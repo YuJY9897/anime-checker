@@ -62,16 +62,17 @@ def save_app_data():
 
 st.markdown("""
     <style>
+    div.block-container { padding-top: 0.75rem !important; }
     .main { max-width: 500px; margin: 0 auto; }
     .stButton>button, .stLinkButton>a { 
-        border-radius: 12px !important; min-height: 3em !important; height: auto !important; padding: 8px 15px !important; 
+        border-radius: 12px !important; min-height: 2.6em !important; height: auto !important; padding: 6px 10px !important; 
         background-color: #f0f2f6 !important; border: 1px solid #d1d5db !important; 
-        font-weight: bold !important; color: #31333F !important;
+        font-weight: bold !important; color: #31333F !important; font-size: 0.9rem !important;
         text-align: left; text-decoration: none; display: inline-flex; align-items: center;
         white-space: normal !important; overflow-wrap: anywhere !important; word-break: keep-all !important; line-height: 1.25 !important;
     }
     .stButton>button p, .stLinkButton>a p {
-        white-space: normal !important; overflow-wrap: anywhere !important; word-break: keep-all !important;
+        white-space: normal !important; overflow-wrap: anywhere !important; word-break: keep-all !important; font-size: 0.9rem !important;
     }
     button[data-testid="baseButton-secondary"], .stLinkButton>a { width: 100% !important; max-width: 100% !important; justify-content: flex-start; }
     button[data-testid="baseButton-secondary"]:hover, button[data-testid="baseButton-secondary"]:active, button[data-testid="baseButton-secondary"]:focus {
@@ -127,6 +128,104 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.markdown("<a class='scroll-top-btn' href='#top' title='맨 위로'>↑<span>맨 위</span></a>", unsafe_allow_html=True)
+
+components.html(
+    """
+    <script>
+    (function () {
+        const appWindow = window.parent;
+        const appDocument = appWindow.document;
+        const guardKey = "__animeCheckerBackGuardInstalled";
+        const lastBackKey = "__animeCheckerLastBackAt";
+        const delayMs = 1800;
+
+        if (appWindow[guardKey]) {
+            return;
+        }
+        appWindow[guardKey] = true;
+        appWindow[lastBackKey] = 0;
+
+        function showBackToast(message) {
+            let toast = appDocument.getElementById("anime-back-toast");
+            if (!toast) {
+                toast = appDocument.createElement("div");
+                toast.id = "anime-back-toast";
+                toast.style.position = "fixed";
+                toast.style.left = "50%";
+                toast.style.bottom = "78px";
+                toast.style.transform = "translateX(-50%)";
+                toast.style.zIndex = "2147483647";
+                toast.style.padding = "11px 16px";
+                toast.style.borderRadius = "999px";
+                toast.style.background = "rgba(17, 24, 39, 0.94)";
+                toast.style.color = "#ffffff";
+                toast.style.fontSize = "14px";
+                toast.style.fontWeight = "700";
+                toast.style.boxShadow = "0 8px 24px rgba(0,0,0,0.24)";
+                toast.style.whiteSpace = "nowrap";
+                appDocument.body.appendChild(toast);
+            }
+            toast.textContent = message || "뒤로가기를 한 번 더 누르면 종료됩니다";
+            toast.style.opacity = "1";
+            appWindow.clearTimeout(appWindow.__animeBackToastTimer);
+            appWindow.__animeBackToastTimer = appWindow.setTimeout(function () {
+                toast.style.opacity = "0";
+            }, 1500);
+        }
+
+        function getTabByText(label) {
+            const tabs = Array.from(appDocument.querySelectorAll('[role="tab"]'));
+            return tabs.find(function (tab) {
+                return (tab.textContent || "").trim() === label;
+            });
+        }
+
+        function isTabSelected(tab) {
+            return tab && (
+                tab.getAttribute("aria-selected") === "true" ||
+                tab.getAttribute("tabindex") === "0"
+            );
+        }
+
+        function returnToMainTabIfNeeded() {
+            const libraryTab = getTabByText("내 보관함");
+            const newAnimeTab = getTabByText("신작 애니");
+            const newsTab = getTabByText("애니 소식");
+            if (!libraryTab) {
+                return false;
+            }
+            if (isTabSelected(newAnimeTab) || isTabSelected(newsTab)) {
+                libraryTab.click();
+                appWindow.scrollTo({ top: 0, behavior: "smooth" });
+                showBackToast("메인 화면으로 돌아왔습니다");
+                return true;
+            }
+            return false;
+        }
+
+        appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+        appWindow.addEventListener("popstate", function () {
+            if (returnToMainTabIfNeeded()) {
+                appWindow[lastBackKey] = 0;
+                appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+                return;
+            }
+
+            const now = Date.now();
+            if (now - appWindow[lastBackKey] <= delayMs) {
+                appWindow[guardKey] = false;
+                appWindow.history.back();
+                return;
+            }
+            appWindow[lastBackKey] = now;
+            showBackToast("뒤로가기를 한 번 더 누르면 종료됩니다");
+            appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+        });
+    })();
+    </script>
+    """,
+    height=0,
+)
 
 
 # === 2. 외부 API 통신 함수 ===
@@ -604,7 +703,10 @@ NEWS_BLOCKED_IMAGE_DOMAINS = (
     "google.com", "google.co.kr", "gstatic.com", "googleusercontent.com", "ggpht.com",
     "googleapis.com", "googleusercontent.cn"
 )
-NEWS_BLOCKED_LINK_DOMAINS = ("news.google.com", "news.google.co.kr", "www.google.com", "google.com", "google.co.kr")
+NEWS_BLOCKED_LINK_DOMAINS = (
+    "news.google.com", "news.google.co.kr", "www.google.com", "google.com", "google.co.kr",
+    "gstatic.com", "googleusercontent.com", "ggpht.com", "googleapis.com",
+)
 NEWS_FEEDS = [
     {
         "name": "Google 뉴스 한국",
@@ -684,6 +786,16 @@ def is_blocked_domain(url, blocked_domains):
     return any(domain == blocked or domain.endswith(f".{blocked}") for blocked in blocked_domains)
 
 
+def is_probable_article_link(url):
+    if not url or is_blocked_domain(url, NEWS_BLOCKED_LINK_DOMAINS):
+        return False
+    lowered = url.lower()
+    blocked_markers = ("favicon", "apple-touch-icon", "logo", "sprite", "manifest.json")
+    blocked_exts = (".ico", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".css", ".js")
+    path = urlparse(url).path.lower()
+    return not any(marker in lowered for marker in blocked_markers) and not path.endswith(blocked_exts)
+
+
 def normalize_candidate_url(candidate, base_url=""):
     candidate = html.unescape(unquote(candidate or "")).strip()
     if not candidate:
@@ -705,7 +817,7 @@ def get_url_from_query(link):
     for key in ("url", "u", "q"):
         if query.get(key):
             candidate = normalize_candidate_url(query[key][0])
-            if candidate and not is_blocked_domain(candidate, NEWS_BLOCKED_LINK_DOMAINS):
+            if is_probable_article_link(candidate):
                 return candidate
     return ""
 
@@ -732,8 +844,89 @@ def decode_google_news_url(link):
     if not match:
         return ""
     candidate = normalize_candidate_url(match.group(0).decode("utf-8", errors="ignore"))
-    if candidate and not is_blocked_domain(candidate, NEWS_BLOCKED_LINK_DOMAINS):
+    if is_probable_article_link(candidate):
         return candidate
+    return ""
+
+
+def extract_google_news_article_id(link):
+    try:
+        parsed = urlparse(link)
+    except ValueError:
+        return ""
+    if not parsed.netloc.endswith("news.google.com") or "/articles/" not in parsed.path:
+        return ""
+    return parsed.path.rsplit("/", 1)[-1]
+
+
+def decode_google_news_url_online(link, headers):
+    article_id = extract_google_news_article_id(link)
+    if not article_id:
+        return ""
+
+    try:
+        res = requests.get(link, headers=headers, timeout=8)
+        res.raise_for_status()
+    except requests.RequestException:
+        return ""
+
+    timestamp_match = re.search(r'data-n-a-ts=["\']([^"\']+)["\']', res.text)
+    signature_match = re.search(r'data-n-a-sg=["\']([^"\']+)["\']', res.text)
+    if not timestamp_match or not signature_match:
+        return extract_original_link_from_html(res.text, res.url)
+
+    request_payload = [
+        [[
+            "Fbv4je",
+            json.dumps([
+                "garturlreq",
+                [
+                    ["ko-KR", "KR", ["FINANCE_TOP_INDICES", "WEB_TEST_1_0_0"], None, None, 1, 1, "KR:ko", None, 1, None, None, None, None, None, 0, 1],
+                    "ko-KR",
+                    "KR",
+                    1,
+                    [1, 1, 1],
+                    1,
+                    1,
+                    None,
+                    0,
+                    0,
+                    None,
+                    0,
+                ],
+                article_id,
+                int(timestamp_match.group(1)),
+                signature_match.group(1),
+            ], ensure_ascii=False, separators=(",", ":")),
+            None,
+            "generic",
+        ]]
+    ]
+
+    try:
+        decode_res = requests.post(
+            "https://news.google.com/_/DotsSplashUi/data/batchexecute",
+            headers={
+                **headers,
+                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                "Referer": "https://news.google.com/",
+            },
+            data={"f.req": json.dumps(request_payload, ensure_ascii=False, separators=(",", ":"))},
+            timeout=8,
+        )
+        decode_res.raise_for_status()
+        response_json = json.loads(decode_res.text.split("\n\n", 1)[1])
+        for response_item in response_json:
+            if not isinstance(response_item, list) or len(response_item) < 3 or not response_item[2]:
+                continue
+            payload = json.loads(response_item[2])
+            if isinstance(payload, list) and len(payload) > 1:
+                candidate = normalize_candidate_url(payload[1])
+                if is_probable_article_link(candidate):
+                    return candidate
+    except (requests.RequestException, ValueError, IndexError, TypeError):
+        return ""
+
     return ""
 
 
@@ -747,7 +940,7 @@ def extract_original_link_from_html(page_html, base_url):
         for raw in re.findall(pattern, page_html, re.IGNORECASE):
             candidate = raw.replace("\\/", "/")
             candidate = normalize_candidate_url(candidate, base_url)
-            if candidate and not is_blocked_domain(candidate, NEWS_BLOCKED_LINK_DOMAINS):
+            if is_probable_article_link(candidate):
                 return candidate
     return ""
 
@@ -757,22 +950,26 @@ def resolve_original_article_link(link, description, headers):
     if decoded_google_url:
         return decoded_google_url
 
+    decoded_online_url = decode_google_news_url_online(link, headers)
+    if decoded_online_url:
+        return decoded_online_url
+
     query_url = get_url_from_query(link)
     if query_url:
         return query_url
 
     for raw_href in re.findall(r'href=["\']([^"\']+)', description or "", re.IGNORECASE):
         candidate = normalize_candidate_url(raw_href, link)
-        if candidate and not is_blocked_domain(candidate, NEWS_BLOCKED_LINK_DOMAINS):
+        if is_probable_article_link(candidate):
             return candidate
 
-    if link and not is_blocked_domain(link, NEWS_BLOCKED_LINK_DOMAINS):
+    if is_probable_article_link(link):
         return link
 
     try:
         res = requests.get(link, headers=headers, timeout=8, allow_redirects=True)
         res.raise_for_status()
-        if res.url and not is_blocked_domain(res.url, NEWS_BLOCKED_LINK_DOMAINS):
+        if is_probable_article_link(res.url):
             return res.url
         if "html" in res.headers.get("content-type", ""):
             original = extract_original_link_from_html(res.text, res.url)
@@ -945,7 +1142,7 @@ def get_anime_news(max_items=12):
     for item in deduped:
         description_raw = item.pop("_description_raw", "")
         article_link = resolve_original_article_link(item.get("link", ""), description_raw, headers)
-        if is_blocked_domain(article_link, NEWS_BLOCKED_LINK_DOMAINS):
+        if not is_probable_article_link(article_link):
             continue
         summary = item.pop("_summary", "")
         item["full_content"] = summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요."
@@ -1013,15 +1210,8 @@ if st.session_state.view == 'main':
 
         with library_tab:
             current_date_str = datetime.now().strftime('%Y.%m.%d')
-            list_col, btn_edit = st.columns([7.5, 2.5])
-            with list_col:
-                st.subheader("내 시청 목록")
-            with btn_edit:
-                st.markdown("<div style='margin-top: 0.5em;'></div>", unsafe_allow_html=True)
-                edit_text = "편집 완료" if st.session_state.is_editing else "목록 편집"
-                if st.button(edit_text, key="edit_my_list"):
-                    st.session_state.is_editing = not st.session_state.is_editing
-                    st.rerun()
+            st.session_state.is_editing = False
+            st.subheader("내 시청 목록")
 
             if not st.session_state.my_anime_list:
                 st.write("아직 추가한 애니가 없습니다. 위 검색창에서 작품을 추가해보세요.")
@@ -1075,33 +1265,27 @@ if st.session_state.view == 'main':
                 if not library_cards:
                     st.write("검색 결과가 없습니다.")
                 else:
-                    cols_per_row = 2
+                    cols_per_row = 3
                     for start_idx in range(0, len(library_cards), cols_per_row):
-                        cols = st.columns(cols_per_row)
+                        cols = st.columns(cols_per_row, gap="small")
                         for offset, card in enumerate(library_cards[start_idx:start_idx + cols_per_row]):
                             title = card['title']
                             info = card['info']
                             anime_uid = get_anime_uid(title, info)
                             with cols[offset]:
-                                with st.container(border=True):
-                                    badge = " :red[**N**]" if card['needs_n_badge'] else ""
-                                    if st.session_state.is_editing:
-                                        if st.button(f"삭제: {title}", key=f"del_card_{anime_uid}_{start_idx}_{offset}"):
-                                            delete_anime(title)
-                                            st.rerun()
-                                    else:
-                                        if st.button(f"{title}{badge}", key=f"main_card_{anime_uid}_{start_idx}_{offset}"):
-                                            st.session_state.selected_anime = title
-                                            st.session_state.selected_season = None
-                                            st.session_state.view = 'detail'
-                                            st.rerun()
+                                badge = " :red[**N**]" if card['needs_n_badge'] else ""
+                                if st.button(f"{title}{badge}", key=f"main_card_{anime_uid}_{start_idx}_{offset}"):
+                                    st.session_state.selected_anime = title
+                                    st.session_state.selected_season = None
+                                    st.session_state.view = 'detail'
+                                    st.rerun()
 
             st.write("")
             st.divider()
 
             st.subheader("내 보관함 편성표")
             days_en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            days_kr = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+            days_kr = ["월", "화", "수", "목", "금", "토", "일"]
 
             schedule_tabs = st.tabs(days_kr)
             for i, day_en in enumerate(days_en):
