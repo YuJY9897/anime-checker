@@ -362,19 +362,39 @@ components.html(
             );
         }
 
-        function clickVisibleAppBackButton() {
+        function getCurrentAppState() {
+            const marker = appDocument.getElementById("anime-current-view");
+            if (!marker) {
+                return { view: "unknown", selectedSeason: "unknown" };
+            }
+            return {
+                view: marker.getAttribute("data-view") || "unknown",
+                selectedSeason: marker.getAttribute("data-selected-season") || "none"
+            };
+        }
+
+        function findVisibleAppBackButton() {
             const labels = ["뒤로가기", "목록으로 돌아가기"];
             const buttons = Array.from(appDocument.querySelectorAll("button"));
-            const backButton = buttons.find(function (button) {
+            return buttons.find(function (button) {
                 const text = (button.textContent || "").trim();
                 const rect = button.getBoundingClientRect();
                 return labels.includes(text) && rect.width > 0 && rect.height > 0 && !button.disabled;
             });
+        }
+
+        function clickVisibleAppBackButton() {
+            const backButton = findVisibleAppBackButton();
             if (!backButton) {
                 return false;
             }
             backButton.click();
             return true;
+        }
+
+        function isMainLibraryTabSelected() {
+            const libraryTab = getTabByText("내 보관함");
+            return !!libraryTab && isTabSelected(libraryTab);
         }
 
         function returnToMainTabIfNeeded() {
@@ -394,6 +414,24 @@ components.html(
 
         appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
         appWindow.addEventListener("popstate", function () {
+            const state = getCurrentAppState();
+
+            if (state.view !== "main") {
+                if (clickVisibleAppBackButton()) {
+                    appWindow[lastBackKey] = 0;
+                    appWindow[suppressExitUntilKey] = Date.now() + delayMs + 1200;
+                    appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+                    return;
+                }
+                appWindow[lastBackKey] = 0;
+                appWindow[suppressExitUntilKey] = Date.now() + delayMs + 1200;
+                appWindow.setTimeout(function () {
+                    clickVisibleAppBackButton();
+                }, 120);
+                appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+                return;
+            }
+
             if (clickVisibleAppBackButton()) {
                 appWindow[lastBackKey] = 0;
                 appWindow[suppressExitUntilKey] = Date.now() + delayMs + 800;
@@ -409,6 +447,11 @@ components.html(
             }
 
             const now = Date.now();
+            if (!isMainLibraryTabSelected()) {
+                appWindow[lastBackKey] = 0;
+                appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+                return;
+            }
             if (now < (appWindow[suppressExitUntilKey] || 0)) {
                 appWindow[lastBackKey] = 0;
                 appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
@@ -1602,6 +1645,14 @@ def get_anime_news(max_items=12):
 
 
 news_data = get_anime_news()
+
+current_view_marker = html.escape(str(st.session_state.get("view", "main")), quote=True)
+selected_season_marker = "none" if st.session_state.get("selected_season") is None else "selected"
+st.markdown(
+    f"<div id='anime-current-view' data-view='{current_view_marker}' "
+    f"data-selected-season='{selected_season_marker}' style='display:none;'></div>",
+    unsafe_allow_html=True,
+)
 
 # --- 화면 1: 메인 화면 ---
 if st.session_state.view == 'main':
