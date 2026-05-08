@@ -154,6 +154,18 @@ st.markdown("""
         background: #f0f2f6; border: 1px solid #d1d5db; color: #31333F !important;
         text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
     }
+    .inline-info-link {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: auto !important; max-width: 58px !important; min-width: 42px !important;
+        height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
+        border-radius: 9px; background: #f0f2f6; border: 1px solid #d1d5db;
+        color: #31333F !important; text-decoration: none !important;
+        font-size: 0.78rem !important; font-weight: 700; line-height: 1 !important;
+        box-sizing: border-box;
+    }
+    .inline-info-link:visited, .inline-info-link:hover, .inline-info-link:active {
+        color: #31333F !important; text-decoration: none !important;
+    }
     .detail-action-btn.danger { color: #b91c1c !important; }
     .library-title-actions-anchor, .detail-actions-anchor { display: none; }
     div[data-testid="stHorizontalBlock"]:has(.library-title-actions-anchor),
@@ -177,7 +189,8 @@ st.markdown("""
     }
     div[data-testid="stHorizontalBlock"]:has(.library-title-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) [data-testid="stButton"] button,
-    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) .stLinkButton > a {
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) .stLinkButton > a,
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) .inline-info-link {
         width: auto !important; max-width: 58px !important; min-width: 42px !important;
         height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
         font-size: 0.78rem !important; justify-content: center !important;
@@ -242,7 +255,8 @@ st.markdown("""
         margin: 0 !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stButton"] button,
-    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) .stLinkButton > a {
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) .stLinkButton > a,
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) .inline-info-link {
         width: auto !important; max-width: 58px !important; min-width: 42px !important;
         height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
         font-size: 0.78rem !important; justify-content: center !important;
@@ -266,7 +280,8 @@ st.markdown("""
         flex: 0 0 58px !important; width: 58px !important; min-width: 58px !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) [data-testid="stButton"] button,
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) .stLinkButton > a {
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) .stLinkButton > a,
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) .inline-info-link {
         width: auto !important; max-width: 58px !important; min-width: 42px !important;
         height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
         font-size: 0.78rem !important; justify-content: center !important;
@@ -1211,7 +1226,6 @@ if 'search_box' not in st.session_state: st.session_state.search_box = ""
 if 'library_filter' not in st.session_state: st.session_state.library_filter = ""
 if 'show_library_search' not in st.session_state: st.session_state.show_library_search = False
 if 'news_return_view' not in st.session_state: st.session_state.news_return_view = 'main'
-if 'open_external_url' not in st.session_state: st.session_state.open_external_url = ""
 
 if 'data_loaded' not in st.session_state:
     saved_data = load_app_data()
@@ -1438,8 +1452,13 @@ def add_direct_and_clear(tv_id, title):
     add_anime_to_list(tv_id, title)
     st.session_state.search_box = ""
 
-def open_external_url(url):
-    st.session_state.open_external_url = url or ""
+def render_info_link(url, label="정보"):
+    safe_url = html.escape(url or "#", quote=True)
+    safe_label = html.escape(label, quote=True)
+    st.markdown(
+        f"<a class='inline-info-link' href='{safe_url}' target='_self' rel='noopener noreferrer'>{safe_label}</a>",
+        unsafe_allow_html=True
+    )
 
 
 NEWS_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
@@ -1940,22 +1959,6 @@ components.html(
     height=0,
 )
 
-if st.session_state.open_external_url:
-    external_url = st.session_state.open_external_url
-    st.session_state.open_external_url = ""
-    components.html(
-        f"""
-        <script>
-        const url = {json.dumps(external_url, ensure_ascii=False)};
-        const opened = window.parent.open(url, "_blank", "noopener,noreferrer");
-        if (!opened) {{
-            window.parent.location.href = url;
-        }}
-        </script>
-        """,
-        height=0,
-    )
-
 # --- 화면 1: 메인 화면 ---
 if st.session_state.view == 'main':
     
@@ -2047,6 +2050,32 @@ if st.session_state.view == 'main':
                             st.session_state.view = 'detail'
                             st.rerun()
 
+        def render_library_schedule(key_prefix):
+            st.write("")
+            st.divider()
+
+            st.subheader("내 보관함 편성표")
+            days_en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            days_kr = ["월", "화", "수", "목", "금", "토", "일"]
+
+            schedule_tabs = st.tabs(days_kr)
+            for i, day_en in enumerate(days_en):
+                with schedule_tabs[i]:
+                    day_animes = {
+                        k: v for k, v in st.session_state.my_anime_list.items()
+                        if v.get('day') == day_en and not is_dropped(v)
+                    }
+                    if not day_animes:
+                        st.write("해당 요일에 맵핑된 애니가 없습니다.")
+                    else:
+                        for t_name, t_info in day_animes.items():
+                            anime_uid = get_anime_uid(t_name, t_info)
+                            if st.button(t_name, key=f"{key_prefix}_sched_{day_en}_{anime_uid}"):
+                                st.session_state.selected_anime = t_name
+                                st.session_state.selected_season = None
+                                st.session_state.view = 'detail'
+                                st.rerun()
+
         update_tab, list_tab, dropped_tab, new_anime_tab, news_tab = st.tabs(["새 화", "목록", "하차", "신작 애니", "애니 소식"])
 
         with update_tab:
@@ -2065,6 +2094,8 @@ if st.session_state.view == 'main':
                     st.write("새로 나온 화가 없습니다.")
                 else:
                     render_anime_card_grid(n_cards, "update_card")
+
+                render_library_schedule("update")
 
         with list_tab:
             title_col, search_btn_col = st.columns([8, 1], gap="small", vertical_alignment="center")
@@ -2099,26 +2130,7 @@ if st.session_state.view == 'main':
                 else:
                     render_anime_card_grid(normal_cards, "list_card")
 
-            st.write("")
-            st.divider()
-
-            st.subheader("내 보관함 편성표")
-            days_en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            days_kr = ["월", "화", "수", "목", "금", "토", "일"]
-
-            schedule_tabs = st.tabs(days_kr)
-            for i, day_en in enumerate(days_en):
-                with schedule_tabs[i]:
-                    day_animes = {k: v for k, v in st.session_state.my_anime_list.items() if v.get('day') == day_en and not is_dropped(v)}
-                    if not day_animes:
-                        st.write("해당 요일에 맵핑된 애니가 없습니다.")
-                    else:
-                        for t_name, t_info in day_animes.items():
-                            if st.button(t_name, key=f"sched_{day_en}_{t_name}"):
-                                st.session_state.selected_anime = t_name
-                                st.session_state.selected_season = None
-                                st.session_state.view = 'detail'
-                                st.rerun()
+            render_library_schedule("list")
 
         with dropped_tab:
             st.subheader("하차 목록")
@@ -2179,7 +2191,7 @@ if st.session_state.view == 'main':
                                     with spacer_col:
                                         st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
                                     with info_col:
-                                        st.link_button("정보", f"https://namu.wiki/Go?q={title}")
+                                        render_info_link(f"https://namu.wiki/Go?q={quote_plus(title)}")
                                     with add_col:
                                         if title in st.session_state.my_anime_list:
                                             st.button("완료", key=f"add_new_tab_{tv_id}", disabled=True)
@@ -2275,7 +2287,7 @@ elif st.session_state.view == 'detail':
                     unsafe_allow_html=True
                 )
             with info_col:
-                st.link_button("정보", anime_info.get('namu_link', '#'))
+                render_info_link(anime_info.get('namu_link', '#'))
             with drop_col:
                 drop_label = "복귀" if is_dropped(anime_info) else "하차"
                 if st.button(drop_label, key=f"drop_detail_{get_anime_uid(anime_title, anime_info)}"):
@@ -2349,12 +2361,7 @@ elif st.session_state.view == 'detail':
                                         toggle_movie_watch(anime_title, movie)
                                         st.rerun()
                                 with info_col:
-                                    st.button(
-                                        "정보",
-                                        key=f"movie_info_{movie_watch_key}",
-                                        on_click=open_external_url,
-                                        args=(movie.get("namu_link", "#"),)
-                                    )
+                                    render_info_link(movie.get("namu_link", "#"))
 
         else:
             season_idx = st.session_state.selected_season
@@ -2461,7 +2468,7 @@ elif st.session_state.view == 'new_animes':
                         with spacer_col:
                             st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
                         with info_col:
-                            st.link_button("정보", f"https://namu.wiki/Go?q={title}")
+                            render_info_link(f"https://namu.wiki/Go?q={quote_plus(title)}")
                         with add_col:
                             if title in st.session_state.my_anime_list:
                                 st.button("완료", key=f"add_new_view_{tv_id}", disabled=True)
