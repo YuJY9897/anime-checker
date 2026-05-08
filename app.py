@@ -149,6 +149,14 @@ st.markdown("""
         text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
     }
     .movie-action-btn.done { color: #047857 !important; border-color: #6ee7b7; background: #ecfdf5; }
+    .episode-watch-action {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 42px; height: 28px; padding: 0 8px; border-radius: 9px;
+        background: #f0f2f6; border: 1px solid #d1d5db; color: #31333F !important;
+        text-decoration: none !important; font-size: 0.78rem; font-weight: 700;
+        float: right;
+    }
+    .episode-watch-action.done { color: #047857 !important; border-color: #6ee7b7; background: #ecfdf5; }
     div[data-testid="stCheckbox"] {
         width: 100% !important; display: flex !important; justify-content: flex-end !important;
     }
@@ -955,8 +963,7 @@ def toggle_movie_watch(a_title, movie):
     save_app_data()
 
 
-def on_checkbox_change(a_title, clicked_s_idx, clicked_ep_idx, w_key):
-    is_checked = st.session_state[w_key]
+def set_episode_watch(a_title, clicked_s_idx, clicked_ep_idx, is_checked):
     anime_info = st.session_state.my_anime_list[a_title]
     seasons = anime_info.get('seasons', [])
 
@@ -977,6 +984,11 @@ def on_checkbox_change(a_title, clicked_s_idx, clicked_ep_idx, w_key):
                         st.session_state[current_w_key] = False
 
     save_app_data()
+
+
+def on_checkbox_change(a_title, clicked_s_idx, clicked_ep_idx, w_key):
+    set_episode_watch(a_title, clicked_s_idx, clicked_ep_idx, st.session_state[w_key])
+
 
 def clear_search():
     st.session_state.search_box = ""
@@ -1695,6 +1707,21 @@ elif st.session_state.view == 'detail':
             toggle_movie_watch(anime_title, target_movie)
         st.query_params.clear()
         st.rerun()
+
+    toggle_ep = st.query_params.get("toggle_ep")
+    if anime_info and toggle_ep:
+        try:
+            ep_s_idx, ep_idx, next_value = toggle_ep.split("_", 2)
+            ep_s_idx = int(ep_s_idx)
+            ep_idx = int(ep_idx)
+            next_checked = next_value == "1"
+        except (ValueError, TypeError):
+            ep_s_idx = ep_idx = None
+            next_checked = False
+        if ep_s_idx is not None and ep_idx is not None:
+            set_episode_watch(anime_title, ep_s_idx, ep_idx, next_checked)
+        st.query_params.clear()
+        st.rerun()
     
     if st.button("뒤로가기", key="back_from_detail"):
         if st.session_state.selected_season is not None:
@@ -1854,7 +1881,16 @@ elif st.session_state.view == 'detail':
                 with c2:
                     st.markdown(f"<div class='date-text'>{ep['date']}</div>", unsafe_allow_html=True)
                 with c3:
-                    st.checkbox("", value=is_watched, key=widget_key, on_change=on_checkbox_change, args=(anime_title, season_idx, i, widget_key), label_visibility="collapsed", disabled=is_future_episode)
+                    if is_future_episode:
+                        st.caption("")
+                    else:
+                        next_checked = "0" if is_watched else "1"
+                        watch_label = "완료" if is_watched else "시청"
+                        done_class = " done" if is_watched else ""
+                        st.markdown(
+                            f'<a class="episode-watch-action{done_class}" href="?toggle_ep={season_idx}_{i}_{next_checked}">{watch_label}</a>',
+                            unsafe_allow_html=True
+                        )
 
 # --- 화면 4: 신작 애니 모아보기 화면 ---
 elif st.session_state.view == 'new_animes':
