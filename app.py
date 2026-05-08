@@ -4,7 +4,7 @@ import re
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urljoin
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -27,6 +27,8 @@ st.set_page_config(page_title="애니 업데이트 체크", layout="centered")
 
 if not TMDB_API_KEY:
     st.warning("TMDB API 키가 없어 데모 데이터로 실행됩니다. 실제 검색을 쓰려면 secrets에 TMDB_API_KEY를 설정하세요.")
+
+st.markdown("<div id='top'></div>", unsafe_allow_html=True)
 
 APP_DIR = Path(__file__).resolve().parent
 DATA_FILE = APP_DIR / "anime_check_data.json"
@@ -61,13 +63,16 @@ st.markdown("""
     <style>
     .main { max-width: 500px; margin: 0 auto; }
     .stButton>button, .stLinkButton>a { 
-        border-radius: 12px !important; height: 3em !important; padding: 0 15px !important; 
+        border-radius: 12px !important; min-height: 3em !important; height: auto !important; padding: 8px 15px !important; 
         background-color: #f0f2f6 !important; border: 1px solid #d1d5db !important; 
         font-weight: bold !important; color: #31333F !important;
         text-align: left; text-decoration: none; display: inline-flex; align-items: center;
-        white-space: nowrap !important; 
+        white-space: normal !important; overflow-wrap: anywhere !important; word-break: keep-all !important; line-height: 1.25 !important;
     }
-    button[data-testid="baseButton-secondary"], .stLinkButton>a { width: fit-content !important; justify-content: flex-start; }
+    .stButton>button p, .stLinkButton>a p {
+        white-space: normal !important; overflow-wrap: anywhere !important; word-break: keep-all !important;
+    }
+    button[data-testid="baseButton-secondary"], .stLinkButton>a { width: 100% !important; max-width: 100% !important; justify-content: flex-start; }
     button[data-testid="baseButton-secondary"]:hover, button[data-testid="baseButton-secondary"]:active, button[data-testid="baseButton-secondary"]:focus {
         background-color: #f0f2f6 !important; border: 1px solid #d1d5db !important; color: #31333F !important;
     }
@@ -103,8 +108,24 @@ st.markdown("""
     .news-date { color: gray; font-size: 0.8em; text-align: right; margin-top: 10px; }
     .anime-date { color: gray; font-size: 0.75em; margin-bottom: 10px; }
     .search-hint { color: #888888; font-size: 0.8em; text-align: left; margin-top: -10px; margin-bottom: 15px; }
+    html { scroll-behavior: smooth; }
+    .scroll-top-btn {
+        position: fixed; right: 18px; bottom: 18px; z-index: 999999;
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        min-width: 52px; height: 44px; padding: 0 14px; border-radius: 999px;
+        background: #31333F; color: white !important; text-decoration: none !important;
+        font-size: 0.9rem; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+        border: 1px solid rgba(255,255,255,0.25);
+    }
+    .scroll-top-btn:hover { background: #111827; color: white !important; }
+    @media (max-width: 640px) {
+        .scroll-top-btn { right: 12px; bottom: 12px; width: 44px; min-width: 44px; padding: 0; }
+        .scroll-top-btn span { display: none; }
+    }
     </style>
     """, unsafe_allow_html=True)
+
+st.markdown("<a class='scroll-top-btn' href='#top' title='맨 위로'>↑<span>맨 위</span></a>", unsafe_allow_html=True)
 
 
 # === 2. 외부 API 통신 함수 ===
@@ -496,10 +517,51 @@ def extract_rss_image(item, description):
         if media is not None and media.attrib.get("url"):
             return media.attrib["url"]
 
+    enclosure = item.find("enclosure")
+    if enclosure is not None and enclosure.attrib.get("url") and enclosure.attrib.get("type", "").startswith("image"):
+        return enclosure.attrib["url"]
+
     match = re.search(r'<img[^>]+src=["\']([^"\']+)', description or "", re.IGNORECASE)
     if match:
         return html.unescape(match.group(1))
-    return NEWS_FALLBACK_IMAGE
+    return ""
+
+
+def extract_article_image(page_html, base_url):
+    meta_patterns = [
+        r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+        r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
+    ]
+    for pattern in meta_patterns:
+        match = re.search(pattern, page_html, re.IGNORECASE)
+        if match:
+            return urljoin(base_url, html.unescape(match.group(1)))
+
+    json_ld_match = re.search(r'"image"\s*:\s*"([^"]+)"', page_html, re.IGNORECASE)
+    if json_ld_match:
+        return urljoin(base_url, html.unescape(json_ld_match.group(1)))
+
+    article_img_match = re.search(r'<(?:article|main)[\s\S]*?<img[^>]+src=["\']([^"\']+)', page_html, re.IGNORECASE)
+    if article_img_match:
+        return urljoin(base_url, html.unescape(article_img_match.group(1)))
+
+    return ""
+
+
+def get_article_image(link, headers):
+    if not link:
+        return ""
+    try:
+        res = requests.get(link, headers=headers, timeout=8, allow_redirects=True)
+        res.raise_for_status()
+        content_type = res.headers.get("content-type", "")
+        if "html" not in content_type:
+            return ""
+        return extract_article_image(res.text, res.url)
+    except requests.RequestException:
+        return ""
 
 
 def parse_rss_feed(xml_bytes, feed_name):
@@ -563,8 +625,12 @@ def get_anime_news(max_items=12):
         deduped.append(item)
 
     deduped.sort(key=lambda item: item.get("sort_date", ""), reverse=True)
+    deduped = deduped[:max_items]
+    for item in deduped:
+        if not item.get("img"):
+            item["img"] = get_article_image(item.get("link", ""), headers) or NEWS_FALLBACK_IMAGE
     if deduped:
-        return deduped[:max_items]
+        return deduped
 
     return [{
         "title": "애니 소식을 불러오지 못했습니다",
@@ -973,3 +1039,4 @@ elif st.session_state.view == 'news_detail':
         st.write("")
         st.markdown(f"<div style='line-height: 1.8; font-size: 1.1em;'>{news.get('full_content', news['content'])}</div>", unsafe_allow_html=True)
         st.divider()
+
