@@ -154,9 +154,19 @@ st.markdown("""
         min-width: 42px; height: 28px; padding: 0 8px; border-radius: 9px;
         background: #f0f2f6; border: 1px solid #d1d5db; color: #31333F !important;
         text-decoration: none !important; font-size: 0.78rem; font-weight: 700;
-        float: right;
     }
     .episode-watch-action.done { color: #047857 !important; border-color: #6ee7b7; background: #ecfdf5; }
+    .episode-row {
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        min-height: 42px;
+    }
+    .episode-main { min-width: 0; flex: 1; }
+    .episode-title { font-size: 0.95rem; line-height: 1.3; font-weight: 700; color: #31333F; }
+    .episode-date { margin-top: 2px; font-size: 0.78rem; line-height: 1.2; color: #6b7280; }
+    .episode-actions { flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
+    .episode-row-divider {
+        height: 1px; background: #eef0f3; margin: 4px 0 5px 0;
+    }
     div[data-testid="stCheckbox"] {
         width: 100% !important; display: flex !important; justify-content: flex-end !important;
     }
@@ -1694,20 +1704,6 @@ elif st.session_state.view == 'detail':
         st.session_state.view = 'main'
         st.rerun()
 
-    toggle_movie_id = st.query_params.get("toggle_movie")
-    if anime_info and toggle_movie_id:
-        target_movie = next(
-            (
-                movie for movie in anime_info.get("related_movies", [])
-                if str(movie.get("id") or compact_title(movie.get("title", "movie"))) == str(toggle_movie_id)
-            ),
-            None
-        )
-        if target_movie:
-            toggle_movie_watch(anime_title, target_movie)
-        st.query_params.clear()
-        st.rerun()
-
     toggle_ep = st.query_params.get("toggle_ep")
     if anime_info and toggle_ep:
         try:
@@ -1829,18 +1825,14 @@ elif st.session_state.view == 'detail':
                                 st.caption(f"극장판 · {movie.get('release_date', '정보 없음')} · {format_runtime(movie.get('runtime'))}")
                                 movie_watch_key = make_movie_watch_key(anime_title, movie)
                                 watched_movie = st.session_state.watched_db.get(movie_watch_key, False)
-                                movie_uid = movie.get("id") or compact_title(movie.get("title", "movie"))
                                 toggle_label = "시청완료" if watched_movie else "시청"
-                                done_class = " done" if watched_movie else ""
-                                st.markdown(
-                                    f"""
-                                    <div class="movie-action-row">
-                                        <a class="movie-action-btn{done_class}" href="?toggle_movie={quote_plus(str(movie_uid))}">{toggle_label}</a>
-                                        <a class="movie-action-btn" href="{html.escape(movie.get('namu_link', '#'))}" target="_blank" rel="noopener noreferrer">정보</a>
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True
-                                )
+                                spacer_col, watch_col, info_col = st.columns([4, 3, 3], gap="small")
+                                with watch_col:
+                                    if st.button(toggle_label, key=f"movie_watch_{movie_watch_key}", use_container_width=True):
+                                        toggle_movie_watch(anime_title, movie)
+                                        st.rerun()
+                                with info_col:
+                                    st.link_button("정보", movie.get("namu_link", "#"), use_container_width=True)
 
         else:
             season_idx = st.session_state.selected_season
@@ -1852,7 +1844,6 @@ elif st.session_state.view == 'detail':
             st.image(season['img'], use_container_width=True)
             st.divider()
             
-            st.write("에피소드 리스트")
             current_date_str = datetime.now().strftime('%Y.%m.%d')
             
             latest_ep_idx = -1
@@ -1861,7 +1852,8 @@ elif st.session_state.view == 'detail':
                     latest_ep_idx = j
 
             for i, ep in enumerate(season.get('episodes', []), 1):
-                c1, c2, c3 = st.columns([6.2, 2.6, 0.7], gap="small")
+                if i > 1:
+                    st.markdown("<div class='episode-row-divider'></div>", unsafe_allow_html=True)
                 
                 db_key = make_watch_key(anime_title, season, i)
                 widget_key = f"widget_{db_key}"
@@ -1869,28 +1861,32 @@ elif st.session_state.view == 'detail':
                 
                 is_future_episode = ep['date'] > current_date_str
                 
-                with c1:
-                    ep_title = ep.get('title', '').strip()
-                    display_title = f"**{i}화**"
-                    if ep_title:
-                        display_title += f" : {ep_title}"
-                    if (i - 1) == latest_ep_idx and not is_watched:
-                        display_title += " :red[**N**]"
-                    st.write(display_title)
-                    
-                with c2:
-                    st.markdown(f"<div class='date-text'>{ep['date']}</div>", unsafe_allow_html=True)
-                with c3:
-                    if is_future_episode:
-                        st.caption("")
-                    else:
-                        next_checked = "0" if is_watched else "1"
-                        watch_label = "완료" if is_watched else "시청"
-                        done_class = " done" if is_watched else ""
-                        st.markdown(
-                            f'<a class="episode-watch-action{done_class}" href="?toggle_ep={season_idx}_{i}_{next_checked}">{watch_label}</a>',
-                            unsafe_allow_html=True
-                        )
+                ep_title = ep.get('title', '').strip()
+                display_title = f"{i}화"
+                if ep_title:
+                    display_title += f" : {ep_title}"
+                if (i - 1) == latest_ep_idx and not is_watched:
+                    display_title += " <span style='color:#ef4444;font-weight:800;'>N</span>"
+
+                action_html = ""
+                if not is_future_episode:
+                    next_checked = "0" if is_watched else "1"
+                    watch_label = "완료" if is_watched else "시청"
+                    done_class = " done" if is_watched else ""
+                    action_html = f'<a class="episode-watch-action{done_class}" href="?toggle_ep={season_idx}_{i}_{next_checked}">{watch_label}</a>'
+
+                st.markdown(
+                    f"""
+                    <div class="episode-row">
+                        <div class="episode-main">
+                            <div class="episode-title">{display_title}</div>
+                            <div class="episode-date">{html.escape(ep['date'])}</div>
+                        </div>
+                        <div class="episode-actions">{action_html}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
 # --- 화면 4: 신작 애니 모아보기 화면 ---
 elif st.session_state.view == 'new_animes':
