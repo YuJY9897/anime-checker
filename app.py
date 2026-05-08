@@ -62,6 +62,18 @@ def save_app_data():
 
 st.markdown("""
     <style>
+    #MainMenu, footer, header, [data-testid="stToolbar"], [data-testid="stDecoration"],
+    [data-testid="stStatusWidget"], [data-testid="stDeployButton"], .stDeployButton {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+    }
+    .viewerBadge_container__1QSob, .viewerBadge_link__1S137,
+    a[href*="streamlit.io/cloud"], a[href*="streamlit.io"] {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
     div.block-container { padding-top: 0.5rem !important; padding-bottom: 0.75rem !important; }
     div[data-testid="stVerticalBlock"] { gap: 0.45rem !important; }
     div[data-testid="stHorizontalBlock"] { gap: 0.4rem !important; }
@@ -149,6 +161,24 @@ st.markdown("""
         text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
     }
     .movie-action-btn.done { color: #047857 !important; border-color: #6ee7b7; background: #ecfdf5; }
+    .movie-actions-anchor { display: none; }
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) {
+        display: flex !important; flex-direction: row !important; align-items: center !important;
+        justify-content: flex-end !important; gap: 6px !important; flex-wrap: nowrap !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:first-child {
+        flex: 1 1 auto !important; width: auto !important; min-width: 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:nth-child(2),
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:nth-child(3) {
+        flex: 0 0 58px !important; width: 58px !important; min-width: 58px !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) .stLinkButton > a {
+        width: auto !important; max-width: 58px !important; min-width: 42px !important;
+        height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
+        font-size: 0.78rem !important; justify-content: center !important;
+    }
     .episode-watch-action {
         display: inline-flex; align-items: center; justify-content: center;
         min-width: 42px; height: 28px; padding: 0 8px; border-radius: 9px;
@@ -1721,20 +1751,6 @@ elif st.session_state.view == 'detail':
         st.session_state.view = 'main'
         st.rerun()
 
-    toggle_movie_id = st.query_params.get("toggle_movie")
-    if anime_info and toggle_movie_id:
-        target_movie = next(
-            (
-                movie for movie in anime_info.get("related_movies", [])
-                if str(movie.get("id") or compact_title(movie.get("title", "movie"))) == str(toggle_movie_id)
-            ),
-            None
-        )
-        if target_movie:
-            toggle_movie_watch(anime_title, target_movie)
-        st.query_params.clear()
-        st.rerun()
-    
     if st.button("뒤로가기", key="back_from_detail"):
         if st.session_state.selected_season is not None:
             st.session_state.selected_season = None
@@ -1841,18 +1857,16 @@ elif st.session_state.view == 'detail':
                                 st.caption(f"극장판 · {movie.get('release_date', '정보 없음')} · {format_runtime(movie.get('runtime'))}")
                                 movie_watch_key = make_movie_watch_key(anime_title, movie)
                                 watched_movie = st.session_state.watched_db.get(movie_watch_key, False)
-                                movie_uid = movie.get("id") or compact_title(movie.get("title", "movie"))
                                 toggle_label = "시청완료" if watched_movie else "시청"
-                                done_class = " done" if watched_movie else ""
-                                st.markdown(
-                                    f"""
-                                    <div class="movie-action-row">
-                                        <a class="movie-action-btn{done_class}" href="?toggle_movie={quote_plus(str(movie_uid))}">{toggle_label}</a>
-                                        <a class="movie-action-btn" href="{html.escape(movie.get('namu_link', '#'))}" target="_blank" rel="noopener noreferrer">정보</a>
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True
-                                )
+                                spacer_col, watch_col, info_col = st.columns([6, 2, 2], gap="small")
+                                with spacer_col:
+                                    st.markdown("<span class='movie-actions-anchor'></span>", unsafe_allow_html=True)
+                                with watch_col:
+                                    if st.button(toggle_label, key=f"movie_watch_{movie_watch_key}"):
+                                        toggle_movie_watch(anime_title, movie)
+                                        st.rerun()
+                                with info_col:
+                                    st.link_button("정보", movie.get("namu_link", "#"))
 
         else:
             season_idx = st.session_state.selected_season
