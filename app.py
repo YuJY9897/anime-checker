@@ -136,6 +136,10 @@ st.markdown("""
     .news-date { color: gray; font-size: 0.8em; text-align: right; margin-top: 3px; }
     .anime-date { color: gray; font-size: 0.75em; margin-bottom: 9px; line-height: 1.35; }
     .search-hint { color: #888888; font-size: 0.78em; text-align: left; margin-top: -12px; margin-bottom: 6px; }
+    .library-count {
+        color: #8a8f98; font-size: 0.76rem; text-align: right;
+        margin-top: -0.2rem; margin-bottom: 0.2rem;
+    }
     .detail-meta-actions {
         display: flex; align-items: center; justify-content: space-between; gap: 8px;
         margin: 2px 0 4px 0;
@@ -1844,7 +1848,9 @@ if st.session_state.view == 'main':
                 n_cards.sort(key=lambda item: item['latest_aired_date'], reverse=True)
                 normal_cards.sort(key=lambda item: item['title'])
                 library_cards = n_cards + normal_cards
-                st.caption(f"총 {len(st.session_state.my_anime_list)}개 중 {len(library_cards)}개 표시")
+                total_count = len(st.session_state.my_anime_list)
+                count_text = f"총 {total_count}개" if not library_filter else f"총 {total_count}개 · 검색 {len(library_cards)}개"
+                st.markdown(f"<div class='library-count'>{count_text}</div>", unsafe_allow_html=True)
 
                 if not library_cards:
                     st.write("검색 결과가 없습니다.")
