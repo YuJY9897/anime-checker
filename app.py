@@ -113,7 +113,8 @@ st.markdown("""
     .anime-genre { 
         color: #666666; 
         font-size: 0.75em; 
-        margin-bottom: 1px; 
+        margin-bottom: 4px; 
+        line-height: 1.35;
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
@@ -121,8 +122,31 @@ st.markdown("""
     
     .date-text { display: flex; align-items: center; justify-content: flex-start; height: 100%; color: gray; font-size: 0.85em; }
     .news-date { color: gray; font-size: 0.8em; text-align: right; margin-top: 3px; }
-    .anime-date { color: gray; font-size: 0.75em; margin-bottom: 4px; }
+    .anime-date { color: gray; font-size: 0.75em; margin-bottom: 9px; line-height: 1.35; }
     .search-hint { color: #888888; font-size: 0.78em; text-align: left; margin-top: -12px; margin-bottom: 6px; }
+    .detail-meta-actions {
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        margin: 2px 0 4px 0;
+    }
+    .detail-meta-text {
+        min-width: 0; flex: 1; color: #4b5563; font-size: 0.86rem; line-height: 1.35;
+    }
+    .detail-action-row { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .detail-action-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 42px; height: 30px; padding: 0 9px; border-radius: 9px;
+        background: #f0f2f6; border: 1px solid #d1d5db; color: #31333F !important;
+        text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
+    }
+    .detail-action-btn.danger { color: #b91c1c !important; }
+    .clickable-season-image {
+        display: block; width: 100%; height: 140px; border-radius: 8px; overflow: hidden;
+        margin-bottom: 5px; cursor: pointer; background: #f3f4f6;
+    }
+    .clickable-season-image img {
+        width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.12s ease;
+    }
+    .clickable-season-image:hover img { transform: scale(1.02); }
     html { scroll-behavior: smooth; }
     .scroll-top-btn {
         position: fixed; right: 18px; bottom: 18px; z-index: 999999;
@@ -212,7 +236,6 @@ components.html(
                 return false;
             }
             backButton.click();
-            showBackToast("이전 화면으로 돌아왔습니다");
             return true;
         }
 
@@ -292,6 +315,41 @@ def get_weekday_names(date_text):
     days_en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     days_kr = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
     return days_en[dt.weekday()], days_kr[dt.weekday()]
+
+
+def parse_episode_date(date_text):
+    normalized = (date_text or "").replace(".", "-")
+    if not normalized or normalized == "9999-12-31":
+        return None
+    try:
+        return datetime.strptime(normalized, "%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def infer_status_from_episodes(seasons, fallback_day="None", fallback_status="정보 없음"):
+    episode_dates = []
+    future_dates = []
+    today = datetime.now().date()
+
+    for season in seasons or []:
+        for ep in season.get("episodes", []):
+            dt = parse_episode_date(ep.get("date", ""))
+            if not dt:
+                continue
+            episode_dates.append(dt)
+            if dt.date() > today:
+                future_dates.append(dt)
+
+    if future_dates:
+        next_dt = min(future_dates)
+        day_en, day_kr = get_weekday_names(next_dt.strftime("%Y-%m-%d"))
+        return day_en, f"매주 {day_kr} 방영" if day_kr else "방영 중"
+
+    if episode_dates:
+        return "Ended", "방영 종료"
+
+    return fallback_day, fallback_status
 
 
 def normalize_season_meta(raw_season, season_num):
@@ -520,14 +578,53 @@ def is_related_anime_movie(movie, title_candidates):
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
+def get_movie_runtime_api(movie_id):
+    if not TMDB_API_KEY or not movie_id:
+        return 0
+    movie_detail = tmdb_get(f"movie/{movie_id}")
+    return movie_detail.get("runtime") or 0
+
+
+def format_runtime(minutes):
+    try:
+        minutes = int(minutes or 0)
+    except (TypeError, ValueError):
+        minutes = 0
+    if minutes <= 0:
+        return "시간 정보 없음"
+    hours, mins = divmod(minutes, 60)
+    if hours and mins:
+        return f"{hours}시간 {mins}분"
+    if hours:
+        return f"{hours}시간"
+    return f"{mins}분"
+
+
+def sort_date_value(date_text):
+    date_text = (date_text or "").replace(".", "-")
+    if not date_text or date_text.startswith("9999") or "정보 없음" in date_text:
+        return "9999-99-99"
+    return date_text
+
+
+def get_season_sort_date(season):
+    dates = [
+        sort_date_value(ep.get("date", ""))
+        for ep in season.get("episodes", [])
+        if sort_date_value(ep.get("date", "")) != "9999-99-99"
+    ]
+    return min(dates) if dates else "9999-99-99"
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_related_anime_movies_api(title, original_title=""):
     if not TMDB_API_KEY:
         return [{
             "id": 0,
             "title": f"{title} 극장판",
             "release_date": "2024.01.01",
+            "runtime": 105,
             "img": "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop",
-            "overview": "API 연동 시 관련 극장판 정보가 표시됩니다.",
             "namu_link": f"https://namu.wiki/Go?q={quote_plus(title + ' 극장판')}",
         }]
 
@@ -547,13 +644,14 @@ def get_related_anime_movies_api(title, original_title=""):
             seen_ids.add(movie_id)
             movie_title = movie.get("title") or movie.get("original_title") or "제목 없음"
             release_date = (movie.get("release_date") or "").replace("-", ".")
+            runtime = get_movie_runtime_api(movie_id)
             collected.append({
                 "id": movie_id,
                 "title": movie_title,
                 "original_title": movie.get("original_title", ""),
                 "release_date": release_date or "개봉일 정보 없음",
+                "runtime": runtime,
                 "img": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get("poster_path") else NEWS_FALLBACK_IMAGE,
-                "overview": movie.get("overview") or "줄거리 정보가 없습니다.",
                 "namu_link": f"https://namu.wiki/Go?q={quote_plus(movie_title)}",
             })
 
@@ -643,6 +741,8 @@ def get_anime_details_api(tv_id, title):
             "img": s_img,
             "episodes": episodes
         })
+
+    day_en, display_status = infer_status_from_episodes(seasons_data, day_en, display_status)
 
     anime_info = {
         "tmdb_id": tv_id,
@@ -757,6 +857,16 @@ for title, info in st.session_state.my_anime_list.items():
                 ep['title'] = cleaned_title
                 existing_data_changed = True
 
+    inferred_day, inferred_status = infer_status_from_episodes(
+        info.get('seasons', []),
+        info.get('day', 'None'),
+        info.get('display_status', '정보 없음')
+    )
+    if info.get('day') != inferred_day or info.get('display_status') != inferred_status:
+        info['day'] = inferred_day
+        info['display_status'] = inferred_status
+        existing_data_changed = True
+
 if existing_data_changed:
     save_app_data()
 # --------------------------------------------------------
@@ -773,6 +883,13 @@ def make_watch_key(title, season, ep_idx):
     return build_watch_key_from_uid(anime_uid, season_num, ep_idx)
 
 
+def make_movie_watch_key(title, movie):
+    info = st.session_state.my_anime_list.get(title, {})
+    anime_uid = get_anime_uid(title, info)
+    movie_uid = movie.get("id") or compact_title(movie.get("title", "movie"))
+    return f"chk_{anime_uid}_movie_{movie_uid}"
+
+
 def get_watch_value(title, season, ep_idx):
     new_key = make_watch_key(title, season, ep_idx)
     old_key = f"chk_{title}_{season.get('name', '')}_{ep_idx}"
@@ -783,6 +900,18 @@ def get_watch_value(title, season, ep_idx):
         save_app_data()
         return st.session_state.watched_db.get(new_key, False)
     return False
+
+
+def refresh_related_movie_runtime(info):
+    changed = False
+    for movie in info.get("related_movies", []):
+        if movie.get("runtime"):
+            continue
+        runtime = get_movie_runtime_api(movie.get("id"))
+        if runtime:
+            movie["runtime"] = runtime
+            changed = True
+    return changed
 
 
 def add_anime_to_list(tv_id, title):
@@ -801,6 +930,12 @@ def delete_anime(title):
         if key.startswith(old_prefix) or key.startswith(new_prefix):
             st.session_state.watched_db.pop(key, None)
 
+    save_app_data()
+
+
+def on_movie_checkbox_change(a_title, movie, w_key):
+    db_key = make_movie_watch_key(a_title, movie)
+    st.session_state.watched_db[db_key] = st.session_state.get(w_key, False)
     save_app_data()
 
 
@@ -1522,6 +1657,24 @@ if st.session_state.view == 'main':
 elif st.session_state.view == 'detail':
     anime_title = st.session_state.selected_anime
     anime_info = st.session_state.my_anime_list.get(anime_title)
+
+    if st.query_params.get("delete_anime") == anime_title:
+        delete_anime(anime_title)
+        st.query_params.clear()
+        st.session_state.selected_anime = None
+        st.session_state.selected_season = None
+        st.session_state.view = 'main'
+        st.rerun()
+
+    if st.query_params.get("season_idx") is not None:
+        try:
+            season_idx_from_query = int(st.query_params.get("season_idx"))
+        except (TypeError, ValueError):
+            season_idx_from_query = None
+        if anime_info and season_idx_from_query is not None and 0 <= season_idx_from_query < len(anime_info.get("seasons", [])):
+            st.query_params.clear()
+            st.session_state.selected_season = season_idx_from_query
+            st.rerun()
     
     if st.button("뒤로가기", key="back_from_detail"):
         if st.session_state.selected_season is not None:
@@ -1536,6 +1689,8 @@ elif st.session_state.view == 'detail':
                 anime_title,
                 anime_info.get("original_title", "")
             )
+            save_app_data()
+        elif refresh_related_movie_runtime(anime_info):
             save_app_data()
 
         last_watched_season = None
@@ -1557,36 +1712,60 @@ elif st.session_state.view == 'detail':
             else:
                 watched_text = "기록 없음"
 
-            info_col, link_col, delete_col = st.columns([6, 2, 2], gap="small")
-            with info_col:
-                st.markdown(
-                    f"<div style='font-size: 0.9em; line-height: 2.6em; color: #4b5563;'>"
-                    f"<b>상태</b> {status_text} &nbsp;·&nbsp; <b>최근</b> {watched_text}"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-            with link_col:
-                st.link_button("정보", anime_info.get('namu_link', '#'), use_container_width=True)
-            with delete_col:
-                if st.button("삭제", key=f"del_detail_{anime_title}", use_container_width=True):
-                    delete_anime(anime_title)
-                    st.session_state.selected_anime = None
-                    st.session_state.view = 'main' 
-                    st.rerun() 
+            st.markdown(
+                f"""
+                <div class="detail-meta-actions">
+                    <div class="detail-meta-text">
+                        {html.escape(status_text)}<br>
+                        최근 {html.escape(watched_text)}
+                    </div>
+                    <div class="detail-action-row">
+                        <a class="detail-action-btn" href="{html.escape(anime_info.get('namu_link', '#'))}" target="_blank" rel="noopener noreferrer">정보</a>
+                        <a class="detail-action-btn danger" href="?delete_anime={quote_plus(anime_title)}">삭제</a>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
                 
             st.divider()
             
             seasons = anime_info.get('seasons', [])
-            rows = (len(seasons) + 1) // 2
-            for r in range(rows):
-                cols = st.columns(2)
-                for c in range(2):
-                    idx = r * 2 + c
-                    if idx < len(seasons):
-                        season = seasons[idx]
-                        with cols[c]:
+            related_movies = anime_info.get("related_movies", [])
+
+            watch_items = []
+            for idx, season in enumerate(seasons):
+                watch_items.append({
+                    "type": "season",
+                    "sort_date": get_season_sort_date(season),
+                    "season_idx": idx,
+                    "season": season,
+                })
+            for idx, movie in enumerate(related_movies):
+                watch_items.append({
+                    "type": "movie",
+                    "sort_date": sort_date_value(movie.get("release_date", "")),
+                    "movie_idx": idx,
+                    "movie": movie,
+                })
+            watch_items.sort(key=lambda item: (item["sort_date"], 0 if item["type"] == "season" else 1))
+
+            cols_per_row = 2
+            for start_idx in range(0, len(watch_items), cols_per_row):
+                cols = st.columns(cols_per_row)
+                for offset, item in enumerate(watch_items[start_idx:start_idx + cols_per_row]):
+                    with cols[offset]:
+                        if item["type"] == "season":
+                            season = item["season"]
                             with st.container(border=True):
-                                st.image(season['img'], use_container_width=True)
+                                st.markdown(
+                                    f"""
+                                    <a class="clickable-season-image" href="?season_idx={item['season_idx']}" title="시즌 보기">
+                                        <img src="{html.escape(season['img'])}" alt="{html.escape(anime_title + ' ' + season['name'])}">
+                                    </a>
+                                    """,
+                                    unsafe_allow_html=True
+                                )
                                 st.markdown(f"**{anime_title} {season['name']}**")
                                 
                                 if season.get('subtitle'):
@@ -1594,32 +1773,28 @@ elif st.session_state.view == 'detail':
                                 else:
                                     st.caption("\u200b") 
                                 
-                                btn_c1, btn_c2 = st.columns([6, 4])
-                                with btn_c1:
-                                    if st.button("시즌 보기", key=f"sel_{idx}"):
-                                        st.session_state.selected_season = idx
-                                        st.rerun()
-                                with btn_c2:
-                                    ep_count = len(season.get('episodes', []))
-                                    st.markdown(f"<div style='margin-top: 0.5em; text-align: right; color: gray; font-size: 0.9em;'>총 {ep_count}부작</div>", unsafe_allow_html=True)
-
-            related_movies = anime_info.get("related_movies", [])
-            if related_movies:
-                st.divider()
-                st.subheader("극장판 / 영화")
-                movie_cols_per_row = 2
-                for start_idx in range(0, len(related_movies), movie_cols_per_row):
-                    movie_cols = st.columns(movie_cols_per_row)
-                    for offset, movie in enumerate(related_movies[start_idx:start_idx + movie_cols_per_row]):
-                        with movie_cols[offset]:
+                                ep_count = len(season.get('episodes', []))
+                                st.markdown(f"<div style='text-align: right; color: gray; font-size: 0.9em;'>총 {ep_count}부작</div>", unsafe_allow_html=True)
+                        else:
+                            movie = item["movie"]
                             with st.container(border=True):
                                 st.image(movie.get("img", NEWS_FALLBACK_IMAGE), use_container_width=True)
                                 st.markdown(f"**{movie.get('title', '제목 없음')}**")
-                                st.caption(f"개봉일: {movie.get('release_date', '정보 없음')}")
-                                overview = movie.get("overview", "")
-                                if overview:
-                                    st.caption(overview[:80] + "..." if len(overview) > 80 else overview)
-                                st.link_button("정보", movie.get("namu_link", "#"), use_container_width=True)
+                                st.caption(f"극장판 · {movie.get('release_date', '정보 없음')} · {format_runtime(movie.get('runtime'))}")
+                                movie_watch_key = make_movie_watch_key(anime_title, movie)
+                                movie_widget_key = f"widget_{movie_watch_key}"
+                                watched_movie = st.session_state.watched_db.get(movie_watch_key, False)
+                                movie_check_col, movie_info_col = st.columns([4, 6], gap="small")
+                                with movie_check_col:
+                                    st.checkbox(
+                                        "봤음",
+                                        value=watched_movie,
+                                        key=movie_widget_key,
+                                        on_change=on_movie_checkbox_change,
+                                        args=(anime_title, movie, movie_widget_key),
+                                    )
+                                with movie_info_col:
+                                    st.link_button("정보", movie.get("namu_link", "#"), use_container_width=True)
 
         else:
             season_idx = st.session_state.selected_season
