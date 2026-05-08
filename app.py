@@ -170,7 +170,8 @@ st.markdown("""
         display: flex !important; justify-content: flex-end !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(2),
-    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(3) {
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(3),
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(4) {
         flex: 0 0 58px !important; width: 58px !important; min-width: 58px !important;
         display: flex !important; justify-content: flex-end !important;
     }
@@ -182,6 +183,9 @@ st.markdown("""
         font-size: 0.78rem !important; justify-content: center !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(3) [data-testid="stButton"] button {
+        color: #92400e !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(4) [data-testid="stButton"] button {
         color: #b91c1c !important;
     }
     .movie-action-row {
@@ -446,12 +450,13 @@ components.html(
 
         function returnToMainTabIfNeeded() {
             const libraryTab = getTabByText("내 보관함");
+            const droppedTab = getTabByText("하차");
             const newAnimeTab = getTabByText("신작 애니");
             const newsTab = getTabByText("애니 소식");
             if (!libraryTab) {
                 return false;
             }
-            if (isTabSelected(newAnimeTab) || isTabSelected(newsTab)) {
+            if (isTabSelected(droppedTab) || isTabSelected(newAnimeTab) || isTabSelected(newsTab)) {
                 libraryTab.click();
                 appWindow.scrollTo({ top: 0, behavior: "smooth" });
                 return true;
@@ -669,6 +674,13 @@ SEASON_SPLIT_RULES = [
             {"s_num": 2, "start": 25, "end": 47, "name": "2기", "subtitle": "회옥·옥절 / 시부야 사변", "jikan_query": "Jujutsu Kaisen 2nd Season"},
             {"s_num": 3, "start": 48, "end": 999, "name": "3기", "subtitle": "사멸회유", "jikan_query": "Jujutsu Kaisen Culling Game"},
         ],
+    },
+    {
+        "keywords": ["지옥락", "地獄楽", "hell's paradise", "hells paradise", "jigokuraku"],
+        "ranges": [
+            {"s_num": 1, "start": 1, "end": 13, "name": "1기", "subtitle": "", "jikan_query": "Jigokuraku"},
+            {"s_num": 2, "start": 14, "end": 999, "name": "2기", "subtitle": "", "jikan_query": "Jigokuraku 2nd Season"},
+        ],
     }
 ]
 
@@ -688,6 +700,73 @@ def build_watch_key_from_uid(anime_uid, season_num, ep_idx):
 def get_split_season_image(range_info, fallback_img):
     poster = get_jikan_anime_poster(range_info.get("jikan_query", ""))
     return poster or range_info.get("img") or fallback_img
+
+
+def build_gap_split_ranges(source_season, gap_days=120):
+    episodes = source_season.get("episodes", [])
+    if len(episodes) < 8:
+        return []
+
+    ranges = []
+    season_start = 1
+    previous_date = None
+
+    for absolute_ep_idx, ep in enumerate(episodes, 1):
+        current_date = parse_episode_date(ep.get("date", ""))
+        if previous_date and current_date:
+            gap = (current_date.date() - previous_date.date()).days
+            if gap >= gap_days and absolute_ep_idx - season_start >= 6:
+                ranges.append({
+                    "s_num": len(ranges) + 1,
+                    "start": season_start,
+                    "end": absolute_ep_idx - 1,
+                    "name": f"{len(ranges) + 1}기",
+                    "subtitle": "",
+                })
+                season_start = absolute_ep_idx
+        if current_date:
+            previous_date = current_date
+
+    if not ranges:
+        return []
+
+    if len(episodes) - season_start + 1 < 3:
+        return []
+
+    ranges.append({
+        "s_num": len(ranges) + 1,
+        "start": season_start,
+        "end": len(episodes),
+        "name": f"{len(ranges) + 1}기",
+        "subtitle": "",
+    })
+    return ranges
+
+
+def get_auto_split_ranges(info):
+    seasons = info.get("seasons", [])
+    if len(seasons) != 1:
+        return []
+    return build_gap_split_ranges(seasons[0])
+
+
+def is_placeholder_season(season):
+    episodes = season.get("episodes", [])
+    if not episodes:
+        return True
+    return all(ep.get("date") == "9999.12.31" for ep in episodes)
+
+
+def remove_empty_seasons(info):
+    seasons = info.get("seasons", [])
+    filtered = [season for season in seasons if not is_placeholder_season(season)]
+    if len(filtered) == len(seasons):
+        return False
+    for idx, season in enumerate(filtered, 1):
+        season["s_num"] = idx
+        season["name"] = f"{idx}기"
+    info["seasons"] = filtered
+    return True
 
 
 def split_continuous_season(source_season, ranges):
@@ -783,9 +862,12 @@ def split_anime_info(title, info, ranges, migrate_watched=False):
 
 def apply_season_split_rules(title, info):
     ranges = get_default_split_ranges(title)
+    if not ranges:
+        ranges = get_auto_split_ranges(info)
     if ranges:
         if not split_anime_info(title, info, ranges, migrate_watched=False):
-            refresh_split_season_images(info, ranges)
+            if get_default_split_ranges(title):
+                refresh_split_season_images(info, ranges)
     return info
 
 
@@ -984,6 +1066,9 @@ def get_anime_details_api(tv_id, title):
                 "date": ep_date.replace('-', '.') if ep_date else "9999.12.31"
             })
 
+        if not episodes or all(ep.get("date") == "9999.12.31" for ep in episodes):
+            continue
+
         seasons_data.append({
             "s_num": s_num,
             "name": s_name,
@@ -1040,6 +1125,7 @@ if 'search_box' not in st.session_state: st.session_state.search_box = ""
 if 'library_filter' not in st.session_state: st.session_state.library_filter = ""
 if 'show_library_search' not in st.session_state: st.session_state.show_library_search = False
 if 'news_return_view' not in st.session_state: st.session_state.news_return_view = 'main'
+if 'open_external_url' not in st.session_state: st.session_state.open_external_url = ""
 
 if 'data_loaded' not in st.session_state:
     saved_data = load_app_data()
@@ -1068,6 +1154,9 @@ if app_back_target:
 current_date_str = datetime.now().strftime('%Y.%m.%d')
 existing_data_changed = False
 for title, info in st.session_state.my_anime_list.items():
+    if remove_empty_seasons(info):
+        existing_data_changed = True
+
     if info.get('day') == "방영 종료/진행중" or 'display_status' not in info:
         start_date_str = info.get('start_date', '').replace('.', '-')
         day_en = "None"
@@ -1094,11 +1183,12 @@ for title, info in st.session_state.my_anime_list.items():
             info['day'] = "Ended"
             info['display_status'] = "방영 종료"
 
-    split_ranges = get_default_split_ranges(title)
+    manual_split_ranges = get_default_split_ranges(title)
+    split_ranges = manual_split_ranges or get_auto_split_ranges(info)
     if split_ranges and len(info.get('seasons', [])) == 1:
         if split_anime_info(title, info, split_ranges, migrate_watched=True):
             existing_data_changed = True
-    elif split_ranges and refresh_split_season_images(info, split_ranges):
+    elif manual_split_ranges and refresh_split_season_images(info, manual_split_ranges):
         existing_data_changed = True
 
     for idx, season in enumerate(info.get('seasons', [])):
@@ -1183,6 +1273,18 @@ def add_anime_to_list(tv_id, title):
     save_app_data()
 
 
+def is_dropped(info):
+    return bool(info.get("dropped", False))
+
+
+def toggle_dropped(title):
+    info = st.session_state.my_anime_list.get(title)
+    if not info:
+        return
+    info["dropped"] = not is_dropped(info)
+    save_app_data()
+
+
 def delete_anime(title):
     info = st.session_state.my_anime_list.get(title, {})
     anime_uid = get_anime_uid(title, info)
@@ -1247,6 +1349,9 @@ def toggle_library_search():
 def add_direct_and_clear(tv_id, title):
     add_anime_to_list(tv_id, title)
     st.session_state.search_box = ""
+
+def open_external_url(url):
+    st.session_state.open_external_url = url or ""
 
 
 NEWS_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
@@ -1747,6 +1852,22 @@ components.html(
     height=0,
 )
 
+if st.session_state.open_external_url:
+    external_url = st.session_state.open_external_url
+    st.session_state.open_external_url = ""
+    components.html(
+        f"""
+        <script>
+        const url = {json.dumps(external_url, ensure_ascii=False)};
+        const opened = window.parent.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) {{
+            window.parent.location.href = url;
+        }}
+        </script>
+        """,
+        height=0,
+    )
+
 # --- 화면 1: 메인 화면 ---
 if st.session_state.view == 'main':
     
@@ -1786,7 +1907,7 @@ if st.session_state.view == 'main':
     else:
         st.divider()
 
-        library_tab, new_anime_tab, news_tab = st.tabs(["내 보관함", "신작 애니", "애니 소식"])
+        library_tab, dropped_tab, new_anime_tab, news_tab = st.tabs(["내 보관함", "하차", "신작 애니", "애니 소식"])
 
         with library_tab:
             current_date_str = datetime.now().strftime('%Y.%m.%d')
@@ -1813,6 +1934,8 @@ if st.session_state.view == 'main':
 
                 library_cards = []
                 for title, info in list(st.session_state.my_anime_list.items()):
+                    if is_dropped(info):
+                        continue
                     if library_filter and library_filter not in title.lower():
                         continue
 
@@ -1848,7 +1971,7 @@ if st.session_state.view == 'main':
                 n_cards.sort(key=lambda item: item['latest_aired_date'], reverse=True)
                 normal_cards.sort(key=lambda item: item['title'])
                 library_cards = n_cards + normal_cards
-                total_count = len(st.session_state.my_anime_list)
+                total_count = sum(1 for info in st.session_state.my_anime_list.values() if not is_dropped(info))
                 count_text = f"총 {total_count}개" if not library_filter else f"총 {total_count}개 · 검색 {len(library_cards)}개"
                 st.markdown(f"<div class='library-count'>{count_text}</div>", unsafe_allow_html=True)
 
@@ -1880,13 +2003,34 @@ if st.session_state.view == 'main':
             schedule_tabs = st.tabs(days_kr)
             for i, day_en in enumerate(days_en):
                 with schedule_tabs[i]:
-                    day_animes = {k: v for k, v in st.session_state.my_anime_list.items() if v.get('day') == day_en}
+                    day_animes = {k: v for k, v in st.session_state.my_anime_list.items() if v.get('day') == day_en and not is_dropped(v)}
                     if not day_animes:
                         st.write("해당 요일에 맵핑된 애니가 없습니다.")
                     else:
                         for t_name, t_info in day_animes.items():
                             if st.button(t_name, key=f"sched_{day_en}_{t_name}"):
                                 st.session_state.selected_anime = t_name
+                                st.session_state.selected_season = None
+                                st.session_state.view = 'detail'
+                                st.rerun()
+
+        with dropped_tab:
+            st.subheader("하차 목록")
+            dropped_items = [(title, info) for title, info in st.session_state.my_anime_list.items() if is_dropped(info)]
+            st.markdown(f"<div class='library-count'>총 {len(dropped_items)}개</div>", unsafe_allow_html=True)
+
+            if not dropped_items:
+                st.write("하차한 애니가 없습니다.")
+            else:
+                dropped_items.sort(key=lambda item: item[0])
+                cols_per_row = 3
+                for start_idx in range(0, len(dropped_items), cols_per_row):
+                    cols = st.columns(cols_per_row, gap="small")
+                    for offset, (title, info) in enumerate(dropped_items[start_idx:start_idx + cols_per_row]):
+                        anime_uid = get_anime_uid(title, info)
+                        with cols[offset]:
+                            if st.button(title, key=f"dropped_card_{anime_uid}_{start_idx}_{offset}"):
+                                st.session_state.selected_anime = title
                                 st.session_state.selected_season = None
                                 st.session_state.view = 'detail'
                                 st.rerun()
@@ -2012,7 +2156,7 @@ elif st.session_state.view == 'detail':
             else:
                 watched_text = "기록 없음"
 
-            meta_col, info_col, delete_col = st.columns([6, 1, 1], gap="small", vertical_alignment="center")
+            meta_col, info_col, drop_col, delete_col = st.columns([5, 1, 1, 1], gap="small", vertical_alignment="center")
             with meta_col:
                 st.markdown("<span class='detail-actions-anchor'></span>", unsafe_allow_html=True)
                 st.markdown(
@@ -2026,6 +2170,11 @@ elif st.session_state.view == 'detail':
                 )
             with info_col:
                 st.link_button("정보", anime_info.get('namu_link', '#'))
+            with drop_col:
+                drop_label = "복귀" if is_dropped(anime_info) else "하차"
+                if st.button(drop_label, key=f"drop_detail_{get_anime_uid(anime_title, anime_info)}"):
+                    toggle_dropped(anime_title)
+                    st.rerun()
             with delete_col:
                 if st.button("삭제", key=f"delete_detail_{get_anime_uid(anime_title, anime_info)}"):
                     delete_anime(anime_title)
@@ -2105,7 +2254,12 @@ elif st.session_state.view == 'detail':
                                         toggle_movie_watch(anime_title, movie)
                                         st.rerun()
                                 with info_col:
-                                    st.link_button("정보", movie.get("namu_link", "#"))
+                                    st.button(
+                                        "정보",
+                                        key=f"movie_info_{movie_watch_key}",
+                                        on_click=open_external_url,
+                                        args=(movie.get("namu_link", "#"),)
+                                    )
 
         else:
             season_idx = st.session_state.selected_season
