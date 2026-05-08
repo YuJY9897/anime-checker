@@ -1056,7 +1056,7 @@ def get_related_anime_movies_api(title, original_title=""):
             "release_date": "2024.01.01",
             "runtime": 105,
             "img": "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop",
-            "namu_link": f"https://namu.wiki/Go?q={quote_plus(title + ' 극장판')}",
+            "namu_link": make_info_url(title + " 극장판"),
         }]
 
     title_candidates = [title, original_title]
@@ -1083,7 +1083,7 @@ def get_related_anime_movies_api(title, original_title=""):
                 "release_date": release_date or "개봉일 정보 없음",
                 "runtime": runtime,
                 "img": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get("poster_path") else NEWS_FALLBACK_IMAGE,
-                "namu_link": f"https://namu.wiki/Go?q={quote_plus(movie_title)}",
+                "namu_link": make_info_url(movie_title),
             })
 
     collected.sort(key=lambda movie: movie.get("release_date", "9999.99.99"))
@@ -1100,7 +1100,7 @@ def get_anime_details_api(tv_id, title):
             "display_status": "API 연동 대기중",
             "start_date": "2024.01.01",
             "genre": "애니메이션",
-            "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
+            "namu_link": make_info_url(title),
             "related_movies": get_related_anime_movies_api(title),
             "seasons": [{
                 "s_num": 1, "name": "1기", "subtitle": "API 자동 불러오기 테스트",
@@ -1118,7 +1118,7 @@ def get_anime_details_api(tv_id, title):
             "display_status": "상세 정보 불러오기 실패",
             "start_date": "",
             "genre": "",
-            "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
+            "namu_link": make_info_url(title),
             "related_movies": [],
             "seasons": []
         }
@@ -1186,7 +1186,7 @@ def get_anime_details_api(tv_id, title):
         "display_status": display_status,
         "start_date": start_date,
         "genre": genres,
-        "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
+        "namu_link": make_info_url(title),
         "original_title": original_title,
         "poster_img": series_img,
         "related_movies": get_related_anime_movies_api(title, original_title),
@@ -1453,12 +1453,28 @@ def add_direct_and_clear(tv_id, title):
     st.session_state.search_box = ""
 
 def render_info_link(url, label="정보"):
-    safe_url = html.escape(url or "#", quote=True)
+    safe_url = html.escape(normalize_info_url(url), quote=True)
     safe_label = html.escape(label, quote=True)
     st.markdown(
         f"<a class='inline-info-link' href='{safe_url}' target='_self' rel='noopener noreferrer'>{safe_label}</a>",
         unsafe_allow_html=True
     )
+
+def make_info_url(query):
+    return f"https://www.google.com/search?q={quote_plus((query or '').strip() + ' 나무위키')}"
+
+def normalize_info_url(url):
+    if not url or url == "#":
+        return "#"
+
+    parsed = urlparse(url)
+    if "namu.wiki" in (parsed.netloc or ""):
+        query = parse_qs(parsed.query).get("q", [""])[0]
+        if not query and parsed.path.startswith("/w/"):
+            query = unquote(parsed.path.removeprefix("/w/"))
+        return make_info_url(query or "나무위키")
+
+    return url
 
 
 NEWS_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
@@ -2187,11 +2203,9 @@ if st.session_state.view == 'main':
                                     st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                                     st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
 
-                                    spacer_col, info_col, add_col = st.columns([6, 2, 2], gap="small")
+                                    spacer_col, add_col = st.columns([8, 2], gap="small")
                                     with spacer_col:
                                         st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
-                                    with info_col:
-                                        render_info_link(f"https://namu.wiki/Go?q={quote_plus(title)}")
                                     with add_col:
                                         if title in st.session_state.my_anime_list:
                                             st.button("완료", key=f"add_new_tab_{tv_id}", disabled=True)
@@ -2274,7 +2288,7 @@ elif st.session_state.view == 'detail':
             else:
                 watched_text = "기록 없음"
 
-            meta_col, info_col, drop_col, delete_col = st.columns([5, 1, 1, 1], gap="small", vertical_alignment="center")
+            meta_col, drop_col, delete_col = st.columns([6, 1, 1], gap="small", vertical_alignment="center")
             with meta_col:
                 st.markdown("<span class='detail-actions-anchor'></span>", unsafe_allow_html=True)
                 st.markdown(
@@ -2286,8 +2300,6 @@ elif st.session_state.view == 'detail':
                     """,
                     unsafe_allow_html=True
                 )
-            with info_col:
-                render_info_link(anime_info.get('namu_link', '#'))
             with drop_col:
                 drop_label = "복귀" if is_dropped(anime_info) else "하차"
                 if st.button(drop_label, key=f"drop_detail_{get_anime_uid(anime_title, anime_info)}"):
@@ -2353,15 +2365,13 @@ elif st.session_state.view == 'detail':
                                 watched_movie = st.session_state.watched_db.get(movie_watch_key, False)
                                 toggle_label = "완료" if watched_movie else "시청"
                                 watch_state_class = "movie-watch-done" if watched_movie else "movie-watch-pending"
-                                spacer_col, watch_col, info_col = st.columns([6, 2, 2], gap="small")
+                                spacer_col, watch_col = st.columns([8, 2], gap="small")
                                 with spacer_col:
                                     st.markdown(f"<span class='movie-actions-anchor {watch_state_class}'></span>", unsafe_allow_html=True)
                                 with watch_col:
                                     if st.button(toggle_label, key=f"movie_watch_{movie_watch_key}"):
                                         toggle_movie_watch(anime_title, movie)
                                         st.rerun()
-                                with info_col:
-                                    render_info_link(movie.get("namu_link", "#"))
 
         else:
             season_idx = st.session_state.selected_season
@@ -2464,11 +2474,9 @@ elif st.session_state.view == 'new_animes':
                         st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
                         
-                        spacer_col, info_col, add_col = st.columns([6, 2, 2], gap="small")
+                        spacer_col, add_col = st.columns([8, 2], gap="small")
                         with spacer_col:
                             st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
-                        with info_col:
-                            render_info_link(f"https://namu.wiki/Go?q={quote_plus(title)}")
                         with add_col:
                             if title in st.session_state.my_anime_list:
                                 st.button("완료", key=f"add_new_view_{tv_id}", disabled=True)
