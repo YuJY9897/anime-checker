@@ -1875,7 +1875,7 @@ elif st.session_state.view == 'detail':
                 })
             watch_items.sort(key=lambda item: (item["sort_date"], 0 if item["type"] == "season" else 1))
 
-            cols_per_row = 2
+            cols_per_row = 1
             for start_idx in range(0, len(watch_items), cols_per_row):
                 cols = st.columns(cols_per_row)
                 for offset, item in enumerate(watch_items[start_idx:start_idx + cols_per_row]):
