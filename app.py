@@ -74,7 +74,7 @@ st.markdown("""
         visibility: hidden !important;
         pointer-events: none !important;
     }
-    div.block-container { padding-top: 0.5rem !important; padding-bottom: 0.75rem !important; }
+    div.block-container { padding-top: 0.5rem !important; padding-bottom: 4.25rem !important; }
     div[data-testid="stVerticalBlock"] { gap: 0.45rem !important; }
     div[data-testid="stHorizontalBlock"] { gap: 0.4rem !important; }
     div[data-testid="stVerticalBlockBorderWrapper"] { padding: 0.45rem !important; }
@@ -293,9 +293,11 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.25);
     }
     .scroll-top-btn:hover { background: #111827; color: white !important; }
+    .bottom-safe-space { height: 3.25rem; }
     @media (max-width: 640px) {
         .scroll-top-btn { right: 12px; bottom: 12px; width: 44px; min-width: 44px; padding: 0; }
         .scroll-top-btn span { display: none; }
+        .bottom-safe-space { height: 4.5rem; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -1864,7 +1866,7 @@ if st.session_state.view == 'main':
             if not sorted_all_animes:
                 st.write("신작 애니 정보를 불러오지 못했습니다.")
             else:
-                cols_per_row = 2
+                cols_per_row = 1
                 rows = (len(sorted_all_animes) + cols_per_row - 1) // cols_per_row
                 for r in range(rows):
                     cols = st.columns(cols_per_row)
@@ -2139,7 +2141,7 @@ elif st.session_state.view == 'new_animes':
     
     sorted_all_animes.sort(key=get_safe_date, reverse=True)
     
-    cols_per_row = 2
+    cols_per_row = 1
     rows = (len(sorted_all_animes) + cols_per_row - 1) // cols_per_row
     for r in range(rows):
         cols = st.columns(cols_per_row)
@@ -2228,4 +2230,6 @@ elif st.session_state.view == 'news_detail':
         st.write("")
         st.markdown(f"<div style='line-height: 1.8; font-size: 1.1em;'>{news.get('full_content', news['content'])}</div>", unsafe_allow_html=True)
         st.divider()
+
+st.markdown("<div class='bottom-safe-space'></div>", unsafe_allow_html=True)
 
