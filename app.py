@@ -1,4 +1,5 @@
 ﻿import json
+import base64
 import html
 import re
 import xml.etree.ElementTree as ET
@@ -200,6 +201,113 @@ def normalize_episode_title(raw_title, season_num, episode_num):
     return title
 
 
+SEASON_SPLIT_RULES = [
+    {
+        "keywords": ["주술회전", "呪術廻戦", "jujutsu kaisen"],
+        "ranges": [
+            {"s_num": 1, "start": 1, "end": 24, "name": "1기", "subtitle": ""},
+            {"s_num": 2, "start": 25, "end": 47, "name": "2기", "subtitle": "회옥·옥절 / 시부야 사변"},
+            {"s_num": 3, "start": 48, "end": 999, "name": "3기", "subtitle": "사멸회유"},
+        ],
+    }
+]
+
+
+def get_default_split_ranges(title):
+    title_lower = (title or "").lower()
+    for rule in SEASON_SPLIT_RULES:
+        if any(keyword.lower() in title_lower for keyword in rule["keywords"]):
+            return rule["ranges"]
+    return []
+
+
+def build_watch_key_from_uid(anime_uid, season_num, ep_idx):
+    return f"chk_{anime_uid}_s{season_num}_e{ep_idx}"
+
+
+def split_continuous_season(source_season, ranges):
+    source_episodes = source_season.get("episodes", [])
+    source_img = source_season.get("img")
+    split_seasons = []
+    mapping = []
+
+    for range_info in ranges:
+        season_num = range_info["s_num"]
+        start_ep = range_info["start"]
+        end_ep = range_info["end"]
+        selected = []
+
+        for absolute_ep_idx, ep in enumerate(source_episodes, 1):
+            if start_ep <= absolute_ep_idx <= end_ep:
+                local_ep_idx = absolute_ep_idx - start_ep + 1
+                new_ep = dict(ep)
+                new_ep["absolute_ep_num"] = absolute_ep_idx
+                new_ep["ep_num"] = local_ep_idx
+                new_ep["title"] = normalize_episode_title(new_ep.get("title", ""), season_num, local_ep_idx)
+                selected.append(new_ep)
+                mapping.append({
+                    "old_season_num": source_season.get("s_num", 1),
+                    "old_season_name": source_season.get("name", "1기"),
+                    "old_ep_idx": absolute_ep_idx,
+                    "new_season_num": season_num,
+                    "new_ep_idx": local_ep_idx,
+                })
+
+        if selected:
+            split_seasons.append({
+                "s_num": season_num,
+                "name": range_info.get("name") or f"{season_num}기",
+                "subtitle": range_info.get("subtitle", ""),
+                "img": source_img,
+                "episodes": selected,
+            })
+
+    return split_seasons, mapping
+
+
+def migrate_split_watched_keys(title, info, mapping):
+    anime_uid = str(info.get("tmdb_id") or info.get("id") or title)
+    for item in mapping:
+        old_candidates = [
+            build_watch_key_from_uid(anime_uid, item["old_season_num"], item["old_ep_idx"]),
+            f"chk_{title}_{item['old_season_name']}_{item['old_ep_idx']}",
+        ]
+        if any(st.session_state.watched_db.get(key, False) for key in old_candidates):
+            new_key = build_watch_key_from_uid(anime_uid, item["new_season_num"], item["new_ep_idx"])
+            st.session_state.watched_db[new_key] = True
+
+
+def split_anime_info(title, info, ranges, migrate_watched=False):
+    seasons = info.get("seasons", [])
+    if len(seasons) != 1:
+        return False
+
+    source_episode_count = len(seasons[0].get("episodes", []))
+    if source_episode_count < 2:
+        return False
+
+    split_seasons, mapping = split_continuous_season(seasons[0], ranges)
+    if len(split_seasons) <= 1:
+        return False
+
+    covered_count = sum(len(season.get("episodes", [])) for season in split_seasons)
+    if covered_count < source_episode_count:
+        return False
+
+    if migrate_watched:
+        migrate_split_watched_keys(title, info, mapping)
+    info["seasons"] = split_seasons
+    info["season_split_applied"] = True
+    return True
+
+
+def apply_season_split_rules(title, info):
+    ranges = get_default_split_ranges(title)
+    if ranges:
+        split_anime_info(title, info, ranges, migrate_watched=False)
+    return info
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def search_anime_api(query):
     if not TMDB_API_KEY:
@@ -294,7 +402,7 @@ def get_anime_details_api(tv_id, title):
             "episodes": episodes
         })
 
-    return {
+    anime_info = {
         "tmdb_id": tv_id,
         "title": title,
         "day": day_en,
@@ -304,6 +412,7 @@ def get_anime_details_api(tv_id, title):
         "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
         "seasons": seasons_data
     }
+    return apply_season_split_rules(title, anime_info)
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -377,6 +486,11 @@ for title, info in st.session_state.my_anime_list.items():
             info['day'] = "Ended"
             info['display_status'] = "방영 종료"
 
+    split_ranges = get_default_split_ranges(title)
+    if split_ranges and len(info.get('seasons', [])) == 1:
+        if split_anime_info(title, info, split_ranges, migrate_watched=True):
+            existing_data_changed = True
+
     for idx, season in enumerate(info.get('seasons', [])):
         season_num = season.get('s_num') or idx + 1
         old_name = season.get('name', '')
@@ -410,7 +524,7 @@ def make_watch_key(title, season, ep_idx):
     info = st.session_state.my_anime_list.get(title, {})
     anime_uid = get_anime_uid(title, info)
     season_num = season.get("s_num") or season.get("name", "season")
-    return f"chk_{anime_uid}_s{season_num}_e{ep_idx}"
+    return build_watch_key_from_uid(anime_uid, season_num, ep_idx)
 
 
 def get_watch_value(title, season, ep_idx):
@@ -476,12 +590,11 @@ def add_direct_and_clear(tv_id, title):
 
 
 NEWS_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
-NEWS_SEARCH_QUERY = '애니메이션 (방영 예정 OR 방영일 OR 공개일 OR 신작 OR 시즌 OR 극장판 개봉 OR PV 공개)'
+NEWS_SEARCH_QUERY = '애니 방영 예정 OR 신작 애니 OR 애니메이션 공개일 OR 애니메이션 방영일 OR 극장판 개봉 OR 애니 시즌 발표'
 NEWS_SCHEDULE_KEYWORDS = [
     "방영", "방송", "공개", "공개일", "방영일", "방송일", "예정", "확정", "신작", "시즌",
-    "극장판", "개봉", "티저", "PV", "예고편", "캐스트", "제작 결정", "premiere", "airs",
-    "airing", "stream", "debut", "release date", "season", "trailer", "anime reveals",
-    "放送", "配信", "公開", "新作", "第", "期", "劇場版", "予告", "制作決定", "キャスト"
+    "극장판", "개봉", "티저", "PV", "예고편", "캐스트", "제작 결정", "넷플릭스",
+    "라프텔", "애니플러스", "애니맥스", "티빙", "왓챠", "OTT"
 ]
 NEWS_EXCLUDE_KEYWORDS = [
     "리뷰", "후기", "칼럼", "순위", "랭킹", "굿즈", "피규어", "게임", "할인", "이벤트",
@@ -494,16 +607,16 @@ NEWS_BLOCKED_IMAGE_DOMAINS = (
 NEWS_BLOCKED_LINK_DOMAINS = ("news.google.com", "news.google.co.kr", "www.google.com", "google.com", "google.co.kr")
 NEWS_FEEDS = [
     {
-        "name": "AnimeAnime",
-        "url": "https://animeanime.jp/rss/index.rdf",
+        "name": "Google 뉴스 한국",
+        "url": f"https://news.google.com/rss/search?q={quote_plus(NEWS_SEARCH_QUERY)}&hl=ko&gl=KR&ceid=KR:ko",
     },
     {
-        "name": "Comic Natalie",
-        "url": "https://natalie.mu/comic/feed/news",
+        "name": "Google 뉴스 한국 - 라프텔",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('라프텔 신작 애니 OR 라프텔 방영 예정 OR 애니플러스 신작')}&hl=ko&gl=KR&ceid=KR:ko",
     },
     {
-        "name": "Anime News Network",
-        "url": "https://www.animenewsnetwork.com/all/rss.xml?ann-edition=us",
+        "name": "Google 뉴스 한국 - 극장판",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('애니 극장판 개봉 OR 애니메이션 극장판 개봉 OR 애니 영화 개봉')}&hl=ko&gl=KR&ceid=KR:ko",
     },
 ]
 
@@ -547,7 +660,16 @@ def is_schedule_news(item):
     text = f"{item.get('title', '')} {item.get('content', '')}".lower()
     has_schedule_keyword = any(keyword.lower() in text for keyword in NEWS_SCHEDULE_KEYWORDS)
     has_excluded_keyword = any(keyword.lower() in text for keyword in NEWS_EXCLUDE_KEYWORDS)
-    return has_schedule_keyword and not has_excluded_keyword
+    return is_korean_news(item) and has_schedule_keyword and not has_excluded_keyword
+
+
+def is_korean_news(item):
+    text = f"{item.get('title', '')} {item.get('content', '')} {item.get('full_content', '')}"
+    hangul_count = len(re.findall(r"[가-힣]", text))
+    letter_count = len(re.findall(r"[A-Za-z가-힣]", text))
+    if hangul_count < 8:
+        return False
+    return not letter_count or (hangul_count / letter_count) >= 0.35
 
 
 def get_domain(url):
@@ -588,6 +710,33 @@ def get_url_from_query(link):
     return ""
 
 
+def decode_google_news_url(link):
+    try:
+        parsed = urlparse(link)
+    except ValueError:
+        return ""
+    if not parsed.netloc.endswith("news.google.com") or "/articles/" not in parsed.path:
+        return ""
+
+    encoded_text = parsed.path.rsplit("/", 1)[-1]
+    if not encoded_text:
+        return ""
+
+    try:
+        padded = encoded_text + ("=" * (-len(encoded_text) % 4))
+        decoded = base64.urlsafe_b64decode(padded)
+    except (ValueError, TypeError):
+        return ""
+
+    match = re.search(rb"https?://[^\x00-\x20\"'<>\\]+", decoded)
+    if not match:
+        return ""
+    candidate = normalize_candidate_url(match.group(0).decode("utf-8", errors="ignore"))
+    if candidate and not is_blocked_domain(candidate, NEWS_BLOCKED_LINK_DOMAINS):
+        return candidate
+    return ""
+
+
 def extract_original_link_from_html(page_html, base_url):
     patterns = [
         r'data-n-au=["\']([^"\']+)',
@@ -604,6 +753,10 @@ def extract_original_link_from_html(page_html, base_url):
 
 
 def resolve_original_article_link(link, description, headers):
+    decoded_google_url = decode_google_news_url(link)
+    if decoded_google_url:
+        return decoded_google_url
+
     query_url = get_url_from_query(link)
     if query_url:
         return query_url
@@ -740,8 +893,6 @@ def parse_rss_feed(xml_bytes, feed_name):
 
         if not title or not link:
             continue
-        if is_blocked_domain(link, NEWS_BLOCKED_LINK_DOMAINS):
-            continue
 
         content = summary[:90] + "..." if len(summary) > 90 else summary
         rss_image = extract_rss_image(item, description_raw)
@@ -758,6 +909,7 @@ def parse_rss_feed(xml_bytes, feed_name):
             "source": source,
             "link": link,
             "_summary": summary,
+            "_description_raw": description_raw,
         })
     return items
 
@@ -788,15 +940,21 @@ def get_anime_news(max_items=12):
 
     deduped.sort(key=lambda item: item.get("sort_date", ""), reverse=True)
     deduped = deduped[:max_items]
+
+    enriched = []
     for item in deduped:
-        article_link = item.get("link", "")
+        description_raw = item.pop("_description_raw", "")
+        article_link = resolve_original_article_link(item.get("link", ""), description_raw, headers)
+        if is_blocked_domain(article_link, NEWS_BLOCKED_LINK_DOMAINS):
+            continue
         summary = item.pop("_summary", "")
         item["full_content"] = summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요."
         item["link"] = article_link
         if not is_usable_news_image(item.get("img", "")):
             item["img"] = get_article_image(article_link, headers) or NEWS_FALLBACK_IMAGE
-    if deduped:
-        return deduped
+        enriched.append(item)
+    if enriched:
+        return enriched
 
     return [{
         "title": "방영 예정 소식을 불러오지 못했습니다",
@@ -883,19 +1041,9 @@ if st.session_state.view == 'main':
                     needs_n_badge = False
                     latest_aired_ep = None
                     latest_aired_date = "0000.00.00"
-                    last_watched_ep = None
-                    total_episode_count = 0
-                    watched_episode_count = 0
 
                     for season in info.get('seasons', []):
                         for i, ep in enumerate(season.get('episodes', []), 1):
-                            total_episode_count += 1
-                            if get_watch_value(title, season, i):
-                                watched_episode_count += 1
-                                last_watched_ep = {
-                                    'season_name': season['name'],
-                                    'ep_num': i
-                                }
                             if ep['date'] <= current_date_str:
                                 latest_aired_ep = {
                                     'season': season,
@@ -914,9 +1062,6 @@ if st.session_state.view == 'main':
                         'needs_n_badge': needs_n_badge,
                         'latest_aired_ep': latest_aired_ep,
                         'latest_aired_date': latest_aired_date,
-                        'last_watched_ep': last_watched_ep,
-                        'total_episode_count': total_episode_count,
-                        'watched_episode_count': watched_episode_count,
                     })
 
                 library_cards.sort(key=lambda item: (not item['needs_n_badge'], item['latest_aired_date']), reverse=False)
@@ -951,27 +1096,6 @@ if st.session_state.view == 'main':
                                             st.session_state.view = 'detail'
                                             st.rerun()
 
-                                    status = info.get('display_status', '정보 없음')
-                                    st.caption(status)
-
-                                    if card['last_watched_ep']:
-                                        watched_text = f"최근: {card['last_watched_ep']['season_name']} {card['last_watched_ep']['ep_num']}화"
-                                    else:
-                                        watched_text = "최근: 기록 없음"
-                                    st.caption(watched_text)
-
-                                    if card['latest_aired_ep']:
-                                        latest_text = f"최신: {card['latest_aired_ep']['season_name']} {card['latest_aired_ep']['ep_num']}화"
-                                    else:
-                                        latest_text = "최신: 방영 정보 없음"
-                                    st.caption(latest_text)
-
-                                    if card['total_episode_count']:
-                                        progress_value = card['watched_episode_count'] / card['total_episode_count']
-                                        st.progress(progress_value, text=f"{card['watched_episode_count']} / {card['total_episode_count']}화")
-                                    else:
-                                        st.caption("에피소드 정보 없음")
-
             st.write("")
             st.divider()
 
@@ -1004,11 +1128,12 @@ if st.session_state.view == 'main':
             if not sorted_all_animes:
                 st.write("신작 애니 정보를 불러오지 못했습니다.")
             else:
-                rows = (len(sorted_all_animes) + 2) // 3
+                cols_per_row = 2
+                rows = (len(sorted_all_animes) + cols_per_row - 1) // cols_per_row
                 for r in range(rows):
-                    cols = st.columns(3)
-                    for c in range(3):
-                        idx = r * 3 + c
+                    cols = st.columns(cols_per_row)
+                    for c in range(cols_per_row):
+                        idx = r * cols_per_row + c
                         if idx < len(sorted_all_animes):
                             item = sorted_all_animes[idx]
                             title = item['name']
@@ -1026,14 +1151,14 @@ if st.session_state.view == 'main':
                                     st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                                     st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
 
-                                    btn_c1, btn_c2 = st.columns(2)
+                                    btn_c1, btn_c2 = st.columns(2, gap="small")
                                     with btn_c1:
                                         st.link_button("정보", f"https://namu.wiki/Go?q={title}")
                                     with btn_c2:
                                         if title in st.session_state.my_anime_list:
-                                            st.button("추가 완료", key=f"add_new_tab_{tv_id}", disabled=True)
+                                            st.button("완료", key=f"add_new_tab_{tv_id}", disabled=True)
                                         else:
-                                            if st.button("목록 추가", key=f"add_new_tab_{tv_id}"):
+                                            if st.button("추가", key=f"add_new_tab_{tv_id}"):
                                                 add_anime_to_list(tv_id, title)
                                                 st.rerun()
 
@@ -1195,11 +1320,12 @@ elif st.session_state.view == 'new_animes':
     
     sorted_all_animes.sort(key=get_safe_date, reverse=True)
     
-    rows = (len(sorted_all_animes) + 2) // 3
+    cols_per_row = 2
+    rows = (len(sorted_all_animes) + cols_per_row - 1) // cols_per_row
     for r in range(rows):
-        cols = st.columns(3)
-        for c in range(3):
-            idx = r * 3 + c
+        cols = st.columns(cols_per_row)
+        for c in range(cols_per_row):
+            idx = r * cols_per_row + c
             if idx < len(sorted_all_animes):
                 item = sorted_all_animes[idx]
                 title = item['name']
@@ -1218,14 +1344,14 @@ elif st.session_state.view == 'new_animes':
                         st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
                         
-                        btn_c1, btn_c2 = st.columns(2)
+                        btn_c1, btn_c2 = st.columns(2, gap="small")
                         with btn_c1:
                             st.link_button("정보", f"https://namu.wiki/Go?q={title}")
                         with btn_c2:
                             if title in st.session_state.my_anime_list:
-                                st.button("추가 완료", key=f"add_new_view_{tv_id}", disabled=True)
+                                st.button("완료", key=f"add_new_view_{tv_id}", disabled=True)
                             else:
-                                if st.button("목록 추가", key=f"add_new_view_{tv_id}"):
+                                if st.button("추가", key=f"add_new_view_{tv_id}"):
                                     add_anime_to_list(tv_id, title)
                                     st.rerun()
 
