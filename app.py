@@ -308,7 +308,8 @@ components.html(
     (function () {
         const appWindow = window.parent;
         const appDocument = appWindow.document;
-        const guardKey = "__animeCheckerBackGuardInstalled";
+        const handlerVersion = 4;
+        const guardKey = "__animeCheckerBackGuardInstalledV4";
         const lastBackKey = "__animeCheckerLastBackAt";
         const suppressExitUntilKey = "__animeCheckerSuppressExitUntil";
         const delayMs = 1800;
@@ -317,6 +318,7 @@ components.html(
             return;
         }
         appWindow[guardKey] = true;
+        appWindow.__animeCheckerBackHandlerVersion = handlerVersion;
         appWindow[lastBackKey] = 0;
         appWindow[suppressExitUntilKey] = 0;
 
@@ -363,6 +365,9 @@ components.html(
         }
 
         function getCurrentAppState() {
+            if (appWindow.__animeCheckerCurrentView) {
+                return appWindow.__animeCheckerCurrentView;
+            }
             const marker = appDocument.getElementById("anime-current-view");
             if (!marker) {
                 return { view: "unknown", selectedSeason: "unknown" };
@@ -379,7 +384,8 @@ components.html(
             return buttons.find(function (button) {
                 const text = (button.textContent || "").trim();
                 const rect = button.getBoundingClientRect();
-                return labels.includes(text) && rect.width > 0 && rect.height > 0 && !button.disabled;
+                return labels.some(function (label) { return text.includes(label); }) &&
+                    rect.width > 0 && rect.height > 0 && !button.disabled;
             });
         }
 
@@ -390,6 +396,12 @@ components.html(
             }
             backButton.click();
             return true;
+        }
+
+        function requestAppBack(target) {
+            const url = new URL(appWindow.location.href);
+            url.searchParams.set("app_back", target || "main");
+            appWindow.location.href = url.toString();
         }
 
         function isMainLibraryTabSelected() {
@@ -414,17 +426,33 @@ components.html(
 
         appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
         appWindow.addEventListener("popstate", function () {
+            if (appWindow.__animeCheckerBackHandlerVersion !== handlerVersion) {
+                return;
+            }
+
             const state = getCurrentAppState();
 
             if (state.view !== "main") {
                 if (clickVisibleAppBackButton()) {
                     appWindow[lastBackKey] = 0;
                     appWindow[suppressExitUntilKey] = Date.now() + delayMs + 1200;
+                    if (state.view === "detail" && state.selectedSeason !== "selected") {
+                        appWindow.setTimeout(function () {
+                            const latestState = getCurrentAppState();
+                            if (latestState.view === "detail" && latestState.selectedSeason !== "selected") {
+                                requestAppBack("main");
+                            }
+                        }, 650);
+                    }
                     appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
                     return;
                 }
                 appWindow[lastBackKey] = 0;
                 appWindow[suppressExitUntilKey] = Date.now() + delayMs + 1200;
+                if (state.view === "detail" && state.selectedSeason !== "selected") {
+                    requestAppBack("main");
+                    return;
+                }
                 appWindow.setTimeout(function () {
                     clickVisibleAppBackButton();
                 }, 120);
@@ -974,6 +1002,8 @@ if 'selected_season' not in st.session_state: st.session_state.selected_season =
 if 'is_editing' not in st.session_state: st.session_state.is_editing = False
 if 'selected_news' not in st.session_state: st.session_state.selected_news = None
 if 'search_box' not in st.session_state: st.session_state.search_box = "" 
+if 'library_filter' not in st.session_state: st.session_state.library_filter = ""
+if 'show_library_search' not in st.session_state: st.session_state.show_library_search = False
 if 'news_return_view' not in st.session_state: st.session_state.news_return_view = 'main'
 
 if 'data_loaded' not in st.session_state:
@@ -986,6 +1016,18 @@ if 'watched_db' not in st.session_state:
     st.session_state.watched_db = {}
 if 'my_anime_list' not in st.session_state:
     st.session_state.my_anime_list = {}
+
+app_back_target = st.query_params.get("app_back")
+if app_back_target:
+    st.query_params.clear()
+    if app_back_target == "season_list" and st.session_state.view == "detail":
+        st.session_state.selected_season = None
+    else:
+        st.session_state.selected_anime = None
+        st.session_state.selected_season = None
+        st.session_state.selected_news = None
+        st.session_state.view = "main"
+    st.rerun()
 
 # --- 과거 데이터 마이그레이션 (자가 치유 로직) ---
 current_date_str = datetime.now().strftime('%Y.%m.%d')
@@ -1161,6 +1203,11 @@ def on_checkbox_change(a_title, clicked_s_idx, clicked_ep_idx, w_key):
 
 def clear_search():
     st.session_state.search_box = ""
+
+def toggle_library_search():
+    st.session_state.show_library_search = not st.session_state.show_library_search
+    if not st.session_state.show_library_search:
+        st.session_state.library_filter = ""
 
 def add_direct_and_clear(tv_id, title):
     add_anime_to_list(tv_id, title)
@@ -1653,6 +1700,17 @@ st.markdown(
     f"data-selected-season='{selected_season_marker}' style='display:none;'></div>",
     unsafe_allow_html=True,
 )
+components.html(
+    f"""
+    <script>
+    window.parent.__animeCheckerCurrentView = {json.dumps({
+        "view": st.session_state.get("view", "main"),
+        "selectedSeason": selected_season_marker,
+    }, ensure_ascii=False)};
+    </script>
+    """,
+    height=0,
+)
 
 # --- 화면 1: 메인 화면 ---
 if st.session_state.view == 'main':
@@ -1698,17 +1756,24 @@ if st.session_state.view == 'main':
         with library_tab:
             current_date_str = datetime.now().strftime('%Y.%m.%d')
             st.session_state.is_editing = False
-            st.subheader("내 시청 목록")
+            title_col, search_btn_col = st.columns([7, 2], gap="small", vertical_alignment="center")
+            with title_col:
+                st.subheader("내 시청 목록")
+            with search_btn_col:
+                search_btn_label = "닫기" if st.session_state.show_library_search else "검색"
+                st.button(search_btn_label, key="toggle_library_search_btn", on_click=toggle_library_search, use_container_width=True)
 
             if not st.session_state.my_anime_list:
                 st.write("아직 추가한 애니가 없습니다. 위 검색창에서 작품을 추가해보세요.")
             else:
-                library_filter = st.text_input(
-                    "내 목록 검색",
-                    key="library_filter",
-                    placeholder="내 보관함에서 제목 검색",
-                    label_visibility="collapsed"
-                ).strip().lower()
+                library_filter = ""
+                if st.session_state.show_library_search:
+                    library_filter = st.text_input(
+                        "내 목록 검색",
+                        key="library_filter",
+                        placeholder="제목 검색",
+                        label_visibility="collapsed"
+                    ).strip().lower()
 
                 library_cards = []
                 for title, info in list(st.session_state.my_anime_list.items()):
