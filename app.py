@@ -139,8 +139,24 @@ st.markdown("""
         text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
     }
     .detail-action-btn.danger { color: #b91c1c !important; }
-    div[data-testid="stCheckbox"] { display: flex !important; justify-content: flex-end !important; }
-    div[data-testid="stCheckbox"] label { justify-content: flex-end !important; }
+    .movie-action-row {
+        display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px;
+    }
+    .movie-action-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 44px; height: 30px; padding: 0 9px; border-radius: 9px;
+        background: #f0f2f6; border: 1px solid #d1d5db; color: #31333F !important;
+        text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
+    }
+    .movie-action-btn.done { color: #047857 !important; border-color: #6ee7b7; background: #ecfdf5; }
+    div[data-testid="stCheckbox"] {
+        width: 100% !important; display: flex !important; justify-content: flex-end !important;
+    }
+    div[data-testid="stCheckbox"] label,
+    div[data-testid="stCheckbox"] [data-baseweb="checkbox"] {
+        margin-left: auto !important; margin-right: 0 !important;
+    }
+    div[data-testid="stCheckbox"] [data-testid="stWidgetLabel"] { display: none !important; }
     html { scroll-behavior: smooth; }
     .scroll-top-btn {
         position: fixed; right: 18px; bottom: 18px; z-index: 999999;
@@ -1666,6 +1682,20 @@ elif st.session_state.view == 'detail':
         st.session_state.view = 'main'
         st.rerun()
 
+    toggle_movie_id = st.query_params.get("toggle_movie")
+    if anime_info and toggle_movie_id:
+        target_movie = next(
+            (
+                movie for movie in anime_info.get("related_movies", [])
+                if str(movie.get("id") or compact_title(movie.get("title", "movie"))) == str(toggle_movie_id)
+            ),
+            None
+        )
+        if target_movie:
+            toggle_movie_watch(anime_title, target_movie)
+        st.query_params.clear()
+        st.rerun()
+    
     if st.button("뒤로가기", key="back_from_detail"):
         if st.session_state.selected_season is not None:
             st.session_state.selected_season = None
@@ -1772,14 +1802,18 @@ elif st.session_state.view == 'detail':
                                 st.caption(f"극장판 · {movie.get('release_date', '정보 없음')} · {format_runtime(movie.get('runtime'))}")
                                 movie_watch_key = make_movie_watch_key(anime_title, movie)
                                 watched_movie = st.session_state.watched_db.get(movie_watch_key, False)
-                                movie_check_col, movie_info_col = st.columns([5, 5], gap="small")
-                                with movie_check_col:
-                                    toggle_label = "시청완료" if watched_movie else "시청"
-                                    if st.button(toggle_label, key=f"movie_watch_{movie_watch_key}", use_container_width=True):
-                                        toggle_movie_watch(anime_title, movie)
-                                        st.rerun()
-                                with movie_info_col:
-                                    st.link_button("정보", movie.get("namu_link", "#"), use_container_width=True)
+                                movie_uid = movie.get("id") or compact_title(movie.get("title", "movie"))
+                                toggle_label = "시청완료" if watched_movie else "시청"
+                                done_class = " done" if watched_movie else ""
+                                st.markdown(
+                                    f"""
+                                    <div class="movie-action-row">
+                                        <a class="movie-action-btn{done_class}" href="?toggle_movie={quote_plus(str(movie_uid))}">{toggle_label}</a>
+                                        <a class="movie-action-btn" href="{html.escape(movie.get('namu_link', '#'))}" target="_blank" rel="noopener noreferrer">정보</a>
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True
+                                )
 
         else:
             season_idx = st.session_state.selected_season
@@ -1800,7 +1834,7 @@ elif st.session_state.view == 'detail':
                     latest_ep_idx = j
 
             for i, ep in enumerate(season.get('episodes', []), 1):
-                c1, c2, c3 = st.columns([6, 3, 1])
+                c1, c2, c3 = st.columns([6.2, 2.6, 0.7], gap="small")
                 
                 db_key = make_watch_key(anime_title, season, i)
                 widget_key = f"widget_{db_key}"
