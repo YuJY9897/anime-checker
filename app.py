@@ -195,11 +195,26 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:nth-child(3) {
         flex: 0 0 58px !important; width: 58px !important; min-width: 58px !important;
     }
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:nth-child(2),
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:nth-child(3) {
+        display: flex !important; align-items: center !important; justify-content: flex-end !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stButton"],
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stLinkButton"],
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) .stLinkButton {
+        margin: 0 !important;
+    }
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) .stLinkButton > a {
         width: auto !important; max-width: 58px !important; min-width: 42px !important;
         height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
         font-size: 0.78rem !important; justify-content: center !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.movie-watch-done) > div:nth-child(2) [data-testid="stButton"] button {
+        color: #047857 !important; border-color: #6ee7b7 !important; background: #ecfdf5 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.movie-watch-pending) > div:nth-child(2) [data-testid="stButton"] button {
+        color: #374151 !important; border-color: #d1d5db !important; background: #f3f4f6 !important;
     }
     .new-anime-actions-anchor { display: none; }
     div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) {
@@ -1914,11 +1929,11 @@ elif st.session_state.view == 'detail':
                                 movie_watch_key = make_movie_watch_key(anime_title, movie)
                                 watched_movie = st.session_state.watched_db.get(movie_watch_key, False)
                                 toggle_label = "완료" if watched_movie else "시청"
+                                watch_state_class = "movie-watch-done" if watched_movie else "movie-watch-pending"
                                 spacer_col, watch_col, info_col = st.columns([6, 2, 2], gap="small")
                                 with spacer_col:
-                                    st.markdown("<span class='movie-actions-anchor'></span>", unsafe_allow_html=True)
+                                    st.markdown(f"<span class='movie-actions-anchor {watch_state_class}'></span>", unsafe_allow_html=True)
                                 with watch_col:
-                                    st.markdown(f"<span class='{'watch-done' if watched_movie else 'watch-pending'}'></span>", unsafe_allow_html=True)
                                     if st.button(toggle_label, key=f"movie_watch_{movie_watch_key}"):
                                         toggle_movie_watch(anime_title, movie)
                                         st.rerun()
