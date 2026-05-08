@@ -139,14 +139,8 @@ st.markdown("""
         text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
     }
     .detail-action-btn.danger { color: #b91c1c !important; }
-    .clickable-season-image {
-        display: block; width: 100%; height: 140px; border-radius: 8px; overflow: hidden;
-        margin-bottom: 5px; cursor: pointer; background: #f3f4f6;
-    }
-    .clickable-season-image img {
-        width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.12s ease;
-    }
-    .clickable-season-image:hover img { transform: scale(1.02); }
+    div[data-testid="stCheckbox"] { display: flex !important; justify-content: flex-end !important; }
+    div[data-testid="stCheckbox"] label { justify-content: flex-end !important; }
     html { scroll-behavior: smooth; }
     .scroll-top-btn {
         position: fixed; right: 18px; bottom: 18px; z-index: 999999;
@@ -939,6 +933,12 @@ def on_movie_checkbox_change(a_title, movie, w_key):
     save_app_data()
 
 
+def toggle_movie_watch(a_title, movie):
+    db_key = make_movie_watch_key(a_title, movie)
+    st.session_state.watched_db[db_key] = not st.session_state.watched_db.get(db_key, False)
+    save_app_data()
+
+
 def on_checkbox_change(a_title, clicked_s_idx, clicked_ep_idx, w_key):
     is_checked = st.session_state[w_key]
     anime_info = st.session_state.my_anime_list[a_title]
@@ -1666,16 +1666,6 @@ elif st.session_state.view == 'detail':
         st.session_state.view = 'main'
         st.rerun()
 
-    if st.query_params.get("season_idx") is not None:
-        try:
-            season_idx_from_query = int(st.query_params.get("season_idx"))
-        except (TypeError, ValueError):
-            season_idx_from_query = None
-        if anime_info and season_idx_from_query is not None and 0 <= season_idx_from_query < len(anime_info.get("seasons", [])):
-            st.query_params.clear()
-            st.session_state.selected_season = season_idx_from_query
-            st.rerun()
-    
     if st.button("뒤로가기", key="back_from_detail"):
         if st.session_state.selected_season is not None:
             st.session_state.selected_season = None
@@ -1758,14 +1748,7 @@ elif st.session_state.view == 'detail':
                         if item["type"] == "season":
                             season = item["season"]
                             with st.container(border=True):
-                                st.markdown(
-                                    f"""
-                                    <a class="clickable-season-image" href="?season_idx={item['season_idx']}" title="시즌 보기">
-                                        <img src="{html.escape(season['img'])}" alt="{html.escape(anime_title + ' ' + season['name'])}">
-                                    </a>
-                                    """,
-                                    unsafe_allow_html=True
-                                )
+                                st.image(season['img'], use_container_width=True)
                                 st.markdown(f"**{anime_title} {season['name']}**")
                                 
                                 if season.get('subtitle'):
@@ -1773,8 +1756,14 @@ elif st.session_state.view == 'detail':
                                 else:
                                     st.caption("\u200b") 
                                 
-                                ep_count = len(season.get('episodes', []))
-                                st.markdown(f"<div style='text-align: right; color: gray; font-size: 0.9em;'>총 {ep_count}부작</div>", unsafe_allow_html=True)
+                                view_col, count_col = st.columns([5, 5], gap="small")
+                                with view_col:
+                                    if st.button("보기", key=f"sel_{item['season_idx']}", use_container_width=True):
+                                        st.session_state.selected_season = item["season_idx"]
+                                        st.rerun()
+                                with count_col:
+                                    ep_count = len(season.get('episodes', []))
+                                    st.markdown(f"<div style='line-height: 2.35em; text-align: right; color: gray; font-size: 0.9em;'>총 {ep_count}부작</div>", unsafe_allow_html=True)
                         else:
                             movie = item["movie"]
                             with st.container(border=True):
@@ -1782,17 +1771,13 @@ elif st.session_state.view == 'detail':
                                 st.markdown(f"**{movie.get('title', '제목 없음')}**")
                                 st.caption(f"극장판 · {movie.get('release_date', '정보 없음')} · {format_runtime(movie.get('runtime'))}")
                                 movie_watch_key = make_movie_watch_key(anime_title, movie)
-                                movie_widget_key = f"widget_{movie_watch_key}"
                                 watched_movie = st.session_state.watched_db.get(movie_watch_key, False)
-                                movie_check_col, movie_info_col = st.columns([4, 6], gap="small")
+                                movie_check_col, movie_info_col = st.columns([5, 5], gap="small")
                                 with movie_check_col:
-                                    st.checkbox(
-                                        "봤음",
-                                        value=watched_movie,
-                                        key=movie_widget_key,
-                                        on_change=on_movie_checkbox_change,
-                                        args=(anime_title, movie, movie_widget_key),
-                                    )
+                                    toggle_label = "시청완료" if watched_movie else "시청"
+                                    if st.button(toggle_label, key=f"movie_watch_{movie_watch_key}", use_container_width=True):
+                                        toggle_movie_watch(anime_title, movie)
+                                        st.rerun()
                                 with movie_info_col:
                                     st.link_button("정보", movie.get("namu_link", "#"), use_container_width=True)
 
@@ -1825,7 +1810,7 @@ elif st.session_state.view == 'detail':
                 
                 with c1:
                     ep_title = ep.get('title', '').strip()
-                    display_title = f"**{s_num}기 {i}화**"
+                    display_title = f"**{i}화**"
                     if ep_title:
                         display_title += f" : {ep_title}"
                     if (i - 1) == latest_ep_idx and not is_watched:
