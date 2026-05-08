@@ -444,19 +444,20 @@ components.html(
         }
 
         function isMainLibraryTabSelected() {
-            const libraryTab = getTabByText("내 보관함");
+            const libraryTab = getTabByText("새 화");
             return !!libraryTab && isTabSelected(libraryTab);
         }
 
         function returnToMainTabIfNeeded() {
-            const libraryTab = getTabByText("내 보관함");
+            const libraryTab = getTabByText("새 화");
+            const listTab = getTabByText("목록");
             const droppedTab = getTabByText("하차");
             const newAnimeTab = getTabByText("신작 애니");
             const newsTab = getTabByText("애니 소식");
             if (!libraryTab) {
                 return false;
             }
-            if (isTabSelected(droppedTab) || isTabSelected(newAnimeTab) || isTabSelected(newsTab)) {
+            if (isTabSelected(listTab) || isTabSelected(droppedTab) || isTabSelected(newAnimeTab) || isTabSelected(newsTab)) {
                 libraryTab.click();
                 appWindow.scrollTo({ top: 0, behavior: "smooth" });
                 return true;
@@ -769,6 +770,40 @@ def remove_empty_seasons(info):
     return True
 
 
+def is_generic_anime_image(image_url):
+    return not image_url or "images.unsplash.com" in image_url
+
+
+def refresh_generic_season_images(info):
+    if not TMDB_API_KEY or not info.get("tmdb_id"):
+        return False
+
+    changed = False
+    series_img = info.get("poster_img", "")
+    if is_generic_anime_image(series_img):
+        detail = tmdb_get(f"tv/{info.get('tmdb_id')}")
+        if detail.get("poster_path"):
+            series_img = f"https://image.tmdb.org/t/p/w500{detail.get('poster_path')}"
+            info["poster_img"] = series_img
+            changed = True
+
+    if is_generic_anime_image(series_img):
+        return changed
+
+    for season in info.get("seasons", []):
+        if not is_generic_anime_image(season.get("img", "")):
+            continue
+        season_num = season.get("s_num")
+        season_detail = tmdb_get(f"tv/{info.get('tmdb_id')}/season/{season_num}") if season_num else {}
+        if season_detail.get("poster_path"):
+            season["img"] = f"https://image.tmdb.org/t/p/w500{season_detail.get('poster_path')}"
+        else:
+            season["img"] = series_img
+        changed = True
+
+    return changed
+
+
 def split_continuous_season(source_season, ranges):
     source_episodes = source_season.get("episodes", [])
     source_img = source_season.get("img")
@@ -878,11 +913,60 @@ def search_anime_api(query):
             return [{"id": 99999, "name": f"{query} (API 연동 테스트)", "poster_path": "", "first_air_date": "2024-01-01", "genre_ids": [16]}]
         return []
 
-    res = tmdb_get("search/tv", {"query": query})
-    return [
-        item for item in res.get('results', [])
-        if 16 in item.get('genre_ids', []) and item.get('original_language') == 'ja'
-    ]
+    search_queries = [query]
+    compact_query = compact_title(query)
+    exact_tv_ids = []
+    if "제로" in compact_query and "이세계" in compact_query:
+        exact_tv_ids.append(65942)
+        search_queries.extend([
+            "Re:ZERO -Starting Life in Another World-",
+            "Re:ゼロから始める異世界生活",
+        ])
+
+    results = []
+    seen_ids = set()
+    for tv_id in exact_tv_ids:
+        detail = tmdb_get(f"tv/{tv_id}")
+        if not detail:
+            continue
+        seen_ids.add(tv_id)
+        results.append({
+            "id": tv_id,
+            "name": detail.get("name") or detail.get("original_name") or query,
+            "original_name": detail.get("original_name", ""),
+            "poster_path": detail.get("poster_path", ""),
+            "first_air_date": detail.get("first_air_date", ""),
+            "genre_ids": [genre.get("id") for genre in detail.get("genres", []) if genre.get("id")],
+            "original_language": detail.get("original_language", "ja"),
+            "popularity": detail.get("popularity", 0),
+        })
+
+    for search_query in dict.fromkeys(q for q in search_queries if q):
+        res = tmdb_get("search/tv", {"query": search_query})
+        for item in res.get('results', []):
+            tv_id = item.get("id")
+            if tv_id in seen_ids:
+                continue
+            if 16 not in item.get('genre_ids', []) or item.get('original_language') != 'ja':
+                continue
+            seen_ids.add(tv_id)
+            results.append(item)
+
+    def score_item(item):
+        name_text = compact_title(f"{item.get('name', '')} {item.get('original_name', '')}")
+        score = 0
+        if compact_query and compact_query in name_text:
+            score += 100
+        if "rezero" in name_text or "rezero" in compact_query:
+            score += 80
+        if "제로" in compact_query and "이세계" in compact_query and "rezero" in name_text:
+            score += 120
+        if item.get("poster_path"):
+            score += 10
+        return (score, item.get("popularity", 0), item.get("first_air_date") or "")
+
+    results.sort(key=score_item, reverse=True)
+    return results
 
 
 def compact_title(text):
@@ -1026,6 +1110,7 @@ def get_anime_details_api(tv_id, title):
 
     genres = " / ".join([g.get('name', '') for g in res.get('genres', []) if g.get('name')])
     original_title = res.get('original_name', '')
+    series_img = f"https://image.tmdb.org/t/p/w500{res.get('poster_path')}" if res.get('poster_path') else "https://images.unsplash.com/photo-1520116468816-95b69f847357?w=500&h=300&fit=crop"
     start_date_raw = res.get('first_air_date', '')
     start_date = start_date_raw.replace('-', '.')
     status_raw = res.get('status', '')
@@ -1052,7 +1137,7 @@ def get_anime_details_api(tv_id, title):
 
         s_name, subtitle = normalize_season_meta(s, s_num)
 
-        s_img = f"https://image.tmdb.org/t/p/w500{s.get('poster_path')}" if s.get('poster_path') else "https://images.unsplash.com/photo-1520116468816-95b69f847357?w=500&h=300&fit=crop"
+        s_img = f"https://image.tmdb.org/t/p/w500{s.get('poster_path')}" if s.get('poster_path') else series_img
         ep_res = tmdb_get(f"tv/{tv_id}/season/{s_num}")
 
         episodes = []
@@ -1088,6 +1173,7 @@ def get_anime_details_api(tv_id, title):
         "genre": genres,
         "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
         "original_title": original_title,
+        "poster_img": series_img,
         "related_movies": get_related_anime_movies_api(title, original_title),
         "seasons": seasons_data
     }
@@ -1155,6 +1241,8 @@ current_date_str = datetime.now().strftime('%Y.%m.%d')
 existing_data_changed = False
 for title, info in st.session_state.my_anime_list.items():
     if remove_empty_seasons(info):
+        existing_data_changed = True
+    if refresh_generic_season_images(info):
         existing_data_changed = True
 
     if info.get('day') == "방영 종료/진행중" or 'display_status' not in info:
@@ -1907,15 +1995,82 @@ if st.session_state.view == 'main':
     else:
         st.divider()
 
-        library_tab, dropped_tab, new_anime_tab, news_tab = st.tabs(["내 보관함", "하차", "신작 애니", "애니 소식"])
+        current_date_str = datetime.now().strftime('%Y.%m.%d')
 
-        with library_tab:
-            current_date_str = datetime.now().strftime('%Y.%m.%d')
+        def build_library_cards(library_filter=""):
+            cards = []
+            for title, info in list(st.session_state.my_anime_list.items()):
+                if is_dropped(info):
+                    continue
+                if library_filter and library_filter not in title.lower():
+                    continue
+
+                needs_n_badge = False
+                latest_aired_ep = None
+                latest_aired_date = "0000.00.00"
+
+                for season in info.get('seasons', []):
+                    for i, ep in enumerate(season.get('episodes', []), 1):
+                        if ep['date'] <= current_date_str:
+                            latest_aired_ep = {
+                                'season': season,
+                                'season_name': season['name'],
+                                'ep_num': i
+                            }
+                            latest_aired_date = ep['date']
+
+                if latest_aired_ep and not get_watch_value(title, latest_aired_ep['season'], latest_aired_ep['ep_num']):
+                    needs_n_badge = True
+
+                cards.append({
+                    'title': title,
+                    'info': info,
+                    'needs_n_badge': needs_n_badge,
+                    'latest_aired_ep': latest_aired_ep,
+                    'latest_aired_date': latest_aired_date,
+                })
+            return cards
+
+        def render_anime_card_grid(cards, key_prefix):
+            cols_per_row = 3
+            for start_idx in range(0, len(cards), cols_per_row):
+                cols = st.columns(cols_per_row, gap="small")
+                for offset, card in enumerate(cards[start_idx:start_idx + cols_per_row]):
+                    title = card['title']
+                    info = card['info']
+                    anime_uid = get_anime_uid(title, info)
+                    with cols[offset]:
+                        badge = " :red[**N**]" if card['needs_n_badge'] else ""
+                        if st.button(f"{title}{badge}", key=f"{key_prefix}_{anime_uid}_{start_idx}_{offset}"):
+                            st.session_state.selected_anime = title
+                            st.session_state.selected_season = None
+                            st.session_state.view = 'detail'
+                            st.rerun()
+
+        update_tab, list_tab, dropped_tab, new_anime_tab, news_tab = st.tabs(["새 화", "목록", "하차", "신작 애니", "애니 소식"])
+
+        with update_tab:
             st.session_state.is_editing = False
+            st.subheader("새 화")
+
+            if not st.session_state.my_anime_list:
+                st.write("아직 추가한 애니가 없습니다. 위 검색창에서 작품을 추가해보세요.")
+            else:
+                library_cards = build_library_cards()
+                n_cards = [item for item in library_cards if item['needs_n_badge']]
+                n_cards.sort(key=lambda item: item['latest_aired_date'], reverse=True)
+                st.markdown(f"<div class='library-count'>총 {len(n_cards)}개</div>", unsafe_allow_html=True)
+
+                if not n_cards:
+                    st.write("새로 나온 화가 없습니다.")
+                else:
+                    render_anime_card_grid(n_cards, "update_card")
+
+        with list_tab:
             title_col, search_btn_col = st.columns([8, 1], gap="small", vertical_alignment="center")
             with title_col:
                 st.markdown("<span class='library-title-actions-anchor'></span>", unsafe_allow_html=True)
-                st.subheader("내 시청 목록")
+                st.subheader("목록")
             with search_btn_col:
                 search_btn_label = "닫기" if st.session_state.show_library_search else "검색"
                 st.button(search_btn_label, key="toggle_library_search_btn", on_click=toggle_library_search)
@@ -1932,66 +2087,17 @@ if st.session_state.view == 'main':
                         label_visibility="collapsed"
                     ).strip().lower()
 
-                library_cards = []
-                for title, info in list(st.session_state.my_anime_list.items()):
-                    if is_dropped(info):
-                        continue
-                    if library_filter and library_filter not in title.lower():
-                        continue
-
-                    needs_n_badge = False
-                    latest_aired_ep = None
-                    latest_aired_date = "0000.00.00"
-
-                    for season in info.get('seasons', []):
-                        for i, ep in enumerate(season.get('episodes', []), 1):
-                            if ep['date'] <= current_date_str:
-                                latest_aired_ep = {
-                                    'season': season,
-                                    'season_name': season['name'],
-                                    'ep_num': i
-                                }
-                                latest_aired_date = ep['date']
-
-                    if latest_aired_ep:
-                        if not get_watch_value(title, latest_aired_ep['season'], latest_aired_ep['ep_num']):
-                            needs_n_badge = True
-
-                    library_cards.append({
-                        'title': title,
-                        'info': info,
-                        'needs_n_badge': needs_n_badge,
-                        'latest_aired_ep': latest_aired_ep,
-                        'latest_aired_date': latest_aired_date,
-                    })
-
-                library_cards.sort(key=lambda item: (not item['needs_n_badge'], item['latest_aired_date']), reverse=False)
-                n_cards = [item for item in library_cards if item['needs_n_badge']]
+                library_cards = build_library_cards(library_filter)
                 normal_cards = [item for item in library_cards if not item['needs_n_badge']]
-                n_cards.sort(key=lambda item: item['latest_aired_date'], reverse=True)
                 normal_cards.sort(key=lambda item: item['title'])
-                library_cards = n_cards + normal_cards
                 total_count = sum(1 for info in st.session_state.my_anime_list.values() if not is_dropped(info))
-                count_text = f"총 {total_count}개" if not library_filter else f"총 {total_count}개 · 검색 {len(library_cards)}개"
+                count_text = f"총 {total_count}개" if not library_filter else f"총 {total_count}개 · 검색 {len(normal_cards)}개"
                 st.markdown(f"<div class='library-count'>{count_text}</div>", unsafe_allow_html=True)
 
-                if not library_cards:
+                if not normal_cards:
                     st.write("검색 결과가 없습니다.")
                 else:
-                    cols_per_row = 3
-                    for start_idx in range(0, len(library_cards), cols_per_row):
-                        cols = st.columns(cols_per_row, gap="small")
-                        for offset, card in enumerate(library_cards[start_idx:start_idx + cols_per_row]):
-                            title = card['title']
-                            info = card['info']
-                            anime_uid = get_anime_uid(title, info)
-                            with cols[offset]:
-                                badge = " :red[**N**]" if card['needs_n_badge'] else ""
-                                if st.button(f"{title}{badge}", key=f"main_card_{anime_uid}_{start_idx}_{offset}"):
-                                    st.session_state.selected_anime = title
-                                    st.session_state.selected_season = None
-                                    st.session_state.view = 'detail'
-                                    st.rerun()
+                    render_anime_card_grid(normal_cards, "list_card")
 
             st.write("")
             st.divider()
@@ -2189,49 +2295,38 @@ elif st.session_state.view == 'detail':
             seasons = anime_info.get('seasons', [])
             related_movies = anime_info.get("related_movies", [])
 
-            watch_items = []
-            for idx, season in enumerate(seasons):
-                watch_items.append({
-                    "type": "season",
-                    "sort_date": get_season_sort_date(season),
-                    "season_idx": idx,
-                    "season": season,
-                })
-            for idx, movie in enumerate(related_movies):
-                watch_items.append({
-                    "type": "movie",
-                    "sort_date": sort_date_value(movie.get("release_date", "")),
-                    "movie_idx": idx,
-                    "movie": movie,
-                })
-            watch_items.sort(key=lambda item: (item["sort_date"], 0 if item["type"] == "season" else 1))
-
             cols_per_row = 1
-            for start_idx in range(0, len(watch_items), cols_per_row):
+            for start_idx in range(0, len(seasons), cols_per_row):
                 cols = st.columns(cols_per_row)
-                for offset, item in enumerate(watch_items[start_idx:start_idx + cols_per_row]):
+                for offset, season in enumerate(seasons[start_idx:start_idx + cols_per_row]):
                     with cols[offset]:
-                        if item["type"] == "season":
-                            season = item["season"]
-                            with st.container(border=True):
-                                st.image(season['img'], use_container_width=True)
-                                st.markdown(f"**{anime_title} {season['name']}**")
-                                
-                                if season.get('subtitle'):
-                                    st.caption(season['subtitle'])
-                                else:
-                                    st.caption("\u200b") 
-                                
-                                view_col, count_col = st.columns([5, 5], gap="small")
-                                with view_col:
-                                    if st.button("보기", key=f"sel_{item['season_idx']}", use_container_width=True):
-                                        st.session_state.selected_season = item["season_idx"]
-                                        st.rerun()
-                                with count_col:
-                                    ep_count = len(season.get('episodes', []))
-                                    st.markdown(f"<div style='line-height: 2.35em; text-align: right; color: gray; font-size: 0.9em;'>총 {ep_count}부작</div>", unsafe_allow_html=True)
-                        else:
-                            movie = item["movie"]
+                        with st.container(border=True):
+                            st.image(season['img'], use_container_width=True)
+                            st.markdown(f"**{anime_title} {season['name']}**")
+                            
+                            if season.get('subtitle'):
+                                st.caption(season['subtitle'])
+                            else:
+                                st.caption("\u200b") 
+                            
+                            view_col, count_col = st.columns([5, 5], gap="small")
+                            with view_col:
+                                season_idx = start_idx + offset
+                                if st.button("보기", key=f"sel_{season_idx}", use_container_width=True):
+                                    st.session_state.selected_season = season_idx
+                                    st.rerun()
+                            with count_col:
+                                ep_count = len(season.get('episodes', []))
+                                st.markdown(f"<div style='line-height: 2.35em; text-align: right; color: gray; font-size: 0.9em;'>총 {ep_count}부작</div>", unsafe_allow_html=True)
+
+            if related_movies:
+                st.divider()
+                st.subheader("극장판/영화")
+
+                for start_idx in range(0, len(related_movies), cols_per_row):
+                    cols = st.columns(cols_per_row)
+                    for offset, movie in enumerate(related_movies[start_idx:start_idx + cols_per_row]):
+                        with cols[offset]:
                             with st.container(border=True):
                                 st.image(movie.get("img", NEWS_FALLBACK_IMAGE), use_container_width=True)
                                 st.markdown(
