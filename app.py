@@ -266,6 +266,12 @@ st.markdown("""
         flex: 0 0 52px !important; width: 52px !important; min-width: 52px !important;
         display: flex !important; justify-content: flex-end !important;
     }
+    div[data-testid="stHorizontalBlock"]:has(.episode-watch-done) > div:last-child [data-testid="stButton"] button {
+        color: #047857 !important; border-color: #6ee7b7 !important; background: #ecfdf5 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.episode-watch-pending) > div:last-child [data-testid="stButton"] button {
+        color: #374151 !important; border-color: #d1d5db !important; background: #f3f4f6 !important;
+    }
     .episode-row-divider {
         height: 1px; background: #eef0f3; margin: 4px 0 5px 0;
     }
@@ -1974,11 +1980,15 @@ elif st.session_state.view == 'detail':
                 if (i - 1) == latest_ep_idx and not is_watched:
                     display_title += " <span style='color:#ef4444;font-weight:800;'>N</span>"
 
+                episode_state_class = ""
+                if not is_future_episode:
+                    episode_state_class = "episode-watch-done" if is_watched else "episode-watch-pending"
+
                 row_text_col, row_action_col = st.columns([8.6, 1.4], gap="small")
                 with row_text_col:
                     st.markdown(
                         f"""
-                        <div class="episode-main">
+                        <div class="episode-main {episode_state_class}">
                             <div class="episode-title">{display_title}</div>
                             <div class="episode-date">{html.escape(ep['date'])}</div>
                         </div>
@@ -1989,7 +1999,6 @@ elif st.session_state.view == 'detail':
                     st.markdown("<div class='episode-actions' style='display:flex;justify-content:flex-end;align-items:center;'>", unsafe_allow_html=True)
                     if not is_future_episode:
                         watch_label = "완료" if is_watched else "시청"
-                        st.markdown(f"<span class='{'watch-done' if is_watched else 'watch-pending'}'></span>", unsafe_allow_html=True)
                         if st.button(watch_label, key=f"ep_watch_{db_key}"):
                             set_episode_watch(anime_title, season_idx, i, not is_watched)
                             st.rerun()
