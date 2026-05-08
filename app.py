@@ -499,15 +499,11 @@ NEWS_FEEDS = [
     },
     {
         "name": "Comic Natalie",
-        "url": "https://natalie.mu/comic/news/rss",
+        "url": "https://natalie.mu/comic/feed/news",
     },
     {
         "name": "Anime News Network",
         "url": "https://www.animenewsnetwork.com/all/rss.xml?ann-edition=us",
-    },
-    {
-        "name": "Google News",
-        "url": f"https://news.google.com/rss/search?q={quote_plus(NEWS_SEARCH_QUERY)}&hl=ko&gl=KR&ceid=KR:ko",
     },
 ]
 
@@ -517,6 +513,34 @@ def strip_html(text):
     text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
+
+
+def local_name(tag):
+    return tag.rsplit("}", 1)[-1] if "}" in tag else tag
+
+
+def find_first_child(node, names):
+    wanted = set(names)
+    for child in list(node):
+        if local_name(child.tag) in wanted:
+            return child
+    return None
+
+
+def find_first_text(node, names):
+    child = find_first_child(node, names)
+    return child.text if child is not None and child.text else ""
+
+
+def find_first_link(node):
+    for child in list(node):
+        if local_name(child.tag) == "link":
+            return child.attrib.get("href") or child.text or ""
+    return find_first_text(node, ["id", "guid"])
+
+
+def find_feed_items(root):
+    return [node for node in root.iter() if local_name(node.tag) in {"item", "entry"}]
 
 
 def is_schedule_news(item):
@@ -633,23 +657,29 @@ def parse_rss_date(date_text):
 
 
 def extract_rss_image(item, description):
-    media_namespaces = [
-        "{http://search.yahoo.com/mrss/}content",
-        "{http://search.yahoo.com/mrss/}thumbnail",
-    ]
-    for tag in media_namespaces:
-        media = item.find(tag)
-        if media is not None and media.attrib.get("url"):
-            return media.attrib["url"]
+    for child in item.iter():
+        child_name = local_name(child.tag)
+        if child_name in {"content", "thumbnail"} and child.attrib.get("url"):
+            image_url = normalize_candidate_url(child.attrib["url"])
+            if is_usable_news_image(image_url):
+                return image_url
+        if child_name == "enclosure" and child.attrib.get("url"):
+            enclosure_type = child.attrib.get("type", "")
+            if not enclosure_type or enclosure_type.startswith("image"):
+                image_url = normalize_candidate_url(child.attrib["url"])
+                if is_usable_news_image(image_url):
+                    return image_url
 
-    enclosure = item.find("enclosure")
-    if enclosure is not None and enclosure.attrib.get("url") and enclosure.attrib.get("type", "").startswith("image"):
-        return enclosure.attrib["url"]
-
-    match = re.search(r'<img[^>]+src=["\']([^"\']+)', description or "", re.IGNORECASE)
-    if match:
-        image_url = html.unescape(match.group(1))
-        return image_url if is_usable_news_image(image_url) else ""
+    for pattern in [
+        r'<img[^>]+src=["\']([^"\']+)',
+        r'<media:thumbnail[^>]+url=["\']([^"\']+)',
+        r'<media:content[^>]+url=["\']([^"\']+)',
+    ]:
+        match = re.search(pattern, description or "", re.IGNORECASE)
+        if match:
+            image_url = normalize_candidate_url(match.group(1))
+            if is_usable_news_image(image_url):
+                return image_url
     return ""
 
 
@@ -699,34 +729,21 @@ def get_article_image(link, headers):
 def parse_rss_feed(xml_bytes, feed_name):
     root = ET.fromstring(xml_bytes)
     items = []
-    for item in root.findall(".//item"):
-        title = strip_html(item.findtext("title"))
-        link = (item.findtext("link") or "").strip()
-        description_raw = item.findtext("description") or ""
+    for item in find_feed_items(root):
+        title = strip_html(find_first_text(item, ["title"]))
+        link = normalize_candidate_url(find_first_link(item))
+        description_raw = find_first_text(item, ["description", "summary", "encoded", "content"]) or ""
         summary = strip_html(description_raw)
-        pub_date = (
-            item.findtext("pubDate")
-            or item.findtext("published")
-            or item.findtext("updated")
-            or item.findtext("{http://purl.org/dc/elements/1.1/}date")
-        )
+        pub_date = find_first_text(item, ["pubDate", "published", "updated", "date"])
         date_label, sort_date = parse_rss_date(pub_date)
-        source_node = item.find("source")
-        source = source_node.text.strip() if source_node is not None and source_node.text else feed_name
+        source = strip_html(find_first_text(item, ["source"])) or feed_name
 
-        if not title:
+        if not title or not link:
+            continue
+        if is_blocked_domain(link, NEWS_BLOCKED_LINK_DOMAINS):
             continue
 
-        if " - " in title and feed_name == "Google News":
-            title, source_from_title = title.rsplit(" - ", 1)
-            source = source or source_from_title
-
         content = summary[:90] + "..." if len(summary) > 90 else summary
-        full_content = summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요."
-        if link:
-            safe_link = html.escape(link, quote=True)
-            full_content += f"<br><br><a href='{safe_link}' target='_blank'>원문 기사 보기</a>"
-
         rss_image = extract_rss_image(item, description_raw)
         if not is_usable_news_image(rss_image):
             rss_image = ""
@@ -734,14 +751,13 @@ def parse_rss_feed(xml_bytes, feed_name):
         items.append({
             "title": title,
             "content": content or source,
-            "full_content": full_content,
+            "full_content": summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요.",
             "date": date_label or "날짜 없음",
             "sort_date": sort_date,
             "img": rss_image,
             "source": source,
             "link": link,
             "_summary": summary,
-            "_description_raw": description_raw,
         })
     return items
 
@@ -773,16 +789,12 @@ def get_anime_news(max_items=12):
     deduped.sort(key=lambda item: item.get("sort_date", ""), reverse=True)
     deduped = deduped[:max_items]
     for item in deduped:
-        original_link = resolve_original_article_link(item.get("link", ""), item.get("_description_raw", ""), headers)
-        item["link"] = original_link
+        article_link = item.get("link", "")
         summary = item.pop("_summary", "")
-        item.pop("_description_raw", None)
-        safe_link = html.escape(original_link, quote=True)
-        item["full_content"] = (summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요.")
-        if original_link:
-            item["full_content"] += f"<br><br><a href='{safe_link}' target='_blank'>원문 기사 보기</a>"
+        item["full_content"] = summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요."
+        item["link"] = article_link
         if not is_usable_news_image(item.get("img", "")):
-            item["img"] = get_article_image(original_link, headers) or NEWS_FALLBACK_IMAGE
+            item["img"] = get_article_image(article_link, headers) or NEWS_FALLBACK_IMAGE
     if deduped:
         return deduped
 
@@ -1264,6 +1276,8 @@ elif st.session_state.view == 'news_detail':
         st.caption(f"발행일: {news['date']}{source_text}")
         st.divider()
         st.image(news['img'], use_container_width=True)
+        if news.get('link'):
+            st.link_button("원문 기사 보기", news['link'], use_container_width=True)
         st.write("")
         st.markdown(f"<div style='line-height: 1.8; font-size: 1.1em;'>{news.get('full_content', news['content'])}</div>", unsafe_allow_html=True)
         st.divider()
