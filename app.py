@@ -62,10 +62,23 @@ def save_app_data():
 
 st.markdown("""
     <style>
-    div.block-container { padding-top: 0.75rem !important; }
+    div.block-container { padding-top: 0.5rem !important; padding-bottom: 0.75rem !important; }
+    div[data-testid="stVerticalBlock"] { gap: 0.45rem !important; }
+    div[data-testid="stHorizontalBlock"] { gap: 0.4rem !important; }
+    div[data-testid="stVerticalBlockBorderWrapper"] { padding: 0.45rem !important; }
+    div[data-testid="stMarkdownContainer"] p { margin-bottom: 0.2rem !important; }
+    div[data-testid="stCaptionContainer"] { margin-top: -0.1rem !important; }
+    div[data-testid="stDivider"] { margin-top: 0.45rem !important; margin-bottom: 0.45rem !important; }
+    div[data-testid="stTabs"] button[role="tab"] { padding-top: 0.35rem !important; padding-bottom: 0.35rem !important; }
+    div[data-testid="stTabs"] [data-baseweb="tab-panel"] { padding-top: 0.55rem !important; }
+    h1 { font-size: 1.65rem !important; line-height: 1.25 !important; }
+    h2, h3 { margin-top: 0.35rem !important; margin-bottom: 0.35rem !important; }
+    @media (max-width: 640px) {
+        h1 { font-size: 1.35rem !important; line-height: 1.3 !important; }
+    }
     .main { max-width: 500px; margin: 0 auto; }
     .stButton>button, .stLinkButton>a { 
-        border-radius: 12px !important; min-height: 2.6em !important; height: auto !important; padding: 6px 10px !important; 
+        border-radius: 10px !important; min-height: 2.35em !important; height: auto !important; padding: 5px 9px !important; 
         background-color: #f0f2f6 !important; border: 1px solid #d1d5db !important; 
         font-weight: bold !important; color: #31333F !important; font-size: 0.9rem !important;
         text-align: left; text-decoration: none; display: inline-flex; align-items: center;
@@ -82,7 +95,7 @@ st.markdown("""
     button[data-testid="baseButton-primary"]:hover, button[data-testid="baseButton-primary"]:active, button[data-testid="baseButton-primary"]:focus {
         background-color: #f0f2f6 !important; border: 1px solid #d1d5db !important; color: #31333F !important;
     }
-    .stImage img { object-fit: cover; height: 180px; border-radius: 10px; }
+    .stImage img { object-fit: cover; height: 140px; border-radius: 8px; }
     
     .anime-title { 
         display: -webkit-box; 
@@ -92,24 +105,24 @@ st.markdown("""
         text-overflow: ellipsis; 
         height: 2.8em; 
         line-height: 1.4em; 
-        margin-top: 10px; 
-        margin-bottom: 3px; 
+        margin-top: 5px; 
+        margin-bottom: 1px; 
         font-weight: bold; 
     }
     
     .anime-genre { 
         color: #666666; 
         font-size: 0.75em; 
-        margin-bottom: 3px; 
+        margin-bottom: 1px; 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
     }
     
     .date-text { display: flex; align-items: center; justify-content: flex-start; height: 100%; color: gray; font-size: 0.85em; }
-    .news-date { color: gray; font-size: 0.8em; text-align: right; margin-top: 10px; }
-    .anime-date { color: gray; font-size: 0.75em; margin-bottom: 10px; }
-    .search-hint { color: #888888; font-size: 0.8em; text-align: left; margin-top: -10px; margin-bottom: 15px; }
+    .news-date { color: gray; font-size: 0.8em; text-align: right; margin-top: 3px; }
+    .anime-date { color: gray; font-size: 0.75em; margin-bottom: 4px; }
+    .search-hint { color: #888888; font-size: 0.78em; text-align: left; margin-top: -12px; margin-bottom: 6px; }
     html { scroll-behavior: smooth; }
     .scroll-top-btn {
         position: fixed; right: 18px; bottom: 18px; z-index: 999999;
@@ -187,6 +200,22 @@ components.html(
             );
         }
 
+        function clickVisibleAppBackButton() {
+            const labels = ["뒤로가기", "목록으로 돌아가기"];
+            const buttons = Array.from(appDocument.querySelectorAll("button"));
+            const backButton = buttons.find(function (button) {
+                const text = (button.textContent || "").trim();
+                const rect = button.getBoundingClientRect();
+                return labels.includes(text) && rect.width > 0 && rect.height > 0 && !button.disabled;
+            });
+            if (!backButton) {
+                return false;
+            }
+            backButton.click();
+            showBackToast("이전 화면으로 돌아왔습니다");
+            return true;
+        }
+
         function returnToMainTabIfNeeded() {
             const libraryTab = getTabByText("내 보관함");
             const newAnimeTab = getTabByText("신작 애니");
@@ -205,6 +234,12 @@ components.html(
 
         appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
         appWindow.addEventListener("popstate", function () {
+            if (clickVisibleAppBackButton()) {
+                appWindow[lastBackKey] = 0;
+                appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+                return;
+            }
+
             if (returnToMainTabIfNeeded()) {
                 appWindow[lastBackKey] = 0;
                 appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
@@ -300,13 +335,31 @@ def normalize_episode_title(raw_title, season_num, episode_num):
     return title
 
 
+@st.cache_data(ttl=86400, show_spinner=False)
+def get_jikan_anime_poster(query):
+    try:
+        res = requests.get(
+            "https://api.jikan.moe/v4/anime",
+            params={"q": query, "limit": 1},
+            timeout=8,
+        )
+        res.raise_for_status()
+        results = res.json().get("data", [])
+        if not results:
+            return ""
+        images = results[0].get("images", {}).get("jpg", {})
+        return images.get("large_image_url") or images.get("image_url") or ""
+    except (requests.RequestException, ValueError, KeyError):
+        return ""
+
+
 SEASON_SPLIT_RULES = [
     {
         "keywords": ["주술회전", "呪術廻戦", "jujutsu kaisen"],
         "ranges": [
-            {"s_num": 1, "start": 1, "end": 24, "name": "1기", "subtitle": ""},
-            {"s_num": 2, "start": 25, "end": 47, "name": "2기", "subtitle": "회옥·옥절 / 시부야 사변"},
-            {"s_num": 3, "start": 48, "end": 999, "name": "3기", "subtitle": "사멸회유"},
+            {"s_num": 1, "start": 1, "end": 24, "name": "1기", "subtitle": "", "jikan_query": "Jujutsu Kaisen"},
+            {"s_num": 2, "start": 25, "end": 47, "name": "2기", "subtitle": "회옥·옥절 / 시부야 사변", "jikan_query": "Jujutsu Kaisen 2nd Season"},
+            {"s_num": 3, "start": 48, "end": 999, "name": "3기", "subtitle": "사멸회유", "jikan_query": "Jujutsu Kaisen Culling Game"},
         ],
     }
 ]
@@ -322,6 +375,11 @@ def get_default_split_ranges(title):
 
 def build_watch_key_from_uid(anime_uid, season_num, ep_idx):
     return f"chk_{anime_uid}_s{season_num}_e{ep_idx}"
+
+
+def get_split_season_image(range_info, fallback_img):
+    poster = get_jikan_anime_poster(range_info.get("jikan_query", ""))
+    return poster or range_info.get("img") or fallback_img
 
 
 def split_continuous_season(source_season, ranges):
@@ -357,11 +415,25 @@ def split_continuous_season(source_season, ranges):
                 "s_num": season_num,
                 "name": range_info.get("name") or f"{season_num}기",
                 "subtitle": range_info.get("subtitle", ""),
-                "img": source_img,
+                "img": get_split_season_image(range_info, source_img),
                 "episodes": selected,
             })
 
     return split_seasons, mapping
+
+
+def refresh_split_season_images(info, ranges):
+    changed = False
+    ranges_by_season = {range_info["s_num"]: range_info for range_info in ranges}
+    for season in info.get("seasons", []):
+        range_info = ranges_by_season.get(season.get("s_num"))
+        if not range_info:
+            continue
+        new_img = get_split_season_image(range_info, season.get("img"))
+        if new_img and new_img != season.get("img"):
+            season["img"] = new_img
+            changed = True
+    return changed
 
 
 def migrate_split_watched_keys(title, info, mapping):
@@ -397,13 +469,15 @@ def split_anime_info(title, info, ranges, migrate_watched=False):
         migrate_split_watched_keys(title, info, mapping)
     info["seasons"] = split_seasons
     info["season_split_applied"] = True
+    refresh_split_season_images(info, ranges)
     return True
 
 
 def apply_season_split_rules(title, info):
     ranges = get_default_split_ranges(title)
     if ranges:
-        split_anime_info(title, info, ranges, migrate_watched=False)
+        if not split_anime_info(title, info, ranges, migrate_watched=False):
+            refresh_split_season_images(info, ranges)
     return info
 
 
@@ -421,6 +495,72 @@ def search_anime_api(query):
     ]
 
 
+def compact_title(text):
+    text = (text or "").lower()
+    text = re.sub(r"\([^)]*\)|\[[^\]]*\]", " ", text)
+    text = re.sub(r"(시즌|season)\s*\d+|第?\s*\d+\s*(期|季)|\d+\s*기", " ", text, flags=re.IGNORECASE)
+    return re.sub(r"[^0-9a-z가-힣ぁ-んァ-ン一-龥]+", "", text)
+
+
+def is_related_anime_movie(movie, title_candidates):
+    if movie.get("original_language") not in {"ja", "ko"}:
+        return False
+    if 16 not in movie.get("genre_ids", []):
+        return False
+
+    movie_text = compact_title(f"{movie.get('title', '')} {movie.get('original_title', '')}")
+    if not movie_text:
+        return False
+
+    for candidate in title_candidates:
+        compact_candidate = compact_title(candidate)
+        if len(compact_candidate) >= 3 and (compact_candidate in movie_text or movie_text in compact_candidate):
+            return True
+    return False
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_related_anime_movies_api(title, original_title=""):
+    if not TMDB_API_KEY:
+        return [{
+            "id": 0,
+            "title": f"{title} 극장판",
+            "release_date": "2024.01.01",
+            "img": "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop",
+            "overview": "API 연동 시 관련 극장판 정보가 표시됩니다.",
+            "namu_link": f"https://namu.wiki/Go?q={quote_plus(title + ' 극장판')}",
+        }]
+
+    title_candidates = [title, original_title]
+    search_queries = [candidate for candidate in title_candidates if candidate]
+    collected = []
+    seen_ids = set()
+
+    for query in dict.fromkeys(search_queries):
+        res = tmdb_get("search/movie", {"query": query, "include_adult": "false"})
+        for movie in res.get("results", []):
+            movie_id = movie.get("id")
+            if not movie_id or movie_id in seen_ids:
+                continue
+            if not is_related_anime_movie(movie, title_candidates):
+                continue
+            seen_ids.add(movie_id)
+            movie_title = movie.get("title") or movie.get("original_title") or "제목 없음"
+            release_date = (movie.get("release_date") or "").replace("-", ".")
+            collected.append({
+                "id": movie_id,
+                "title": movie_title,
+                "original_title": movie.get("original_title", ""),
+                "release_date": release_date or "개봉일 정보 없음",
+                "img": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get("poster_path") else NEWS_FALLBACK_IMAGE,
+                "overview": movie.get("overview") or "줄거리 정보가 없습니다.",
+                "namu_link": f"https://namu.wiki/Go?q={quote_plus(movie_title)}",
+            })
+
+    collected.sort(key=lambda movie: movie.get("release_date", "9999.99.99"))
+    return collected[:8]
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_anime_details_api(tv_id, title):
     if not TMDB_API_KEY:
@@ -432,6 +572,7 @@ def get_anime_details_api(tv_id, title):
             "start_date": "2024.01.01",
             "genre": "애니메이션",
             "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
+            "related_movies": get_related_anime_movies_api(title),
             "seasons": [{
                 "s_num": 1, "name": "1기", "subtitle": "API 자동 불러오기 테스트",
                 "img": "https://images.unsplash.com/photo-1520116468816-95b69f847357?w=500&h=300&fit=crop",
@@ -449,10 +590,12 @@ def get_anime_details_api(tv_id, title):
             "start_date": "",
             "genre": "",
             "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
+            "related_movies": [],
             "seasons": []
         }
 
     genres = " / ".join([g.get('name', '') for g in res.get('genres', []) if g.get('name')])
+    original_title = res.get('original_name', '')
     start_date_raw = res.get('first_air_date', '')
     start_date = start_date_raw.replace('-', '.')
     status_raw = res.get('status', '')
@@ -509,6 +652,8 @@ def get_anime_details_api(tv_id, title):
         "start_date": start_date,
         "genre": genres,
         "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
+        "original_title": original_title,
+        "related_movies": get_related_anime_movies_api(title, original_title),
         "seasons": seasons_data
     }
     return apply_season_split_rules(title, anime_info)
@@ -589,6 +734,8 @@ for title, info in st.session_state.my_anime_list.items():
     if split_ranges and len(info.get('seasons', [])) == 1:
         if split_anime_info(title, info, split_ranges, migrate_watched=True):
             existing_data_changed = True
+    elif split_ranges and refresh_split_season_images(info, split_ranges):
+        existing_data_changed = True
 
     for idx, season in enumerate(info.get('seasons', [])):
         season_num = season.get('s_num') or idx + 1
@@ -1384,6 +1531,13 @@ elif st.session_state.view == 'detail':
         st.rerun()
 
     if anime_info:
+        if "related_movies" not in anime_info:
+            anime_info["related_movies"] = get_related_anime_movies_api(
+                anime_title,
+                anime_info.get("original_title", "")
+            )
+            save_app_data()
+
         last_watched_season = None
         last_watched_episode = None
         
@@ -1397,23 +1551,28 @@ elif st.session_state.view == 'detail':
         if st.session_state.selected_season is None:
             st.title(f"{anime_title}")
             
-            title_col1, title_col2 = st.columns([6, 4])
-            with title_col1:
-                st.write(f"**방영 상태:** {anime_info.get('display_status', '정보 없음')}")
-                if last_watched_season and last_watched_episode:
-                    st.markdown(f"**최근 시청:** :blue[{last_watched_season} {last_watched_episode}화까지 완료]")
-                else:
-                    st.markdown("**최근 시청:** 아직 시청 기록이 없습니다.")
-            with title_col2:
-                action_c1, action_c2 = st.columns(2)
-                with action_c1:
-                    st.link_button("정보", anime_info.get('namu_link', '#'))
-                with action_c2:
-                    if st.button("삭제", key=f"del_detail_{anime_title}"):
-                        delete_anime(anime_title)
-                        st.session_state.selected_anime = None
-                        st.session_state.view = 'main' 
-                        st.rerun() 
+            status_text = anime_info.get('display_status', '정보 없음')
+            if last_watched_season and last_watched_episode:
+                watched_text = f"{last_watched_season} {last_watched_episode}화까지"
+            else:
+                watched_text = "기록 없음"
+
+            info_col, link_col, delete_col = st.columns([6, 2, 2], gap="small")
+            with info_col:
+                st.markdown(
+                    f"<div style='font-size: 0.9em; line-height: 2.6em; color: #4b5563;'>"
+                    f"<b>상태</b> {status_text} &nbsp;·&nbsp; <b>최근</b> {watched_text}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+            with link_col:
+                st.link_button("정보", anime_info.get('namu_link', '#'), use_container_width=True)
+            with delete_col:
+                if st.button("삭제", key=f"del_detail_{anime_title}", use_container_width=True):
+                    delete_anime(anime_title)
+                    st.session_state.selected_anime = None
+                    st.session_state.view = 'main' 
+                    st.rerun() 
                 
             st.divider()
             
@@ -1443,7 +1602,25 @@ elif st.session_state.view == 'detail':
                                 with btn_c2:
                                     ep_count = len(season.get('episodes', []))
                                     st.markdown(f"<div style='margin-top: 0.5em; text-align: right; color: gray; font-size: 0.9em;'>총 {ep_count}부작</div>", unsafe_allow_html=True)
-                                    
+
+            related_movies = anime_info.get("related_movies", [])
+            if related_movies:
+                st.divider()
+                st.subheader("극장판 / 영화")
+                movie_cols_per_row = 2
+                for start_idx in range(0, len(related_movies), movie_cols_per_row):
+                    movie_cols = st.columns(movie_cols_per_row)
+                    for offset, movie in enumerate(related_movies[start_idx:start_idx + movie_cols_per_row]):
+                        with movie_cols[offset]:
+                            with st.container(border=True):
+                                st.image(movie.get("img", NEWS_FALLBACK_IMAGE), use_container_width=True)
+                                st.markdown(f"**{movie.get('title', '제목 없음')}**")
+                                st.caption(f"개봉일: {movie.get('release_date', '정보 없음')}")
+                                overview = movie.get("overview", "")
+                                if overview:
+                                    st.caption(overview[:80] + "..." if len(overview) > 80 else overview)
+                                st.link_button("정보", movie.get("namu_link", "#"), use_container_width=True)
+
         else:
             season_idx = st.session_state.selected_season
             season = anime_info['seasons'][season_idx]
