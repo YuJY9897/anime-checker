@@ -1,0 +1,6 @@
+﻿.streamlit/secrets.toml
+anime_check_data.json
+anime_check_data.tmp
+__pycache__/
+*.pyc
+app.py.bak

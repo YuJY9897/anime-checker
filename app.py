@@ -1,3 +1,7 @@
+import json
+from pathlib import Path
+from urllib.parse import quote_plus
+
 import streamlit as st
 import streamlit.components.v1 as components
 import requests
@@ -5,10 +9,9 @@ from datetime import datetime
 
 # === 1. API 및 장르 설정 ===
 try:
-    TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
-except:
-    st.error("API 키가 설정되지 않았습니다. 관리자 설정을 확인해주세요.")
-    st.stop()
+    TMDB_API_KEY = st.secrets.get("TMDB_API_KEY", "")
+except Exception:
+    TMDB_API_KEY = ""
 
 TMDB_GENRE_MAP = {
     10759: "액션/판타지", 16: "애니메이션", 35: "코미디", 18: "드라마",
@@ -17,6 +20,38 @@ TMDB_GENRE_MAP = {
 }
 
 st.set_page_config(page_title="애니 업데이트 체크", layout="centered")
+
+if not TMDB_API_KEY:
+    st.warning("TMDB API 키가 없어 데모 데이터로 실행됩니다. 실제 검색을 쓰려면 secrets에 TMDB_API_KEY를 설정하세요.")
+
+APP_DIR = Path(__file__).resolve().parent
+DATA_FILE = APP_DIR / "anime_check_data.json"
+
+
+def load_app_data():
+    if not DATA_FILE.exists():
+        return {"my_anime_list": {}, "watched_db": {}}
+    try:
+        with DATA_FILE.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        return {
+            "my_anime_list": data.get("my_anime_list", {}),
+            "watched_db": data.get("watched_db", {}),
+        }
+    except (json.JSONDecodeError, OSError):
+        return {"my_anime_list": {}, "watched_db": {}}
+
+
+def save_app_data():
+    data = {
+        "my_anime_list": st.session_state.get("my_anime_list", {}),
+        "watched_db": st.session_state.get("watched_db", {}),
+        "updated_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    tmp_file = DATA_FILE.with_suffix(".tmp")
+    with tmp_file.open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    tmp_file.replace(DATA_FILE)
 
 st.markdown("""
     <style>
@@ -70,27 +105,60 @@ st.markdown("""
 
 # === 2. 외부 API 통신 함수 ===
 
+def tmdb_get(endpoint, params=None):
+    if not TMDB_API_KEY:
+        return {}
+
+    url = f"https://api.themoviedb.org/3/{endpoint.lstrip('/')}"
+    request_params = {"api_key": TMDB_API_KEY, "language": "ko-KR"}
+    if params:
+        request_params.update(params)
+
+    try:
+        res = requests.get(url, params=request_params, timeout=10)
+        res.raise_for_status()
+        return res.json()
+    except (requests.RequestException, ValueError):
+        return {}
+
+
+def get_weekday_names(date_text):
+    if not date_text:
+        return "None", ""
+    try:
+        dt = datetime.strptime(date_text, "%Y-%m-%d")
+    except ValueError:
+        return "None", ""
+    days_en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    days_kr = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+    return days_en[dt.weekday()], days_kr[dt.weekday()]
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
 def search_anime_api(query):
     if not TMDB_API_KEY:
         if query:
             return [{"id": 99999, "name": f"{query} (API 연동 테스트)", "poster_path": "", "first_air_date": "2024-01-01", "genre_ids": [16]}]
         return []
 
-    url = f"https://api.themoviedb.org/3/search/tv?api_key={TMDB_API_KEY}&language=ko-KR&query={query}"
-    try:
-        res = requests.get(url).json()
-        return [
-            item for item in res.get('results', []) 
-            if 16 in item.get('genre_ids', []) and item.get('original_language') == 'ja'
-        ]
-    except:
-        return []
+    res = tmdb_get("search/tv", {"query": query})
+    return [
+        item for item in res.get('results', [])
+        if 16 in item.get('genre_ids', []) and item.get('original_language') == 'ja'
+    ]
 
+
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_anime_details_api(tv_id, title):
     if not TMDB_API_KEY:
         return {
-            "day": "Monday", "display_status": "API 연동 대기중", "start_date": "2024.01.01", "genre": "애니메이션",
-            "namu_link": f"https://namu.wiki/Go?q={title}",
+            "tmdb_id": tv_id,
+            "title": title,
+            "day": "Monday",
+            "display_status": "API 연동 대기중",
+            "start_date": "2024.01.01",
+            "genre": "애니메이션",
+            "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
             "seasons": [{
                 "s_num": 1, "name": "1기", "subtitle": "API 자동 불러오기 테스트",
                 "img": "https://images.unsplash.com/photo-1520116468816-95b69f847357?w=500&h=300&fit=crop",
@@ -98,27 +166,33 @@ def get_anime_details_api(tv_id, title):
             }]
         }
 
-    url = f"https://api.themoviedb.org/3/tv/{tv_id}?api_key={TMDB_API_KEY}&language=ko-KR"
-    res = requests.get(url).json()
+    res = tmdb_get(f"tv/{tv_id}")
+    if not res:
+        return {
+            "tmdb_id": tv_id,
+            "title": title,
+            "day": "None",
+            "display_status": "상세 정보 불러오기 실패",
+            "start_date": "",
+            "genre": "",
+            "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
+            "seasons": []
+        }
 
-    genres = " / ".join([g['name'] for g in res.get('genres', [])])
+    genres = " / ".join([g.get('name', '') for g in res.get('genres', []) if g.get('name')])
     start_date_raw = res.get('first_air_date', '')
     start_date = start_date_raw.replace('-', '.')
     status_raw = res.get('status', '')
+    next_air_date = (res.get('next_episode_to_air') or {}).get('air_date')
+    last_air_date = (res.get('last_episode_to_air') or {}).get('air_date')
+    schedule_date = next_air_date or last_air_date or start_date_raw
 
-    day_en = "None"
-    day_kr = ""
-    if start_date_raw:
-        try:
-            dt = datetime.strptime(start_date_raw, "%Y-%m-%d")
-            day_en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][dt.weekday()]
-            day_kr = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"][dt.weekday()]
-        except:
-            pass
-
+    day_en, day_kr = get_weekday_names(schedule_date)
     if status_raw in ['Ended', 'Canceled']:
         display_status = "방영 종료"
-        day_en = "Ended" 
+        day_en = "Ended"
+    elif next_air_date:
+        display_status = f"다음 화 {next_air_date.replace('-', '.')} ({day_kr})" if day_kr else "방영 중"
     elif status_raw in ['Returning Series', 'In Production']:
         display_status = f"매주 {day_kr} 방영" if day_kr else "방영 중"
     else:
@@ -126,8 +200,9 @@ def get_anime_details_api(tv_id, title):
 
     seasons_data = []
     for s in res.get('seasons', []):
-        s_num = s['season_number']
-        if s_num == 0: continue 
+        s_num = s.get('season_number')
+        if s_num == 0 or s_num is None:
+            continue
 
         s_name = f"{s_num}기"
         tmdb_name = s.get('name', '')
@@ -135,19 +210,20 @@ def get_anime_details_api(tv_id, title):
             subtitle = tmdb_name
         else:
             subtitle = s.get('overview', '')[:30]
-            if len(s.get('overview', '')) > 30: subtitle += "..."
+            if len(s.get('overview', '')) > 30:
+                subtitle += "..."
 
         s_img = f"https://image.tmdb.org/t/p/w500{s.get('poster_path')}" if s.get('poster_path') else "https://images.unsplash.com/photo-1520116468816-95b69f847357?w=500&h=300&fit=crop"
-
-        ep_url = f"https://api.themoviedb.org/3/tv/{tv_id}/season/{s_num}?api_key={TMDB_API_KEY}&language=ko-KR"
-        ep_res = requests.get(ep_url).json()
+        ep_res = tmdb_get(f"tv/{tv_id}/season/{s_num}")
 
         episodes = []
         for ep in ep_res.get('episodes', []):
             ep_date = ep.get('air_date')
+            ep_num = ep.get('episode_number')
             episodes.append({
-                "title": ep.get('name', f"{ep.get('episode_number')}화"),
-                "date": ep_date.replace('-', '.') if ep_date else "9999.12.31" 
+                "ep_num": ep_num,
+                "title": ep.get('name') or f"{ep_num}화",
+                "date": ep_date.replace('-', '.') if ep_date else "9999.12.31"
             })
 
         seasons_data.append({
@@ -159,30 +235,36 @@ def get_anime_details_api(tv_id, title):
         })
 
     return {
-        "day": day_en,  
-        "display_status": display_status, 
+        "tmdb_id": tv_id,
+        "title": title,
+        "day": day_en,
+        "display_status": display_status,
         "start_date": start_date,
         "genre": genres,
-        "namu_link": f"https://namu.wiki/Go?q={title}",
+        "namu_link": f"https://namu.wiki/Go?q={quote_plus(title)}",
         "seasons": seasons_data
     }
 
+
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_trending_anime_api(page=1):
     if not TMDB_API_KEY:
         return [
-            {"id": 1, "name": "최근 핫한 애니 1", "poster_path": "", "first_air_date": "2024-05-01"}
+            {"id": 1, "name": "최근 핫한 애니 1", "poster_path": "", "first_air_date": "2024-05-01", "genre_ids": [16]}
         ]
-    
+
     current_year = datetime.now().year
-    recent_date = f"{current_year - 1}-01-01" 
-    today_date = datetime.now().strftime('%Y-%m-%d') 
-    
-    url = f"https://api.themoviedb.org/3/discover/tv?api_key={TMDB_API_KEY}&language=ko-KR&with_genres=16&with_original_language=ja&sort_by=popularity.desc&first_air_date.gte={recent_date}&first_air_date.lte={today_date}&page={page}"
-    try:
-        res = requests.get(url).json()
-        return res.get('results', [])
-    except:
-        return []
+    recent_date = f"{current_year - 1}-01-01"
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    res = tmdb_get("discover/tv", {
+        "with_genres": 16,
+        "with_original_language": "ja",
+        "sort_by": "popularity.desc",
+        "first_air_date.gte": recent_date,
+        "first_air_date.lte": today_date,
+        "page": page,
+    })
+    return res.get('results', [])
 
 # === 3. 세션 상태 관리 및 콜백 함수 ===
 
@@ -193,9 +275,14 @@ if 'is_editing' not in st.session_state: st.session_state.is_editing = False
 if 'selected_news' not in st.session_state: st.session_state.selected_news = None
 if 'search_box' not in st.session_state: st.session_state.search_box = "" 
 
+if 'data_loaded' not in st.session_state:
+    saved_data = load_app_data()
+    st.session_state.watched_db = saved_data.get("watched_db", {})
+    st.session_state.my_anime_list = saved_data.get("my_anime_list", {})
+    st.session_state.data_loaded = True
+
 if 'watched_db' not in st.session_state:
     st.session_state.watched_db = {}
-    
 if 'my_anime_list' not in st.session_state:
     st.session_state.my_anime_list = {}
 
@@ -238,17 +325,59 @@ for title, info in st.session_state.my_anime_list.items():
                     season['subtitle'] = old_name
 # --------------------------------------------------------
 
+def get_anime_uid(title, info=None):
+    info = info or st.session_state.my_anime_list.get(title, {})
+    return str(info.get("tmdb_id") or info.get("id") or title)
+
+
+def make_watch_key(title, season, ep_idx):
+    info = st.session_state.my_anime_list.get(title, {})
+    anime_uid = get_anime_uid(title, info)
+    season_num = season.get("s_num") or season.get("name", "season")
+    return f"chk_{anime_uid}_s{season_num}_e{ep_idx}"
+
+
+def get_watch_value(title, season, ep_idx):
+    new_key = make_watch_key(title, season, ep_idx)
+    old_key = f"chk_{title}_{season.get('name', '')}_{ep_idx}"
+    if new_key in st.session_state.watched_db:
+        return st.session_state.watched_db.get(new_key, False)
+    if old_key in st.session_state.watched_db:
+        st.session_state.watched_db[new_key] = st.session_state.watched_db.pop(old_key)
+        save_app_data()
+        return st.session_state.watched_db.get(new_key, False)
+    return False
+
+
+def add_anime_to_list(tv_id, title):
+    st.session_state.my_anime_list[title] = get_anime_details_api(tv_id, title)
+    save_app_data()
+
+
+def delete_anime(title):
+    info = st.session_state.my_anime_list.get(title, {})
+    anime_uid = get_anime_uid(title, info)
+    st.session_state.my_anime_list.pop(title, None)
+
+    old_prefix = f"chk_{title}_"
+    new_prefix = f"chk_{anime_uid}_"
+    for key in list(st.session_state.watched_db.keys()):
+        if key.startswith(old_prefix) or key.startswith(new_prefix):
+            st.session_state.watched_db.pop(key, None)
+
+    save_app_data()
+
+
 def on_checkbox_change(a_title, clicked_s_idx, clicked_ep_idx, w_key):
-    is_checked = st.session_state[w_key] 
-    anime_info = st.session_state.my_anime_list[a_title] 
+    is_checked = st.session_state[w_key]
+    anime_info = st.session_state.my_anime_list[a_title]
     seasons = anime_info.get('seasons', [])
-    
+
     for s_idx, season in enumerate(seasons):
-        s_name = season['name']
         for ep_idx, ep in enumerate(season.get('episodes', []), 1):
-            db_key = f"chk_{a_title}_{s_name}_{ep_idx}"
+            db_key = make_watch_key(a_title, season, ep_idx)
             current_w_key = f"widget_{db_key}"
-            
+
             if is_checked:
                 if s_idx < clicked_s_idx or (s_idx == clicked_s_idx and ep_idx <= clicked_ep_idx):
                     st.session_state.watched_db[db_key] = True
@@ -260,11 +389,13 @@ def on_checkbox_change(a_title, clicked_s_idx, clicked_ep_idx, w_key):
                     if current_w_key in st.session_state:
                         st.session_state[current_w_key] = False
 
+    save_app_data()
+
 def clear_search():
     st.session_state.search_box = ""
 
 def add_direct_and_clear(tv_id, title):
-    st.session_state.my_anime_list[title] = get_anime_details_api(tv_id, title)
+    add_anime_to_list(tv_id, title)
     st.session_state.search_box = ""
 
 
@@ -332,19 +463,20 @@ if st.session_state.view == 'main':
                 for i, ep in enumerate(season.get('episodes', []), 1):
                     if ep['date'] <= current_date_str:
                         latest_aired_ep = {
+                            'season': season,
                             'season_name': season['name'],
                             'ep_num': i
                         }
             
             if latest_aired_ep:
-                db_key = f"chk_{title}_{latest_aired_ep['season_name']}_{latest_aired_ep['ep_num']}"
-                if not st.session_state.watched_db.get(db_key, False):
+                db_key = make_watch_key(title, latest_aired_ep['season'], latest_aired_ep['ep_num'])
+                if not get_watch_value(title, latest_aired_ep['season'], latest_aired_ep['ep_num']):
                     needs_n_badge = True 
             
             if st.session_state.is_editing:
                 display_name = f"{title} [삭제]" 
                 if st.button(display_name, key=f"del_{title}"):
-                    del st.session_state.my_anime_list[title]
+                    delete_anime(title)
                     st.rerun()
             else:
                 display_name = f"{title} :red[**N**]" if needs_n_badge else title
@@ -417,7 +549,7 @@ if st.session_state.view == 'main':
                             st.button("추가 완료", key=f"add_new_main_{tv_id}", disabled=True)
                         else:
                             if st.button("목록 추가", key=f"add_new_main_{tv_id}"):
-                                st.session_state.my_anime_list[title] = get_anime_details_api(tv_id, title)
+                                add_anime_to_list(tv_id, title)
                                 st.rerun()
                                     
         st.write("")
@@ -465,8 +597,8 @@ elif st.session_state.view == 'detail':
         
         for season in anime_info.get('seasons', []):
             for i, ep in enumerate(season.get('episodes', []), 1):
-                db_key = f"chk_{anime_title}_{season['name']}_{i}"
-                if st.session_state.watched_db.get(db_key, False):
+                db_key = make_watch_key(anime_title, season, i)
+                if get_watch_value(anime_title, season, i):
                     last_watched_season = season['name']
                     last_watched_episode = i
 
@@ -486,7 +618,7 @@ elif st.session_state.view == 'detail':
                     st.link_button("정보", anime_info.get('namu_link', '#'))
                 with action_c2:
                     if st.button("삭제", key=f"del_detail_{anime_title}"):
-                        del st.session_state.my_anime_list[anime_title] 
+                        delete_anime(anime_title)
                         st.session_state.selected_anime = None
                         st.session_state.view = 'main' 
                         st.rerun() 
@@ -541,9 +673,9 @@ elif st.session_state.view == 'detail':
             for i, ep in enumerate(season.get('episodes', []), 1):
                 c1, c2, c3 = st.columns([6, 3, 1])
                 
-                db_key = f"chk_{anime_title}_{season['name']}_{i}"
+                db_key = make_watch_key(anime_title, season, i)
                 widget_key = f"widget_{db_key}"
-                is_watched = st.session_state.watched_db.get(db_key, False)
+                is_watched = get_watch_value(anime_title, season, i)
                 
                 is_future_episode = ep['date'] > current_date_str
                 
@@ -608,16 +740,45 @@ elif st.session_state.view == 'new_animes':
                                 st.button("추가 완료", key=f"add_new_view_{tv_id}", disabled=True)
                             else:
                                 if st.button("목록 추가", key=f"add_new_view_{tv_id}"):
-                                    st.session_state.my_anime_list[title] = get_anime_details_api(tv_id, title)
+                                    add_anime_to_list(tv_id, title)
                                     st.rerun()
 
-# --- 화면 5: 기사 상세 보기 화면 ---
+# --- 화면 5: 애니 소식 목록 화면 ---
+elif st.session_state.view == 'news':
+    components.html("<script>window.parent.scrollTo(0,0);</script>", height=0)
+
+    if st.button("목록으로 돌아가기", key="back_from_news"):
+        st.session_state.view = 'main'
+        st.rerun()
+
+    st.title("최신 애니 소식")
+    st.write("관심 있는 소식을 골라 자세히 확인하세요.")
+    st.divider()
+
+    rows = (len(news_data) + 2) // 3
+    for r in range(rows):
+        cols = st.columns(3)
+        for c in range(3):
+            idx = r * 3 + c
+            if idx < len(news_data):
+                news = news_data[idx]
+                with cols[c]:
+                    with st.container(border=True):
+                        st.image(news['img'], use_container_width=True)
+                        if st.button(news['title'], key=f"news_list_{idx}"):
+                            st.session_state.selected_news = news
+                            st.session_state.view = 'news_detail'
+                            st.rerun()
+                        st.caption(news['content'])
+                        st.markdown(f"<div class='news-date'>{news['date']}</div>", unsafe_allow_html=True)
+
+# --- 화면 6: 기사 상세 보기 화면 ---
 elif st.session_state.view == 'news_detail':
     news = st.session_state.selected_news
     
     if st.button("목록으로 돌아가기", key="back_from_news_detail"):
         st.session_state.selected_news = None
-        st.session_state.view = 'main' 
+        st.session_state.view = 'news' 
         st.rerun()
 
     if news:
