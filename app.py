@@ -151,6 +151,35 @@ st.markdown("""
         text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
     }
     .detail-action-btn.danger { color: #b91c1c !important; }
+    .library-title-actions-anchor, .detail-actions-anchor { display: none; }
+    div[data-testid="stHorizontalBlock"]:has(.library-title-actions-anchor),
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) {
+        display: flex !important; flex-direction: row !important; align-items: center !important;
+        justify-content: space-between !important; gap: 6px !important; flex-wrap: nowrap !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.library-title-actions-anchor) > div:first-child,
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:first-child {
+        flex: 1 1 auto !important; width: auto !important; min-width: 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.library-title-actions-anchor) > div:nth-child(2) {
+        flex: 0 0 58px !important; width: 58px !important; min-width: 58px !important;
+        display: flex !important; justify-content: flex-end !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(2),
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(3) {
+        flex: 0 0 58px !important; width: 58px !important; min-width: 58px !important;
+        display: flex !important; justify-content: flex-end !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.library-title-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) .stLinkButton > a {
+        width: auto !important; max-width: 58px !important; min-width: 42px !important;
+        height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
+        font-size: 0.78rem !important; justify-content: center !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(3) [data-testid="stButton"] button {
+        color: #b91c1c !important;
+    }
     .movie-action-row {
         display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px;
     }
@@ -1758,12 +1787,13 @@ if st.session_state.view == 'main':
         with library_tab:
             current_date_str = datetime.now().strftime('%Y.%m.%d')
             st.session_state.is_editing = False
-            title_col, search_btn_col = st.columns([7, 2], gap="small", vertical_alignment="center")
+            title_col, search_btn_col = st.columns([8, 1], gap="small", vertical_alignment="center")
             with title_col:
+                st.markdown("<span class='library-title-actions-anchor'></span>", unsafe_allow_html=True)
                 st.subheader("내 시청 목록")
             with search_btn_col:
                 search_btn_label = "닫기" if st.session_state.show_library_search else "검색"
-                st.button(search_btn_label, key="toggle_library_search_btn", on_click=toggle_library_search, use_container_width=True)
+                st.button(search_btn_label, key="toggle_library_search_btn", on_click=toggle_library_search)
 
             if not st.session_state.my_anime_list:
                 st.write("아직 추가한 애니가 없습니다. 위 검색창에서 작품을 추가해보세요.")
@@ -1976,21 +2006,28 @@ elif st.session_state.view == 'detail':
             else:
                 watched_text = "기록 없음"
 
-            st.markdown(
-                f"""
-                <div class="detail-meta-actions">
+            meta_col, info_col, delete_col = st.columns([6, 1, 1], gap="small", vertical_alignment="center")
+            with meta_col:
+                st.markdown("<span class='detail-actions-anchor'></span>", unsafe_allow_html=True)
+                st.markdown(
+                    f"""
                     <div class="detail-meta-text">
                         {html.escape(status_text)}<br>
                         최근 {html.escape(watched_text)}
                     </div>
-                    <div class="detail-action-row">
-                        <a class="detail-action-btn" href="{html.escape(anime_info.get('namu_link', '#'))}" target="_blank" rel="noopener noreferrer">정보</a>
-                        <a class="detail-action-btn danger" href="?delete_anime={quote_plus(anime_title)}">삭제</a>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+                    """,
+                    unsafe_allow_html=True
+                )
+            with info_col:
+                st.link_button("정보", anime_info.get('namu_link', '#'))
+            with delete_col:
+                if st.button("삭제", key=f"delete_detail_{get_anime_uid(anime_title, anime_info)}"):
+                    delete_anime(anime_title)
+                    st.query_params.clear()
+                    st.session_state.selected_anime = None
+                    st.session_state.selected_season = None
+                    st.session_state.view = 'main'
+                    st.rerun()
                 
             st.divider()
             
