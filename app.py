@@ -4,7 +4,7 @@ import re
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from urllib.parse import quote_plus, urljoin
+from urllib.parse import parse_qs, quote_plus, unquote, urljoin, urlparse
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -476,14 +476,38 @@ def add_direct_and_clear(tv_id, title):
 
 
 NEWS_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
+NEWS_SEARCH_QUERY = '애니메이션 (방영 예정 OR 방영일 OR 공개일 OR 신작 OR 시즌 OR 극장판 개봉 OR PV 공개)'
+NEWS_SCHEDULE_KEYWORDS = [
+    "방영", "방송", "공개", "공개일", "방영일", "방송일", "예정", "확정", "신작", "시즌",
+    "극장판", "개봉", "티저", "PV", "예고편", "캐스트", "제작 결정", "premiere", "airs",
+    "airing", "stream", "debut", "release date", "season", "trailer", "anime reveals",
+    "放送", "配信", "公開", "新作", "第", "期", "劇場版", "予告", "制作決定", "キャスト"
+]
+NEWS_EXCLUDE_KEYWORDS = [
+    "리뷰", "후기", "칼럼", "순위", "랭킹", "굿즈", "피규어", "게임", "할인", "이벤트",
+    "review", "ranking", "figure", "merch", "game"
+]
+NEWS_BLOCKED_IMAGE_DOMAINS = (
+    "google.com", "google.co.kr", "gstatic.com", "googleusercontent.com", "ggpht.com",
+    "googleapis.com", "googleusercontent.cn"
+)
+NEWS_BLOCKED_LINK_DOMAINS = ("news.google.com", "news.google.co.kr", "www.google.com", "google.com", "google.co.kr")
 NEWS_FEEDS = [
     {
-        "name": "Google News",
-        "url": f"https://news.google.com/rss/search?q={quote_plus('애니메이션 OR 애니 신작 성우 극장판')}&hl=ko&gl=KR&ceid=KR:ko",
+        "name": "AnimeAnime",
+        "url": "https://animeanime.jp/rss/index.rdf",
+    },
+    {
+        "name": "Comic Natalie",
+        "url": "https://natalie.mu/comic/news/rss",
     },
     {
         "name": "Anime News Network",
         "url": "https://www.animenewsnetwork.com/all/rss.xml?ann-edition=us",
+    },
+    {
+        "name": "Google News",
+        "url": f"https://news.google.com/rss/search?q={quote_plus(NEWS_SEARCH_QUERY)}&hl=ko&gl=KR&ceid=KR:ko",
     },
 ]
 
@@ -495,16 +519,117 @@ def strip_html(text):
     return text
 
 
+def is_schedule_news(item):
+    text = f"{item.get('title', '')} {item.get('content', '')}".lower()
+    has_schedule_keyword = any(keyword.lower() in text for keyword in NEWS_SCHEDULE_KEYWORDS)
+    has_excluded_keyword = any(keyword.lower() in text for keyword in NEWS_EXCLUDE_KEYWORDS)
+    return has_schedule_keyword and not has_excluded_keyword
+
+
+def get_domain(url):
+    try:
+        return urlparse(url).netloc.lower().removeprefix("www.")
+    except ValueError:
+        return ""
+
+
+def is_blocked_domain(url, blocked_domains):
+    domain = get_domain(url)
+    return any(domain == blocked or domain.endswith(f".{blocked}") for blocked in blocked_domains)
+
+
+def normalize_candidate_url(candidate, base_url=""):
+    candidate = html.unescape(unquote(candidate or "")).strip()
+    if not candidate:
+        return ""
+    if candidate.startswith("//"):
+        candidate = "https:" + candidate
+    if base_url:
+        candidate = urljoin(base_url, candidate)
+    if not candidate.startswith(("http://", "https://")):
+        return ""
+    return candidate
+
+
+def get_url_from_query(link):
+    try:
+        query = parse_qs(urlparse(link).query)
+    except ValueError:
+        return ""
+    for key in ("url", "u", "q"):
+        if query.get(key):
+            candidate = normalize_candidate_url(query[key][0])
+            if candidate and not is_blocked_domain(candidate, NEWS_BLOCKED_LINK_DOMAINS):
+                return candidate
+    return ""
+
+
+def extract_original_link_from_html(page_html, base_url):
+    patterns = [
+        r'data-n-au=["\']([^"\']+)',
+        r'href=["\'](https?://[^"\']+)',
+        r'(https?:\\/\\/[^"\']+)',
+    ]
+    for pattern in patterns:
+        for raw in re.findall(pattern, page_html, re.IGNORECASE):
+            candidate = raw.replace("\\/", "/")
+            candidate = normalize_candidate_url(candidate, base_url)
+            if candidate and not is_blocked_domain(candidate, NEWS_BLOCKED_LINK_DOMAINS):
+                return candidate
+    return ""
+
+
+def resolve_original_article_link(link, description, headers):
+    query_url = get_url_from_query(link)
+    if query_url:
+        return query_url
+
+    for raw_href in re.findall(r'href=["\']([^"\']+)', description or "", re.IGNORECASE):
+        candidate = normalize_candidate_url(raw_href, link)
+        if candidate and not is_blocked_domain(candidate, NEWS_BLOCKED_LINK_DOMAINS):
+            return candidate
+
+    if link and not is_blocked_domain(link, NEWS_BLOCKED_LINK_DOMAINS):
+        return link
+
+    try:
+        res = requests.get(link, headers=headers, timeout=8, allow_redirects=True)
+        res.raise_for_status()
+        if res.url and not is_blocked_domain(res.url, NEWS_BLOCKED_LINK_DOMAINS):
+            return res.url
+        if "html" in res.headers.get("content-type", ""):
+            original = extract_original_link_from_html(res.text, res.url)
+            if original:
+                return original
+    except requests.RequestException:
+        pass
+
+    return link
+
+
+def is_usable_news_image(url):
+    if not url:
+        return False
+    if is_blocked_domain(url, NEWS_BLOCKED_IMAGE_DOMAINS):
+        return False
+    lowered = url.lower()
+    blocked_markers = ("logo", "favicon", "sprite", "placeholder", "default")
+    return not any(marker in lowered for marker in blocked_markers)
+
+
 def parse_rss_date(date_text):
     if not date_text:
         return "", "0000-00-00T00:00:00"
     try:
         dt = parsedate_to_datetime(date_text)
-        if dt.tzinfo:
-            dt = dt.astimezone()
-        return dt.strftime("%Y.%m.%d"), dt.isoformat()
     except (TypeError, ValueError):
-        return "", "0000-00-00T00:00:00"
+        try:
+            dt = datetime.fromisoformat(date_text.replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return "", "0000-00-00T00:00:00"
+    if dt.tzinfo:
+        dt = dt.astimezone()
+    return dt.strftime("%Y.%m.%d"), dt.isoformat()
 
 
 def extract_rss_image(item, description):
@@ -523,7 +648,8 @@ def extract_rss_image(item, description):
 
     match = re.search(r'<img[^>]+src=["\']([^"\']+)', description or "", re.IGNORECASE)
     if match:
-        return html.unescape(match.group(1))
+        image_url = html.unescape(match.group(1))
+        return image_url if is_usable_news_image(image_url) else ""
     return ""
 
 
@@ -537,15 +663,21 @@ def extract_article_image(page_html, base_url):
     for pattern in meta_patterns:
         match = re.search(pattern, page_html, re.IGNORECASE)
         if match:
-            return urljoin(base_url, html.unescape(match.group(1)))
+            image_url = urljoin(base_url, html.unescape(match.group(1)))
+            if is_usable_news_image(image_url):
+                return image_url
 
     json_ld_match = re.search(r'"image"\s*:\s*"([^"]+)"', page_html, re.IGNORECASE)
     if json_ld_match:
-        return urljoin(base_url, html.unescape(json_ld_match.group(1)))
+        image_url = urljoin(base_url, html.unescape(json_ld_match.group(1)))
+        if is_usable_news_image(image_url):
+            return image_url
 
     article_img_match = re.search(r'<(?:article|main)[\s\S]*?<img[^>]+src=["\']([^"\']+)', page_html, re.IGNORECASE)
     if article_img_match:
-        return urljoin(base_url, html.unescape(article_img_match.group(1)))
+        image_url = urljoin(base_url, html.unescape(article_img_match.group(1)))
+        if is_usable_news_image(image_url):
+            return image_url
 
     return ""
 
@@ -572,7 +704,12 @@ def parse_rss_feed(xml_bytes, feed_name):
         link = (item.findtext("link") or "").strip()
         description_raw = item.findtext("description") or ""
         summary = strip_html(description_raw)
-        pub_date = item.findtext("pubDate") or item.findtext("published") or item.findtext("updated")
+        pub_date = (
+            item.findtext("pubDate")
+            or item.findtext("published")
+            or item.findtext("updated")
+            or item.findtext("{http://purl.org/dc/elements/1.1/}date")
+        )
         date_label, sort_date = parse_rss_date(pub_date)
         source_node = item.find("source")
         source = source_node.text.strip() if source_node is not None and source_node.text else feed_name
@@ -587,7 +724,12 @@ def parse_rss_feed(xml_bytes, feed_name):
         content = summary[:90] + "..." if len(summary) > 90 else summary
         full_content = summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요."
         if link:
-            full_content += f"<br><br><a href='{link}' target='_blank'>원문 기사 보기</a>"
+            safe_link = html.escape(link, quote=True)
+            full_content += f"<br><br><a href='{safe_link}' target='_blank'>원문 기사 보기</a>"
+
+        rss_image = extract_rss_image(item, description_raw)
+        if not is_usable_news_image(rss_image):
+            rss_image = ""
 
         items.append({
             "title": title,
@@ -595,9 +737,11 @@ def parse_rss_feed(xml_bytes, feed_name):
             "full_content": full_content,
             "date": date_label or "날짜 없음",
             "sort_date": sort_date,
-            "img": extract_rss_image(item, description_raw),
+            "img": rss_image,
             "source": source,
             "link": link,
+            "_summary": summary,
+            "_description_raw": description_raw,
         })
     return items
 
@@ -615,9 +759,11 @@ def get_anime_news(max_items=12):
         except (requests.RequestException, ET.ParseError):
             continue
 
+    schedule_items = [item for item in collected if is_schedule_news(item)]
+
     deduped = []
     seen_titles = set()
-    for item in collected:
+    for item in schedule_items:
         key = re.sub(r"\W+", "", item["title"].lower())
         if key in seen_titles:
             continue
@@ -627,15 +773,23 @@ def get_anime_news(max_items=12):
     deduped.sort(key=lambda item: item.get("sort_date", ""), reverse=True)
     deduped = deduped[:max_items]
     for item in deduped:
-        if not item.get("img"):
-            item["img"] = get_article_image(item.get("link", ""), headers) or NEWS_FALLBACK_IMAGE
+        original_link = resolve_original_article_link(item.get("link", ""), item.get("_description_raw", ""), headers)
+        item["link"] = original_link
+        summary = item.pop("_summary", "")
+        item.pop("_description_raw", None)
+        safe_link = html.escape(original_link, quote=True)
+        item["full_content"] = (summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요.")
+        if original_link:
+            item["full_content"] += f"<br><br><a href='{safe_link}' target='_blank'>원문 기사 보기</a>"
+        if not is_usable_news_image(item.get("img", "")):
+            item["img"] = get_article_image(original_link, headers) or NEWS_FALLBACK_IMAGE
     if deduped:
         return deduped
 
     return [{
-        "title": "애니 소식을 불러오지 못했습니다",
-        "content": "네트워크 연결 또는 RSS 제공 상태를 확인해주세요.",
-        "full_content": "뉴스 RSS를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+        "title": "방영 예정 소식을 불러오지 못했습니다",
+        "content": "현재 조건에 맞는 방영 예정/신작 소식을 찾지 못했습니다.",
+        "full_content": "RSS에서 방영 예정, 공개일, 신작, 시즌 발표 중심의 소식을 찾지 못했습니다. 잠시 후 다시 시도해주세요.",
         "date": datetime.now().strftime("%Y.%m.%d"),
         "sort_date": datetime.now().isoformat(),
         "img": NEWS_FALLBACK_IMAGE,
@@ -702,35 +856,109 @@ if st.session_state.view == 'main':
             if not st.session_state.my_anime_list:
                 st.write("아직 추가한 애니가 없습니다. 위 검색창에서 작품을 추가해보세요.")
             else:
+                library_filter = st.text_input(
+                    "내 목록 검색",
+                    key="library_filter",
+                    placeholder="내 보관함에서 제목 검색",
+                    label_visibility="collapsed"
+                ).strip().lower()
+
+                library_cards = []
                 for title, info in list(st.session_state.my_anime_list.items()):
+                    if library_filter and library_filter not in title.lower():
+                        continue
+
                     needs_n_badge = False
                     latest_aired_ep = None
+                    latest_aired_date = "0000.00.00"
+                    last_watched_ep = None
+                    total_episode_count = 0
+                    watched_episode_count = 0
 
                     for season in info.get('seasons', []):
                         for i, ep in enumerate(season.get('episodes', []), 1):
+                            total_episode_count += 1
+                            if get_watch_value(title, season, i):
+                                watched_episode_count += 1
+                                last_watched_ep = {
+                                    'season_name': season['name'],
+                                    'ep_num': i
+                                }
                             if ep['date'] <= current_date_str:
                                 latest_aired_ep = {
                                     'season': season,
                                     'season_name': season['name'],
                                     'ep_num': i
                                 }
+                                latest_aired_date = ep['date']
 
                     if latest_aired_ep:
                         if not get_watch_value(title, latest_aired_ep['season'], latest_aired_ep['ep_num']):
                             needs_n_badge = True
 
-                    if st.session_state.is_editing:
-                        display_name = f"{title} [삭제]"
-                        if st.button(display_name, key=f"del_{title}"):
-                            delete_anime(title)
-                            st.rerun()
-                    else:
-                        display_name = f"{title} :red[**N**]" if needs_n_badge else title
-                        if st.button(display_name, key=f"main_{title}"):
-                            st.session_state.selected_anime = title
-                            st.session_state.selected_season = None
-                            st.session_state.view = 'detail'
-                            st.rerun()
+                    library_cards.append({
+                        'title': title,
+                        'info': info,
+                        'needs_n_badge': needs_n_badge,
+                        'latest_aired_ep': latest_aired_ep,
+                        'latest_aired_date': latest_aired_date,
+                        'last_watched_ep': last_watched_ep,
+                        'total_episode_count': total_episode_count,
+                        'watched_episode_count': watched_episode_count,
+                    })
+
+                library_cards.sort(key=lambda item: (not item['needs_n_badge'], item['latest_aired_date']), reverse=False)
+                n_cards = [item for item in library_cards if item['needs_n_badge']]
+                normal_cards = [item for item in library_cards if not item['needs_n_badge']]
+                n_cards.sort(key=lambda item: item['latest_aired_date'], reverse=True)
+                normal_cards.sort(key=lambda item: item['title'])
+                library_cards = n_cards + normal_cards
+                st.caption(f"총 {len(st.session_state.my_anime_list)}개 중 {len(library_cards)}개 표시")
+
+                if not library_cards:
+                    st.write("검색 결과가 없습니다.")
+                else:
+                    cols_per_row = 2
+                    for start_idx in range(0, len(library_cards), cols_per_row):
+                        cols = st.columns(cols_per_row)
+                        for offset, card in enumerate(library_cards[start_idx:start_idx + cols_per_row]):
+                            title = card['title']
+                            info = card['info']
+                            anime_uid = get_anime_uid(title, info)
+                            with cols[offset]:
+                                with st.container(border=True):
+                                    badge = " :red[**N**]" if card['needs_n_badge'] else ""
+                                    if st.session_state.is_editing:
+                                        if st.button(f"삭제: {title}", key=f"del_card_{anime_uid}_{start_idx}_{offset}"):
+                                            delete_anime(title)
+                                            st.rerun()
+                                    else:
+                                        if st.button(f"{title}{badge}", key=f"main_card_{anime_uid}_{start_idx}_{offset}"):
+                                            st.session_state.selected_anime = title
+                                            st.session_state.selected_season = None
+                                            st.session_state.view = 'detail'
+                                            st.rerun()
+
+                                    status = info.get('display_status', '정보 없음')
+                                    st.caption(status)
+
+                                    if card['last_watched_ep']:
+                                        watched_text = f"최근: {card['last_watched_ep']['season_name']} {card['last_watched_ep']['ep_num']}화"
+                                    else:
+                                        watched_text = "최근: 기록 없음"
+                                    st.caption(watched_text)
+
+                                    if card['latest_aired_ep']:
+                                        latest_text = f"최신: {card['latest_aired_ep']['season_name']} {card['latest_aired_ep']['ep_num']}화"
+                                    else:
+                                        latest_text = "최신: 방영 정보 없음"
+                                    st.caption(latest_text)
+
+                                    if card['total_episode_count']:
+                                        progress_value = card['watched_episode_count'] / card['total_episode_count']
+                                        st.progress(progress_value, text=f"{card['watched_episode_count']} / {card['total_episode_count']}화")
+                                    else:
+                                        st.caption("에피소드 정보 없음")
 
             st.write("")
             st.divider()
@@ -799,7 +1027,7 @@ if st.session_state.view == 'main':
 
         with news_tab:
             st.subheader("최신 애니 소식")
-            st.write("RSS에서 가져온 최신 애니 관련 기사를 확인하세요.")
+            st.write("방영 예정, 신작 공개일, 시즌 발표 중심의 소식을 확인하세요.")
             st.divider()
 
             rows = (len(news_data) + 2) // 3
