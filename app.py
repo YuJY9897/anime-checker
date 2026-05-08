@@ -201,6 +201,24 @@ st.markdown("""
         height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
         font-size: 0.78rem !important; justify-content: center !important;
     }
+    .new-anime-actions-anchor { display: none; }
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) {
+        display: flex !important; flex-direction: row !important; align-items: center !important;
+        justify-content: flex-end !important; gap: 6px !important; flex-wrap: nowrap !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:first-child {
+        flex: 1 1 auto !important; width: auto !important; min-width: 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:nth-child(2),
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:nth-child(3) {
+        flex: 0 0 58px !important; width: 58px !important; min-width: 58px !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) .stLinkButton > a {
+        width: auto !important; max-width: 58px !important; min-width: 42px !important;
+        height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
+        font-size: 0.78rem !important; justify-content: center !important;
+    }
     .episode-watch-action {
         display: inline-flex; align-items: center; justify-content: center;
         min-width: 42px; height: 28px; padding: 0 8px; border-radius: 9px;
@@ -271,6 +289,7 @@ components.html(
         const appDocument = appWindow.document;
         const guardKey = "__animeCheckerBackGuardInstalled";
         const lastBackKey = "__animeCheckerLastBackAt";
+        const suppressExitUntilKey = "__animeCheckerSuppressExitUntil";
         const delayMs = 1800;
 
         if (appWindow[guardKey]) {
@@ -278,6 +297,7 @@ components.html(
         }
         appWindow[guardKey] = true;
         appWindow[lastBackKey] = 0;
+        appWindow[suppressExitUntilKey] = 0;
 
         function showBackToast(message) {
             let toast = appDocument.getElementById("anime-back-toast");
@@ -346,7 +366,6 @@ components.html(
             if (isTabSelected(newAnimeTab) || isTabSelected(newsTab)) {
                 libraryTab.click();
                 appWindow.scrollTo({ top: 0, behavior: "smooth" });
-                showBackToast("메인 화면으로 돌아왔습니다");
                 return true;
             }
             return false;
@@ -356,17 +375,24 @@ components.html(
         appWindow.addEventListener("popstate", function () {
             if (clickVisibleAppBackButton()) {
                 appWindow[lastBackKey] = 0;
+                appWindow[suppressExitUntilKey] = Date.now() + delayMs + 800;
                 appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
                 return;
             }
 
             if (returnToMainTabIfNeeded()) {
                 appWindow[lastBackKey] = 0;
+                appWindow[suppressExitUntilKey] = Date.now() + delayMs + 800;
                 appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
                 return;
             }
 
             const now = Date.now();
+            if (now < (appWindow[suppressExitUntilKey] || 0)) {
+                appWindow[lastBackKey] = 0;
+                appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+                return;
+            }
             if (now - appWindow[lastBackKey] <= delayMs) {
                 appWindow[guardKey] = false;
                 appWindow.history.back();
@@ -1724,10 +1750,12 @@ if st.session_state.view == 'main':
                                     st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                                     st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
 
-                                    btn_c1, btn_c2 = st.columns(2, gap="small")
-                                    with btn_c1:
+                                    spacer_col, info_col, add_col = st.columns([6, 2, 2], gap="small")
+                                    with spacer_col:
+                                        st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
+                                    with info_col:
                                         st.link_button("정보", f"https://namu.wiki/Go?q={title}")
-                                    with btn_c2:
+                                    with add_col:
                                         if title in st.session_state.my_anime_list:
                                             st.button("완료", key=f"add_new_tab_{tv_id}", disabled=True)
                                         else:
@@ -1885,7 +1913,7 @@ elif st.session_state.view == 'detail':
                                 )
                                 movie_watch_key = make_movie_watch_key(anime_title, movie)
                                 watched_movie = st.session_state.watched_db.get(movie_watch_key, False)
-                                toggle_label = "시청완료" if watched_movie else "시청"
+                                toggle_label = "완료" if watched_movie else "시청"
                                 spacer_col, watch_col, info_col = st.columns([6, 2, 2], gap="small")
                                 with spacer_col:
                                     st.markdown("<span class='movie-actions-anchor'></span>", unsafe_allow_html=True)
@@ -1995,10 +2023,12 @@ elif st.session_state.view == 'new_animes':
                         st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
                         
-                        btn_c1, btn_c2 = st.columns(2, gap="small")
-                        with btn_c1:
+                        spacer_col, info_col, add_col = st.columns([6, 2, 2], gap="small")
+                        with spacer_col:
+                            st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
+                        with info_col:
                             st.link_button("정보", f"https://namu.wiki/Go?q={title}")
-                        with btn_c2:
+                        with add_col:
                             if title in st.session_state.my_anime_list:
                                 st.button("완료", key=f"add_new_view_{tv_id}", disabled=True)
                             else:
