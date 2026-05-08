@@ -154,6 +154,16 @@ st.markdown("""
     .movie-action-row {
         display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px;
     }
+    .movie-title {
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; text-overflow: ellipsis; min-height: 2.5em;
+        line-height: 1.25; font-size: 0.92rem; font-weight: 700; color: #31333F;
+        margin: 3px 0 2px 0; word-break: keep-all; overflow-wrap: anywhere;
+    }
+    .movie-meta {
+        color: #6b7280; font-size: 0.74rem; line-height: 1.25;
+        margin-bottom: 4px; word-break: keep-all; overflow-wrap: anywhere;
+    }
     .movie-action-btn {
         display: inline-flex; align-items: center; justify-content: center;
         min-width: 44px; height: 30px; padding: 0 9px; border-radius: 9px;
@@ -161,6 +171,18 @@ st.markdown("""
         text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
     }
     .movie-action-btn.done { color: #047857 !important; border-color: #6ee7b7; background: #ecfdf5; }
+    .watch-done button {
+        color: #047857 !important; border-color: #6ee7b7 !important; background: #ecfdf5 !important;
+    }
+    .watch-pending button {
+        color: #374151 !important; border-color: #d1d5db !important; background: #f3f4f6 !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.watch-done) div[data-testid="stButton"] button {
+        color: #047857 !important; border-color: #6ee7b7 !important; background: #ecfdf5 !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(.watch-pending) div[data-testid="stButton"] button {
+        color: #374151 !important; border-color: #d1d5db !important; background: #f3f4f6 !important;
+    }
     .movie-actions-anchor { display: none; }
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) {
         display: flex !important; flex-direction: row !important; align-items: center !important;
@@ -1853,8 +1875,14 @@ elif st.session_state.view == 'detail':
                             movie = item["movie"]
                             with st.container(border=True):
                                 st.image(movie.get("img", NEWS_FALLBACK_IMAGE), use_container_width=True)
-                                st.markdown(f"**{movie.get('title', '제목 없음')}**")
-                                st.caption(f"극장판 · {movie.get('release_date', '정보 없음')} · {format_runtime(movie.get('runtime'))}")
+                                st.markdown(
+                                    f"<div class='movie-title'>{html.escape(movie.get('title', '제목 없음'))}</div>",
+                                    unsafe_allow_html=True
+                                )
+                                st.markdown(
+                                    f"<div class='movie-meta'>극장판 · {html.escape(movie.get('release_date', '정보 없음'))} · {format_runtime(movie.get('runtime'))}</div>",
+                                    unsafe_allow_html=True
+                                )
                                 movie_watch_key = make_movie_watch_key(anime_title, movie)
                                 watched_movie = st.session_state.watched_db.get(movie_watch_key, False)
                                 toggle_label = "시청완료" if watched_movie else "시청"
@@ -1862,6 +1890,7 @@ elif st.session_state.view == 'detail':
                                 with spacer_col:
                                     st.markdown("<span class='movie-actions-anchor'></span>", unsafe_allow_html=True)
                                 with watch_col:
+                                    st.markdown(f"<span class='{'watch-done' if watched_movie else 'watch-pending'}'></span>", unsafe_allow_html=True)
                                     if st.button(toggle_label, key=f"movie_watch_{movie_watch_key}"):
                                         toggle_movie_watch(anime_title, movie)
                                         st.rerun()
@@ -1917,6 +1946,7 @@ elif st.session_state.view == 'detail':
                     st.markdown("<div class='episode-actions' style='display:flex;justify-content:flex-end;align-items:center;'>", unsafe_allow_html=True)
                     if not is_future_episode:
                         watch_label = "완료" if is_watched else "시청"
+                        st.markdown(f"<span class='{'watch-done' if is_watched else 'watch-pending'}'></span>", unsafe_allow_html=True)
                         if st.button(watch_label, key=f"ep_watch_{db_key}"):
                             set_episode_watch(anime_title, season_idx, i, not is_watched)
                             st.rerun()
