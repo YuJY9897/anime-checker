@@ -60,6 +60,34 @@ def save_app_data():
         json.dump(data, f, ensure_ascii=False, indent=2)
     tmp_file.replace(DATA_FILE)
 
+def build_backup_json():
+    data = {
+        "my_anime_list": st.session_state.get("my_anime_list", {}),
+        "watched_db": st.session_state.get("watched_db", {}),
+        "updated_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+def restore_backup_file(uploaded_file):
+    try:
+        raw = uploaded_file.getvalue().decode("utf-8-sig")
+        data = json.loads(raw)
+        my_anime_list = data.get("my_anime_list", {})
+        watched_db = data.get("watched_db", {})
+        if not isinstance(my_anime_list, dict) or not isinstance(watched_db, dict):
+            return False, "백업 파일 형식이 맞지 않습니다."
+
+        st.session_state.my_anime_list = my_anime_list
+        st.session_state.watched_db = watched_db
+        st.session_state.selected_anime = None
+        st.session_state.selected_season = None
+        st.session_state.view = "main"
+        save_app_data()
+        return True, "백업을 불러왔습니다."
+    except (UnicodeDecodeError, json.JSONDecodeError, OSError):
+        return False, "백업 파일을 읽지 못했습니다."
+
 st.markdown("""
     <style>
     #MainMenu, footer, header, [data-testid="stToolbar"], [data-testid="stDecoration"],
@@ -466,7 +494,7 @@ components.html(
         function returnToMainTabIfNeeded() {
             const libraryTab = getTabByText("새 화");
             const listTab = getTabByText("목록");
-            const droppedTab = getTabByText("하차");
+            const droppedTab = getTabByText("보류");
             const newAnimeTab = getTabByText("신작 애니");
             const newsTab = getTabByText("애니 소식");
             if (!libraryTab) {
@@ -2092,7 +2120,7 @@ if st.session_state.view == 'main':
                                 st.session_state.view = 'detail'
                                 st.rerun()
 
-        update_tab, list_tab, dropped_tab, new_anime_tab, news_tab = st.tabs(["새 화", "목록", "하차", "신작 애니", "애니 소식"])
+        update_tab, list_tab, dropped_tab, new_anime_tab, news_tab = st.tabs(["새 화", "목록", "보류", "신작 애니", "애니 소식"])
 
         with update_tab:
             st.session_state.is_editing = False
@@ -2122,9 +2150,38 @@ if st.session_state.view == 'main':
                 search_btn_label = "닫기" if st.session_state.show_library_search else "검색"
                 st.button(search_btn_label, key="toggle_library_search_btn", on_click=toggle_library_search)
 
+            with st.expander("백업 / 불러오기"):
+                backup_col, restore_col = st.columns([1, 1], gap="small")
+                with backup_col:
+                    st.download_button(
+                        "백업 저장",
+                        data=build_backup_json(),
+                        file_name=f"anime_checker_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+                        mime="application/json",
+                        use_container_width=True,
+                        key="download_backup_json"
+                    )
+                with restore_col:
+                    backup_file = st.file_uploader(
+                        "백업 불러오기",
+                        type=["json"],
+                        label_visibility="collapsed",
+                        key="restore_backup_file"
+                    )
+                if backup_file is not None:
+                    st.caption("불러오면 현재 목록과 시청 기록이 백업 파일 내용으로 바뀝니다.")
+                    if st.button("불러오기", key="restore_backup_btn", use_container_width=True):
+                        ok, message = restore_backup_file(backup_file)
+                        if ok:
+                            st.success(message)
+                            st.rerun()
+                        else:
+                            st.error(message)
+
             if not st.session_state.my_anime_list:
                 st.write("아직 추가한 애니가 없습니다. 위 검색창에서 작품을 추가해보세요.")
             else:
+
                 library_filter = ""
                 if st.session_state.show_library_search:
                     library_filter = st.text_input(
@@ -2149,12 +2206,12 @@ if st.session_state.view == 'main':
             render_library_schedule("list")
 
         with dropped_tab:
-            st.subheader("하차 목록")
+            st.subheader("보류 목록")
             dropped_items = [(title, info) for title, info in st.session_state.my_anime_list.items() if is_dropped(info)]
             st.markdown(f"<div class='library-count'>총 {len(dropped_items)}개</div>", unsafe_allow_html=True)
 
             if not dropped_items:
-                st.write("하차한 애니가 없습니다.")
+                st.write("보류한 애니가 없습니다.")
             else:
                 dropped_items.sort(key=lambda item: item[0])
                 cols_per_row = 3
@@ -2301,7 +2358,7 @@ elif st.session_state.view == 'detail':
                     unsafe_allow_html=True
                 )
             with drop_col:
-                drop_label = "복귀" if is_dropped(anime_info) else "하차"
+                drop_label = "복귀" if is_dropped(anime_info) else "보류"
                 if st.button(drop_label, key=f"drop_detail_{get_anime_uid(anime_title, anime_info)}"):
                     toggle_dropped(anime_title)
                     st.rerun()
