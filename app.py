@@ -12,6 +12,11 @@ import streamlit.components.v1 as components
 import requests
 from datetime import datetime
 
+try:
+    from streamlit_local_storage import LocalStorage
+except Exception:
+    LocalStorage = None
+
 # === 1. API 및 장르 설정 ===
 try:
     TMDB_API_KEY = st.secrets.get("TMDB_API_KEY", "")
@@ -33,6 +38,7 @@ st.markdown("<div id='top'></div>", unsafe_allow_html=True)
 
 APP_DIR = Path(__file__).resolve().parent
 DATA_FILE = APP_DIR / "anime_check_data.json"
+BROWSER_STORAGE_KEY = "anime_checker_data_v1"
 
 
 def load_app_data():
@@ -44,9 +50,35 @@ def load_app_data():
         return {
             "my_anime_list": data.get("my_anime_list", {}),
             "watched_db": data.get("watched_db", {}),
+            "updated_at": data.get("updated_at", ""),
         }
     except (json.JSONDecodeError, OSError):
         return {"my_anime_list": {}, "watched_db": {}}
+
+
+def normalize_app_data(data):
+    if not isinstance(data, dict):
+        return None
+    my_anime_list = data.get("my_anime_list", {})
+    watched_db = data.get("watched_db", {})
+    if not isinstance(my_anime_list, dict) or not isinstance(watched_db, dict):
+        return None
+    return {
+        "my_anime_list": my_anime_list,
+        "watched_db": watched_db,
+        "updated_at": data.get("updated_at", ""),
+    }
+
+
+def parse_app_data_json(raw):
+    if not raw:
+        return None
+    try:
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8-sig")
+        return normalize_app_data(json.loads(raw))
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
+        return None
 
 
 def save_app_data():
@@ -59,6 +91,8 @@ def save_app_data():
     with tmp_file.open("w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     tmp_file.replace(DATA_FILE)
+    st.session_state.pending_local_save = True
+    st.session_state.local_save_version = st.session_state.get("local_save_version", 0) + 1
 
 def build_backup_json():
     data = {
@@ -70,23 +104,17 @@ def build_backup_json():
 
 
 def restore_backup_file(uploaded_file):
-    try:
-        raw = uploaded_file.getvalue().decode("utf-8-sig")
-        data = json.loads(raw)
-        my_anime_list = data.get("my_anime_list", {})
-        watched_db = data.get("watched_db", {})
-        if not isinstance(my_anime_list, dict) or not isinstance(watched_db, dict):
-            return False, "백업 파일 형식이 맞지 않습니다."
+    data = parse_app_data_json(uploaded_file.getvalue())
+    if data is None:
+        return False, "백업 파일 형식이 맞지 않습니다."
 
-        st.session_state.my_anime_list = my_anime_list
-        st.session_state.watched_db = watched_db
-        st.session_state.selected_anime = None
-        st.session_state.selected_season = None
-        st.session_state.view = "main"
-        save_app_data()
-        return True, "백업을 불러왔습니다."
-    except (UnicodeDecodeError, json.JSONDecodeError, OSError):
-        return False, "백업 파일을 읽지 못했습니다."
+    st.session_state.my_anime_list = data["my_anime_list"]
+    st.session_state.watched_db = data["watched_db"]
+    st.session_state.selected_anime = None
+    st.session_state.selected_season = None
+    st.session_state.view = "main"
+    save_app_data()
+    return True, "백업을 불러왔습니다."
 
 st.markdown("""
     <style>
@@ -1254,17 +1282,48 @@ if 'search_box' not in st.session_state: st.session_state.search_box = ""
 if 'library_filter' not in st.session_state: st.session_state.library_filter = ""
 if 'show_library_search' not in st.session_state: st.session_state.show_library_search = False
 if 'news_return_view' not in st.session_state: st.session_state.news_return_view = 'main'
+if 'pending_local_save' not in st.session_state: st.session_state.pending_local_save = False
+if 'local_save_version' not in st.session_state: st.session_state.local_save_version = 0
+if 'loaded_from_local_storage' not in st.session_state: st.session_state.loaded_from_local_storage = False
+
+local_storage = LocalStorage() if LocalStorage is not None else None
+local_storage_raw = None
+if local_storage is not None:
+    try:
+        local_storage_raw = local_storage.getItem(BROWSER_STORAGE_KEY, key="load_browser_storage")
+    except Exception:
+        local_storage_raw = None
 
 if 'data_loaded' not in st.session_state:
-    saved_data = load_app_data()
+    if local_storage is not None:
+        saved_data = {"my_anime_list": {}, "watched_db": {}, "updated_at": ""}
+    else:
+        saved_data = load_app_data()
     st.session_state.watched_db = saved_data.get("watched_db", {})
     st.session_state.my_anime_list = saved_data.get("my_anime_list", {})
+    st.session_state.loaded_updated_at = saved_data.get("updated_at", "")
     st.session_state.data_loaded = True
 
 if 'watched_db' not in st.session_state:
     st.session_state.watched_db = {}
 if 'my_anime_list' not in st.session_state:
     st.session_state.my_anime_list = {}
+
+local_storage_data = parse_app_data_json(local_storage_raw)
+if local_storage_data and not st.session_state.loaded_from_local_storage:
+    has_local_data = bool(local_storage_data["my_anime_list"]) or bool(local_storage_data["watched_db"])
+    current_has_data = bool(st.session_state.my_anime_list) or bool(st.session_state.watched_db)
+    if has_local_data and (not current_has_data or local_storage_data.get("updated_at", "") >= st.session_state.get("loaded_updated_at", "")):
+        st.session_state.my_anime_list = local_storage_data["my_anime_list"]
+        st.session_state.watched_db = local_storage_data["watched_db"]
+        st.session_state.loaded_from_local_storage = True
+        st.session_state.pending_local_save = False
+        st.session_state.selected_anime = None
+        st.session_state.selected_season = None
+        st.session_state.selected_news = None
+        st.session_state.view = "main"
+        st.rerun()
+    st.session_state.loaded_from_local_storage = True
 
 app_back_target = st.query_params.get("app_back")
 if app_back_target:
@@ -1353,6 +1412,13 @@ for title, info in st.session_state.my_anime_list.items():
 
 if existing_data_changed:
     save_app_data()
+
+if local_storage is not None and st.session_state.get("pending_local_save", False):
+    try:
+        local_storage.setItem(BROWSER_STORAGE_KEY, build_backup_json())
+        st.session_state.pending_local_save = False
+    except Exception:
+        pass
 # --------------------------------------------------------
 
 def get_anime_uid(title, info=None):
