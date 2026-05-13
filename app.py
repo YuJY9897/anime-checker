@@ -1572,7 +1572,7 @@ def normalize_info_url(url):
 
 
 NEWS_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
-NEWS_SEARCH_QUERY = '애니 방영 예정 OR 신작 애니 OR 애니메이션 공개일 OR 애니메이션 방영일 OR 극장판 개봉 OR 애니 시즌 발표'
+NEWS_SEARCH_QUERY = '(애니 방영 예정 OR 신작 애니 OR 애니메이션 공개일 OR 애니메이션 방영일 OR 애니메이션 방영 OR 극장판 개봉 OR 애니 시즌 발표) when:14d'
 NEWS_SCHEDULE_KEYWORDS = [
     "방영", "방송", "공개", "공개일", "방영일", "방송일", "예정", "확정", "신작", "시즌",
     "극장판", "개봉", "티저", "PV", "예고편", "캐스트", "제작 결정", "넷플릭스",
@@ -1596,12 +1596,16 @@ NEWS_FEEDS = [
         "url": f"https://news.google.com/rss/search?q={quote_plus(NEWS_SEARCH_QUERY)}&hl=ko&gl=KR&ceid=KR:ko",
     },
     {
+        "name": "Google 뉴스 한국 - 최근 방영",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('(애니메이션 방영 OR 애니메이션 공개 OR 애니메이션 시즌 OR 애니메이션 티저) when:14d')}&hl=ko&gl=KR&ceid=KR:ko",
+    },
+    {
         "name": "Google 뉴스 한국 - 라프텔",
-        "url": f"https://news.google.com/rss/search?q={quote_plus('라프텔 신작 애니 OR 라프텔 방영 예정 OR 애니플러스 신작')}&hl=ko&gl=KR&ceid=KR:ko",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('(라프텔 신작 애니 OR 라프텔 방영 예정 OR 애니플러스 신작) when:30d')}&hl=ko&gl=KR&ceid=KR:ko",
     },
     {
         "name": "Google 뉴스 한국 - 극장판",
-        "url": f"https://news.google.com/rss/search?q={quote_plus('애니 극장판 개봉 OR 애니메이션 극장판 개봉 OR 애니 영화 개봉')}&hl=ko&gl=KR&ceid=KR:ko",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('(애니 극장판 개봉 OR 애니메이션 극장판 개봉 OR 애니 영화 개봉) when:30d')}&hl=ko&gl=KR&ceid=KR:ko",
     },
 ]
 
@@ -1994,7 +1998,7 @@ def parse_rss_feed(xml_bytes, feed_name):
     return items
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False)
 def get_anime_news(max_items=12):
     collected = []
     headers = {"User-Agent": "Mozilla/5.0 anime-checker/1.0"}
@@ -2019,10 +2023,10 @@ def get_anime_news(max_items=12):
         deduped.append(item)
 
     deduped.sort(key=lambda item: item.get("sort_date", ""), reverse=True)
-    deduped = deduped[:max_items]
+    candidates = deduped[:max_items * 3]
 
     enriched = []
-    for item in deduped:
+    for item in candidates:
         description_raw = item.pop("_description_raw", "")
         article_link = resolve_original_article_link(item.get("link", ""), description_raw, headers)
         if not is_probable_article_link(article_link):
@@ -2033,6 +2037,8 @@ def get_anime_news(max_items=12):
         if not is_usable_news_image(item.get("img", "")):
             item["img"] = get_article_image(article_link, headers) or NEWS_FALLBACK_IMAGE
         enriched.append(item)
+        if len(enriched) >= max_items:
+            break
     if enriched:
         return enriched
 
@@ -2048,7 +2054,13 @@ def get_anime_news(max_items=12):
     }]
 
 
-news_data = get_anime_news()
+if "news_loaded_at" not in st.session_state:
+    st.session_state.news_loaded_at = datetime.now()
+if "news_data" not in st.session_state:
+    st.session_state.news_data = get_anime_news()
+
+news_data = st.session_state.news_data
+news_loaded_label = st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
 
 current_view_marker = html.escape(str(st.session_state.get("view", "main")), quote=True)
 selected_season_marker = "none" if st.session_state.get("selected_season") is None else "selected"
@@ -2338,7 +2350,11 @@ if st.session_state.view == 'main':
                                                 st.rerun()
 
         with news_tab:
-            st.subheader("최신 애니 소식")
+            news_title_col, news_time_col = st.columns([5, 4], gap="small", vertical_alignment="center")
+            with news_title_col:
+                st.subheader("최신 애니 소식")
+            with news_time_col:
+                st.markdown(f"<div class='library-count'>{news_loaded_label}</div>", unsafe_allow_html=True)
             st.write("방영 예정, 신작 공개일, 시즌 발표 중심의 소식을 확인하세요.")
             st.divider()
 
@@ -2616,7 +2632,11 @@ elif st.session_state.view == 'news':
         st.session_state.view = 'main'
         st.rerun()
 
-    st.title("최신 애니 소식")
+    news_title_col, news_time_col = st.columns([5, 4], gap="small", vertical_alignment="center")
+    with news_title_col:
+        st.title("최신 애니 소식")
+    with news_time_col:
+        st.markdown(f"<div class='library-count'>{news_loaded_label}</div>", unsafe_allow_html=True)
     st.write("관심 있는 소식을 골라 자세히 확인하세요.")
     st.divider()
 
