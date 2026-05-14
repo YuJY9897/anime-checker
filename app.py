@@ -1290,8 +1290,7 @@ local_storage = LocalStorage() if LocalStorage is not None else None
 local_storage_raw = None
 if local_storage is not None:
     try:
-        returned_local_value = local_storage.getItem(BROWSER_STORAGE_KEY, key="load_browser_storage")
-        local_storage_raw = st.session_state.get("load_browser_storage") or returned_local_value
+        local_storage_raw = local_storage.getItem(BROWSER_STORAGE_KEY)
     except Exception:
         local_storage_raw = None
 
@@ -1417,8 +1416,11 @@ if existing_data_changed:
 if local_storage is not None and st.session_state.get("pending_local_save", False):
     try:
         backup_json = build_backup_json()
-        local_storage.setItem(BROWSER_STORAGE_KEY, backup_json)
-        st.session_state["load_browser_storage"] = backup_json
+        local_storage.setItem(
+            BROWSER_STORAGE_KEY,
+            backup_json,
+            key=f"save_browser_storage_{st.session_state.get('local_save_version', 0)}"
+        )
         st.session_state.pending_local_save = False
     except Exception:
         pass
@@ -1581,8 +1583,13 @@ NEWS_SCHEDULE_KEYWORDS = [
     "극장판", "개봉", "티저", "PV", "예고편", "캐스트", "제작 결정", "넷플릭스",
     "라프텔", "애니플러스", "애니맥스", "티빙", "왓챠", "OTT"
 ]
+NEWS_ANIME_KEYWORDS = [
+    "애니", "애니메이션", "극장판", "라프텔", "애니플러스", "애니맥스", "성우",
+    "만화 원작", "일본 만화", "라이트노벨", "라노벨", "오리지널 애니"
+]
 NEWS_EXCLUDE_KEYWORDS = [
     "리뷰", "후기", "칼럼", "순위", "랭킹", "굿즈", "피규어", "게임", "할인", "이벤트",
+    "웹툰", "드라마", "실사", "뮤지컬", "콘서트", "팝업", "콜라보 카페",
     "review", "ranking", "figure", "merch", "game"
 ]
 NEWS_BLOCKED_IMAGE_DOMAINS = (
@@ -1650,9 +1657,10 @@ def find_feed_items(root):
 
 def is_schedule_news(item):
     text = f"{item.get('title', '')} {item.get('content', '')}".lower()
+    has_anime_keyword = any(keyword.lower() in text for keyword in NEWS_ANIME_KEYWORDS)
     has_schedule_keyword = any(keyword.lower() in text for keyword in NEWS_SCHEDULE_KEYWORDS)
     has_excluded_keyword = any(keyword.lower() in text for keyword in NEWS_EXCLUDE_KEYWORDS)
-    return is_korean_news(item) and has_schedule_keyword and not has_excluded_keyword
+    return is_korean_news(item) and has_anime_keyword and has_schedule_keyword and not has_excluded_keyword
 
 
 def is_korean_news(item):
@@ -2107,7 +2115,7 @@ def parse_rss_feed(xml_bytes, feed_name):
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
-def get_anime_news(max_items=12, image_extract_version=2):
+def get_anime_news(max_items=12, image_extract_version=3):
     collected = []
     headers = {"User-Agent": "Mozilla/5.0 anime-checker/1.0"}
 
