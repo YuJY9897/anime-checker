@@ -1290,7 +1290,8 @@ local_storage = LocalStorage() if LocalStorage is not None else None
 local_storage_raw = None
 if local_storage is not None:
     try:
-        local_storage_raw = local_storage.getItem(BROWSER_STORAGE_KEY, key="load_browser_storage")
+        returned_local_value = local_storage.getItem(BROWSER_STORAGE_KEY, key="load_browser_storage")
+        local_storage_raw = st.session_state.get("load_browser_storage") or returned_local_value
     except Exception:
         local_storage_raw = None
 
@@ -1415,7 +1416,9 @@ if existing_data_changed:
 
 if local_storage is not None and st.session_state.get("pending_local_save", False):
     try:
-        local_storage.setItem(BROWSER_STORAGE_KEY, build_backup_json())
+        backup_json = build_backup_json()
+        local_storage.setItem(BROWSER_STORAGE_KEY, backup_json)
+        st.session_state["load_browser_storage"] = backup_json
         st.session_state.pending_local_save = False
     except Exception:
         pass
@@ -1871,11 +1874,84 @@ def resolve_original_article_link(link, description, headers):
 def is_usable_news_image(url):
     if not url:
         return False
+    if url.startswith("data:"):
+        return False
     if is_blocked_domain(url, NEWS_BLOCKED_IMAGE_DOMAINS):
         return False
     lowered = url.lower()
-    blocked_markers = ("logo", "favicon", "sprite", "placeholder", "default")
+    blocked_markers = ("logo", "favicon", "sprite", "placeholder", "default", "profile", "avatar")
     return not any(marker in lowered for marker in blocked_markers)
+
+
+def normalize_image_url(raw_url, base_url):
+    raw_url = html.unescape(raw_url or "").strip()
+    if not raw_url:
+        return ""
+    if "," in raw_url and " " in raw_url:
+        raw_url = raw_url.split(",", 1)[0].strip().split(" ", 1)[0].strip()
+    return normalize_candidate_url(raw_url, base_url)
+
+
+def first_usable_image_url(values, base_url):
+    for value in values:
+        if isinstance(value, dict):
+            nested = first_usable_image_url(
+                [
+                    value.get("url"),
+                    value.get("contentUrl"),
+                    value.get("@id"),
+                    value.get("thumbnailUrl"),
+                ],
+                base_url,
+            )
+            if nested:
+                return nested
+            continue
+        if isinstance(value, list):
+            nested = first_usable_image_url(value, base_url)
+            if nested:
+                return nested
+            continue
+        image_url = normalize_image_url(str(value or ""), base_url)
+        if is_usable_news_image(image_url):
+            return image_url
+    return ""
+
+
+def extract_json_ld_images(page_html, base_url):
+    for match in re.finditer(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>([\s\S]*?)</script>',
+        page_html,
+        re.IGNORECASE,
+    ):
+        raw_json = html.unescape(match.group(1)).strip()
+        if not raw_json:
+            continue
+        try:
+            data = json.loads(raw_json)
+        except json.JSONDecodeError:
+            continue
+
+        stack = data if isinstance(data, list) else [data]
+        while stack:
+            node = stack.pop(0)
+            if isinstance(node, list):
+                stack.extend(node)
+                continue
+            if not isinstance(node, dict):
+                continue
+
+            image_url = first_usable_image_url(
+                [node.get("image"), node.get("thumbnailUrl"), node.get("primaryImageOfPage")],
+                base_url,
+            )
+            if image_url:
+                return image_url
+
+            graph = node.get("@graph")
+            if isinstance(graph, list):
+                stack.extend(graph)
+    return ""
 
 
 def parse_rss_date(date_text):
@@ -1909,12 +1985,15 @@ def extract_rss_image(item, description):
 
     for pattern in [
         r'<img[^>]+src=["\']([^"\']+)',
+        r'<img[^>]+data-src=["\']([^"\']+)',
+        r'<img[^>]+data-original=["\']([^"\']+)',
+        r'<img[^>]+srcset=["\']([^"\']+)',
         r'<media:thumbnail[^>]+url=["\']([^"\']+)',
         r'<media:content[^>]+url=["\']([^"\']+)',
     ]:
         match = re.search(pattern, description or "", re.IGNORECASE)
         if match:
-            image_url = normalize_candidate_url(match.group(1))
+            image_url = normalize_image_url(match.group(1), "")
             if is_usable_news_image(image_url):
                 return image_url
     return ""
@@ -1923,28 +2002,52 @@ def extract_rss_image(item, description):
 def extract_article_image(page_html, base_url):
     meta_patterns = [
         r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
+        r'<meta[^>]+property=["\']og:image:url["\'][^>]+content=["\']([^"\']+)',
+        r'<meta[^>]+property=["\']og:image:secure_url["\'][^>]+content=["\']([^"\']+)',
         r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image:url["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image:secure_url["\']',
         r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)',
+        r'<meta[^>]+name=["\']twitter:image:src["\'][^>]+content=["\']([^"\']+)',
         r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image:src["\']',
+        r'<meta[^>]+itemprop=["\']image["\'][^>]+content=["\']([^"\']+)',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+itemprop=["\']image["\']',
+        r'<link[^>]+rel=["\']image_src["\'][^>]+href=["\']([^"\']+)',
+        r'<link[^>]+href=["\']([^"\']+)["\'][^>]+rel=["\']image_src["\']',
     ]
     for pattern in meta_patterns:
         match = re.search(pattern, page_html, re.IGNORECASE)
         if match:
-            image_url = urljoin(base_url, html.unescape(match.group(1)))
+            image_url = normalize_image_url(match.group(1), base_url)
             if is_usable_news_image(image_url):
                 return image_url
 
-    json_ld_match = re.search(r'"image"\s*:\s*"([^"]+)"', page_html, re.IGNORECASE)
-    if json_ld_match:
-        image_url = urljoin(base_url, html.unescape(json_ld_match.group(1)))
-        if is_usable_news_image(image_url):
-            return image_url
+    json_ld_image = extract_json_ld_images(page_html, base_url)
+    if json_ld_image:
+        return json_ld_image
 
-    article_img_match = re.search(r'<(?:article|main)[\s\S]*?<img[^>]+src=["\']([^"\']+)', page_html, re.IGNORECASE)
-    if article_img_match:
-        image_url = urljoin(base_url, html.unescape(article_img_match.group(1)))
-        if is_usable_news_image(image_url):
-            return image_url
+    json_image_patterns = [
+        r'"image"\s*:\s*"([^"]+)"',
+        r'"thumbnailUrl"\s*:\s*"([^"]+)"',
+        r'"contentUrl"\s*:\s*"([^"]+)"',
+        r'"url"\s*:\s*"([^"]+\.(?:jpg|jpeg|png|webp)(?:\?[^"]*)?)"',
+    ]
+    for pattern in json_image_patterns:
+        for match in re.finditer(pattern, page_html, re.IGNORECASE):
+            image_url = normalize_image_url(match.group(1), base_url)
+            if is_usable_news_image(image_url):
+                return image_url
+
+    image_attr_patterns = [
+        r'<(?:article|main)[\s\S]*?<img[^>]+(?:data-src|data-original|srcset|src)=["\']([^"\']+)',
+        r'<img[^>]+(?:data-src|data-original|srcset|src)=["\']([^"\']+)',
+    ]
+    for pattern in image_attr_patterns:
+        for match in re.finditer(pattern, page_html, re.IGNORECASE):
+            image_url = normalize_image_url(match.group(1), base_url)
+            if is_usable_news_image(image_url):
+                return image_url
 
     return ""
 
@@ -1953,7 +2056,12 @@ def get_article_image(link, headers):
     if not link:
         return ""
     try:
-        res = requests.get(link, headers=headers, timeout=8, allow_redirects=True)
+        article_headers = {
+            **headers,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.6,en;q=0.5",
+        }
+        res = requests.get(link, headers=article_headers, timeout=8, allow_redirects=True)
         res.raise_for_status()
         content_type = res.headers.get("content-type", "")
         if "html" not in content_type:
@@ -1999,7 +2107,7 @@ def parse_rss_feed(xml_bytes, feed_name):
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
-def get_anime_news(max_items=12):
+def get_anime_news(max_items=12, image_extract_version=2):
     collected = []
     headers = {"User-Agent": "Mozilla/5.0 anime-checker/1.0"}
 
