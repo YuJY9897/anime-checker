@@ -1600,6 +1600,11 @@ NEWS_BLOCKED_LINK_DOMAINS = (
     "news.google.com", "news.google.co.kr", "www.google.com", "google.com", "google.co.kr",
     "gstatic.com", "googleusercontent.com", "ggpht.com", "googleapis.com",
 )
+NEWS_KOREAN_DOMAINS = (
+    "inven.co.kr", "gamefocus.co.kr", "thisisgame.com", "gamemeca.com", "gamechosun.co.kr",
+    "ruliweb.com", "zdnet.co.kr", "newsis.com", "yna.co.kr", "hankyung.com",
+    "naver.com", "daum.net", "mk.co.kr", "etnews.com", "sportsseoul.com",
+)
 NEWS_FEEDS = [
     {
         "name": "Google 뉴스 한국",
@@ -1692,6 +1697,14 @@ def is_probable_article_link(url):
     blocked_exts = (".ico", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".css", ".js")
     path = urlparse(url).path.lower()
     return not any(marker in lowered for marker in blocked_markers) and not path.endswith(blocked_exts)
+
+
+def is_korean_article_source(item, article_link):
+    source = item.get("source", "")
+    if len(re.findall(r"[가-힣]", source)) >= 2:
+        return True
+    domain = get_domain(article_link)
+    return domain.endswith(".kr") or any(domain == allowed or domain.endswith(f".{allowed}") for allowed in NEWS_KOREAN_DOMAINS)
 
 
 def normalize_candidate_url(candidate, base_url=""):
@@ -1889,6 +1902,23 @@ def is_usable_news_image(url):
     lowered = url.lower()
     blocked_markers = ("logo", "favicon", "sprite", "placeholder", "default", "profile", "avatar")
     return not any(marker in lowered for marker in blocked_markers)
+
+
+def is_loadable_news_image(url, headers):
+    if not is_usable_news_image(url):
+        return False
+    try:
+        image_headers = {
+            **headers,
+            "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            "Referer": f"{urlparse(url).scheme}://{urlparse(url).netloc}/",
+        }
+        res = requests.get(url, headers=image_headers, timeout=6, stream=True, allow_redirects=True)
+        res.raise_for_status()
+        content_type = res.headers.get("content-type", "").lower()
+        return content_type.startswith("image/")
+    except requests.RequestException:
+        return False
 
 
 def normalize_image_url(raw_url, base_url):
