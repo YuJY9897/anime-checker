@@ -1654,20 +1654,27 @@ def normalize_info_url(url):
 
 
 NEWS_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
-NEWS_SEARCH_QUERY = '(애니 방영 예정 OR 신작 애니 OR 애니메이션 공개일 OR 애니메이션 방영일 OR 애니메이션 방영 OR 극장판 개봉 OR 애니 시즌 발표) when:14d'
-NEWS_SCHEDULE_KEYWORDS = [
-    "방영", "방송", "공개", "공개일", "방영일", "방송일", "예정", "확정", "신작", "시즌",
-    "극장판", "개봉", "티저", "PV", "예고편", "캐스트", "제작 결정", "넷플릭스",
-    "라프텔", "애니플러스", "애니맥스", "티빙", "왓챠", "OTT"
+NEWS_SEARCH_QUERY = (
+    "(신작 애니 OR 애니메이션 신작 OR 애니 방영 예정 OR 애니메이션 공개일 OR "
+    "애니메이션 새 시즌 OR 애니 2기 OR 애니 3기 OR 애니 후속작 OR "
+    "애니 극장판 개봉 OR 애니 극장판 재개봉 OR 애니메이션 흥행 OR 애니메이션 인기) when:30d"
+)
+NEWS_TOPIC_KEYWORDS = [
+    "방영", "방송", "공개", "공개일", "방영일", "방송일", "예정", "확정", "신작",
+    "시즌", "새 시즌", "신시즌", "후속작", "속편", "2기", "3기", "4기", "5기",
+    "제작 결정", "제작 확정", "제작 발표", "티저", "PV", "예고편", "캐스트",
+    "극장판", "개봉", "재개봉", "상영", "특별상영",
+    "흥행", "인기", "화제", "박스오피스", "관객", "누적 관객", "순위", "랭킹",
+    "넷플릭스", "라프텔", "애니플러스", "애니맥스", "티빙", "왓챠", "OTT"
 ]
 NEWS_ANIME_KEYWORDS = [
     "애니", "애니메이션", "극장판", "라프텔", "애니플러스", "애니맥스", "성우",
     "만화 원작", "일본 만화", "라이트노벨", "라노벨", "오리지널 애니"
 ]
 NEWS_EXCLUDE_KEYWORDS = [
-    "리뷰", "후기", "칼럼", "순위", "랭킹", "굿즈", "피규어", "게임", "할인", "이벤트",
+    "리뷰", "후기", "칼럼", "굿즈", "피규어", "게임", "할인", "이벤트",
     "웹툰", "드라마", "실사", "뮤지컬", "콘서트", "팝업", "콜라보 카페",
-    "review", "ranking", "figure", "merch", "game"
+    "review", "figure", "merch", "game"
 ]
 NEWS_BLOCKED_IMAGE_DOMAINS = (
     "google.com", "google.co.kr", "gstatic.com", "googleusercontent.com", "ggpht.com",
@@ -1681,6 +1688,7 @@ NEWS_KOREAN_DOMAINS = (
     "inven.co.kr", "gamefocus.co.kr", "thisisgame.com", "gamemeca.com", "gamechosun.co.kr",
     "ruliweb.com", "zdnet.co.kr", "newsis.com", "yna.co.kr", "hankyung.com",
     "naver.com", "daum.net", "mk.co.kr", "etnews.com", "sportsseoul.com",
+    "cstimes.com", "cine21.com", "maxmovie.com", "kstar.kbs.co.kr", "sports.khan.co.kr",
 )
 NEWS_FEEDS = [
     {
@@ -1688,16 +1696,20 @@ NEWS_FEEDS = [
         "url": f"https://news.google.com/rss/search?q={quote_plus(NEWS_SEARCH_QUERY)}&hl=ko&gl=KR&ceid=KR:ko",
     },
     {
-        "name": "Google 뉴스 한국 - 최근 방영",
-        "url": f"https://news.google.com/rss/search?q={quote_plus('(애니메이션 방영 OR 애니메이션 공개 OR 애니메이션 시즌 OR 애니메이션 티저) when:14d')}&hl=ko&gl=KR&ceid=KR:ko",
+        "name": "Google 뉴스 한국 - 신작/새 시즌",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('(신작 애니 OR 애니메이션 신작 OR 애니메이션 새 시즌 OR 애니 후속작 OR 애니 2기 OR 애니 3기) when:30d')}&hl=ko&gl=KR&ceid=KR:ko",
     },
     {
         "name": "Google 뉴스 한국 - 라프텔",
         "url": f"https://news.google.com/rss/search?q={quote_plus('(라프텔 신작 애니 OR 라프텔 방영 예정 OR 애니플러스 신작) when:30d')}&hl=ko&gl=KR&ceid=KR:ko",
     },
     {
-        "name": "Google 뉴스 한국 - 극장판",
-        "url": f"https://news.google.com/rss/search?q={quote_plus('(애니 극장판 개봉 OR 애니메이션 극장판 개봉 OR 애니 영화 개봉) when:30d')}&hl=ko&gl=KR&ceid=KR:ko",
+        "name": "Google 뉴스 한국 - 극장판/재개봉",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('(애니 극장판 개봉 OR 애니메이션 극장판 개봉 OR 애니 영화 개봉 OR 애니 극장판 재개봉 OR 애니메이션 재개봉) when:45d')}&hl=ko&gl=KR&ceid=KR:ko",
+    },
+    {
+        "name": "Google 뉴스 한국 - 인기/흥행",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('(애니메이션 흥행 OR 애니메이션 인기 OR 애니 박스오피스 OR 애니 극장판 관객 OR 애니메이션 순위) when:30d')}&hl=ko&gl=KR&ceid=KR:ko",
     },
 ]
 
@@ -1740,9 +1752,9 @@ def find_feed_items(root):
 def is_schedule_news(item):
     text = f"{item.get('title', '')} {item.get('content', '')}".lower()
     has_anime_keyword = any(keyword.lower() in text for keyword in NEWS_ANIME_KEYWORDS)
-    has_schedule_keyword = any(keyword.lower() in text for keyword in NEWS_SCHEDULE_KEYWORDS)
+    has_topic_keyword = any(keyword.lower() in text for keyword in NEWS_TOPIC_KEYWORDS)
     has_excluded_keyword = any(keyword.lower() in text for keyword in NEWS_EXCLUDE_KEYWORDS)
-    return is_korean_news(item) and has_anime_keyword and has_schedule_keyword and not has_excluded_keyword
+    return is_korean_news(item) and has_anime_keyword and has_topic_keyword and not has_excluded_keyword
 
 
 def is_korean_news(item):
@@ -2222,7 +2234,7 @@ def parse_rss_feed(xml_bytes, feed_name):
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
-def get_anime_news(max_items=12, image_extract_version=4):
+def get_anime_news(max_items=12, image_extract_version=5):
     collected = []
     headers = {"User-Agent": "Mozilla/5.0 anime-checker/1.0"}
 
