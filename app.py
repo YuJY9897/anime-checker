@@ -50,6 +50,7 @@ def load_app_data():
         return {
             "my_anime_list": data.get("my_anime_list", {}),
             "watched_db": data.get("watched_db", {}),
+            "wish_list": data.get("wish_list", {}),
             "updated_at": data.get("updated_at", ""),
         }
     except (json.JSONDecodeError, OSError):
@@ -61,11 +62,13 @@ def normalize_app_data(data):
         return None
     my_anime_list = data.get("my_anime_list", {})
     watched_db = data.get("watched_db", {})
-    if not isinstance(my_anime_list, dict) or not isinstance(watched_db, dict):
+    wish_list = data.get("wish_list", {})
+    if not isinstance(my_anime_list, dict) or not isinstance(watched_db, dict) or not isinstance(wish_list, dict):
         return None
     return {
         "my_anime_list": my_anime_list,
         "watched_db": watched_db,
+        "wish_list": wish_list,
         "updated_at": data.get("updated_at", ""),
     }
 
@@ -85,6 +88,7 @@ def save_app_data():
     data = {
         "my_anime_list": st.session_state.get("my_anime_list", {}),
         "watched_db": st.session_state.get("watched_db", {}),
+        "wish_list": st.session_state.get("wish_list", {}),
         "updated_at": datetime.now().isoformat(timespec="seconds"),
     }
     tmp_file = DATA_FILE.with_suffix(".tmp")
@@ -98,6 +102,7 @@ def build_backup_json():
     data = {
         "my_anime_list": st.session_state.get("my_anime_list", {}),
         "watched_db": st.session_state.get("watched_db", {}),
+        "wish_list": st.session_state.get("wish_list", {}),
         "updated_at": datetime.now().isoformat(timespec="seconds"),
     }
     return json.dumps(data, ensure_ascii=False, indent=2)
@@ -110,6 +115,22 @@ def restore_backup_file(uploaded_file):
 
     st.session_state.my_anime_list = data["my_anime_list"]
     st.session_state.watched_db = data["watched_db"]
+    st.session_state.wish_list = data.get("wish_list", {})
+    st.session_state.selected_anime = None
+    st.session_state.selected_season = None
+    st.session_state.view = "main"
+    save_app_data()
+    return True, "백업을 불러왔습니다."
+
+
+def restore_backup_text(raw_text):
+    data = parse_app_data_json(raw_text)
+    if data is None:
+        return False, "붙여넣은 백업 내용이 올바르지 않습니다."
+
+    st.session_state.my_anime_list = data["my_anime_list"]
+    st.session_state.watched_db = data["watched_db"]
+    st.session_state.wish_list = data.get("wish_list", {})
     st.session_state.selected_anime = None
     st.session_state.selected_season = None
     st.session_state.view = "main"
@@ -523,12 +544,13 @@ components.html(
             const libraryTab = getTabByText("새 화");
             const listTab = getTabByText("목록");
             const droppedTab = getTabByText("보류");
+            const wishTab = getTabByText("찜");
             const newAnimeTab = getTabByText("신작 애니");
             const newsTab = getTabByText("애니 소식");
             if (!libraryTab) {
                 return false;
             }
-            if (isTabSelected(listTab) || isTabSelected(droppedTab) || isTabSelected(newAnimeTab) || isTabSelected(newsTab)) {
+            if (isTabSelected(listTab) || isTabSelected(droppedTab) || isTabSelected(wishTab) || isTabSelected(newAnimeTab) || isTabSelected(newsTab)) {
                 libraryTab.click();
                 appWindow.scrollTo({ top: 0, behavior: "smooth" });
                 return true;
@@ -543,6 +565,14 @@ components.html(
             }
 
             const state = getCurrentAppState();
+
+            if (state.view === "detail") {
+                appWindow[lastBackKey] = 0;
+                appWindow[suppressExitUntilKey] = Date.now() + delayMs + 1200;
+                requestAppBack(state.selectedSeason === "selected" ? "season_list" : "main");
+                appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+                return;
+            }
 
             if (state.view !== "main") {
                 if (clickVisibleAppBackButton()) {
@@ -1296,11 +1326,12 @@ if local_storage is not None:
 
 if 'data_loaded' not in st.session_state:
     if local_storage is not None:
-        saved_data = {"my_anime_list": {}, "watched_db": {}, "updated_at": ""}
+        saved_data = {"my_anime_list": {}, "watched_db": {}, "wish_list": {}, "updated_at": ""}
     else:
         saved_data = load_app_data()
     st.session_state.watched_db = saved_data.get("watched_db", {})
     st.session_state.my_anime_list = saved_data.get("my_anime_list", {})
+    st.session_state.wish_list = saved_data.get("wish_list", {})
     st.session_state.loaded_updated_at = saved_data.get("updated_at", "")
     st.session_state.data_loaded = True
 
@@ -1308,14 +1339,17 @@ if 'watched_db' not in st.session_state:
     st.session_state.watched_db = {}
 if 'my_anime_list' not in st.session_state:
     st.session_state.my_anime_list = {}
+if 'wish_list' not in st.session_state:
+    st.session_state.wish_list = {}
 
 local_storage_data = parse_app_data_json(local_storage_raw)
 if local_storage_data and not st.session_state.loaded_from_local_storage:
-    has_local_data = bool(local_storage_data["my_anime_list"]) or bool(local_storage_data["watched_db"])
-    current_has_data = bool(st.session_state.my_anime_list) or bool(st.session_state.watched_db)
+    has_local_data = bool(local_storage_data["my_anime_list"]) or bool(local_storage_data["watched_db"]) or bool(local_storage_data.get("wish_list", {}))
+    current_has_data = bool(st.session_state.my_anime_list) or bool(st.session_state.watched_db) or bool(st.session_state.wish_list)
     if has_local_data and (not current_has_data or local_storage_data.get("updated_at", "") >= st.session_state.get("loaded_updated_at", "")):
         st.session_state.my_anime_list = local_storage_data["my_anime_list"]
         st.session_state.watched_db = local_storage_data["watched_db"]
+        st.session_state.wish_list = local_storage_data.get("wish_list", {})
         st.session_state.loaded_from_local_storage = True
         st.session_state.pending_local_save = False
         st.session_state.selected_anime = None
@@ -1469,9 +1503,52 @@ def refresh_related_movie_runtime(info):
     return changed
 
 
+def is_generic_image_url(url):
+    lowered = (url or "").lower()
+    return not lowered or "images.unsplash.com" in lowered or "placeholder" in lowered or "default" in lowered
+
+
+def get_display_season_image(season, anime_info):
+    season_img = season.get("img", "")
+    if not is_generic_image_url(season_img):
+        return season_img
+    for key in ("poster_img", "img", "series_img"):
+        candidate = anime_info.get(key, "")
+        if not is_generic_image_url(candidate):
+            return candidate
+    return season_img or NEWS_FALLBACK_IMAGE
+
+
 def add_anime_to_list(tv_id, title):
     st.session_state.my_anime_list[title] = get_anime_details_api(tv_id, title)
+    st.session_state.wish_list.pop(str(tv_id), None)
     save_app_data()
+
+
+def make_wish_item(tv_id, title, item=None):
+    item = item or {}
+    rep_img = f"https://image.tmdb.org/t/p/w500{item.get('poster_path')}" if item.get('poster_path') else ""
+    return {
+        "id": tv_id,
+        "title": title,
+        "poster_path": item.get("poster_path", ""),
+        "img": rep_img,
+        "first_air_date": item.get("first_air_date", ""),
+        "genre_ids": item.get("genre_ids", []),
+    }
+
+
+def toggle_wish(tv_id, title, item=None):
+    wish_key = str(tv_id)
+    if wish_key in st.session_state.wish_list:
+        st.session_state.wish_list.pop(wish_key, None)
+    else:
+        st.session_state.wish_list[wish_key] = make_wish_item(tv_id, title, item)
+    save_app_data()
+
+
+def is_wished(tv_id):
+    return str(tv_id) in st.session_state.wish_list
 
 
 def is_dropped(info):
@@ -2145,7 +2222,7 @@ def parse_rss_feed(xml_bytes, feed_name):
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
-def get_anime_news(max_items=12, image_extract_version=3):
+def get_anime_news(max_items=12, image_extract_version=4):
     collected = []
     headers = {"User-Agent": "Mozilla/5.0 anime-checker/1.0"}
 
@@ -2177,11 +2254,15 @@ def get_anime_news(max_items=12, image_extract_version=3):
         article_link = resolve_original_article_link(item.get("link", ""), description_raw, headers)
         if not is_probable_article_link(article_link):
             continue
+        if not is_korean_article_source(item, article_link):
+            continue
         summary = item.pop("_summary", "")
         item["full_content"] = summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요."
         item["link"] = article_link
-        if not is_usable_news_image(item.get("img", "")):
-            item["img"] = get_article_image(article_link, headers) or NEWS_FALLBACK_IMAGE
+        image_url = item.get("img", "")
+        if not is_loadable_news_image(image_url, headers):
+            image_url = get_article_image(article_link, headers)
+        item["img"] = image_url if is_loadable_news_image(image_url, headers) else ""
         enriched.append(item)
         if len(enriched) >= max_items:
             break
@@ -2194,7 +2275,7 @@ def get_anime_news(max_items=12, image_extract_version=3):
         "full_content": "RSS에서 방영 예정, 공개일, 신작, 시즌 발표 중심의 소식을 찾지 못했습니다. 잠시 후 다시 시도해주세요.",
         "date": datetime.now().strftime("%Y.%m.%d"),
         "sort_date": datetime.now().isoformat(),
-        "img": NEWS_FALLBACK_IMAGE,
+        "img": "",
         "source": "앱 안내",
         "link": "",
     }]
@@ -2261,7 +2342,14 @@ if st.session_state.view == 'main':
                         if title in st.session_state.my_anime_list:
                             st.caption("목록에 있음")
                         else:
-                            st.button("목록 추가", key=f"add_api_{tv_id}", on_click=add_direct_and_clear, args=(tv_id, title))
+                            add_col, wish_col = st.columns([2, 1], gap="small")
+                            with add_col:
+                                st.button("목록 추가", key=f"add_api_{tv_id}", on_click=add_direct_and_clear, args=(tv_id, title))
+                            with wish_col:
+                                wish_label = "찜해제" if is_wished(tv_id) else "찜"
+                                if st.button(wish_label, key=f"wish_api_{tv_id}"):
+                                    toggle_wish(tv_id, title, item)
+                                    st.rerun()
             
     else:
         st.divider()
@@ -2344,7 +2432,7 @@ if st.session_state.view == 'main':
                                 st.session_state.view = 'detail'
                                 st.rerun()
 
-        update_tab, list_tab, dropped_tab, new_anime_tab, news_tab = st.tabs(["새 화", "목록", "보류", "신작 애니", "애니 소식"])
+        update_tab, list_tab, dropped_tab, wish_tab, new_anime_tab, news_tab = st.tabs(["새 화", "목록", "보류", "찜", "신작 애니", "애니 소식"])
 
         with update_tab:
             st.session_state.is_editing = False
@@ -2377,6 +2465,13 @@ if st.session_state.view == 'main':
             with st.expander("백업 / 불러오기"):
                 backup_col, restore_col = st.columns([1, 1], gap="small")
                 with backup_col:
+                    st.text_area(
+                        "백업 내용",
+                        value=build_backup_json(),
+                        height=120,
+                        key="backup_json_text",
+                        help="파일 저장이 안 되는 폰에서는 이 내용을 복사해두세요."
+                    )
                     st.download_button(
                         "백업 저장",
                         data=build_backup_json(),
@@ -2401,6 +2496,20 @@ if st.session_state.view == 'main':
                             st.rerun()
                         else:
                             st.error(message)
+                restore_text = st.text_area(
+                    "백업 붙여넣기",
+                    value="",
+                    height=120,
+                    key="restore_backup_text_area",
+                    placeholder="백업 내용을 여기에 붙여넣고 아래 버튼을 누르세요."
+                )
+                if st.button("붙여넣은 백업 불러오기", key="restore_backup_text_btn", use_container_width=True):
+                    ok, message = restore_backup_text(restore_text)
+                    if ok:
+                        st.success(message)
+                        st.rerun()
+                    else:
+                        st.error(message)
 
             if not st.session_state.my_anime_list:
                 st.write("아직 추가한 애니가 없습니다. 위 검색창에서 작품을 추가해보세요.")
@@ -2450,6 +2559,40 @@ if st.session_state.view == 'main':
                                 st.session_state.view = 'detail'
                                 st.rerun()
 
+        with wish_tab:
+            st.subheader("찜 목록")
+            wish_items = list(st.session_state.wish_list.values())
+            wish_items.sort(key=lambda item: item.get("title", ""))
+            st.markdown(f"<div class='library-count'>총 {len(wish_items)}개</div>", unsafe_allow_html=True)
+
+            if not wish_items:
+                st.write("찜한 애니가 없습니다.")
+            else:
+                cols_per_row = 2
+                for start_idx in range(0, len(wish_items), cols_per_row):
+                    cols = st.columns(cols_per_row, gap="small")
+                    for offset, item in enumerate(wish_items[start_idx:start_idx + cols_per_row]):
+                        tv_id = item.get("id")
+                        title = item.get("title", "제목 없음")
+                        rep_img = item.get("img") or (f"https://image.tmdb.org/t/p/w500{item.get('poster_path')}" if item.get("poster_path") else "")
+                        with cols[offset]:
+                            with st.container(border=True):
+                                if rep_img:
+                                    st.image(rep_img, use_container_width=True)
+                                st.markdown(f"<div class='anime-title'>{html.escape(title)}</div>", unsafe_allow_html=True)
+                                add_col, remove_col = st.columns([2, 1], gap="small")
+                                with add_col:
+                                    if title in st.session_state.my_anime_list:
+                                        st.button("추가됨", key=f"wish_added_{tv_id}", disabled=True)
+                                    elif st.button("목록 추가", key=f"wish_add_{tv_id}"):
+                                        add_anime_to_list(tv_id, title)
+                                        st.rerun()
+                                with remove_col:
+                                    if st.button("삭제", key=f"wish_remove_{tv_id}"):
+                                        st.session_state.wish_list.pop(str(tv_id), None)
+                                        save_app_data()
+                                        st.rerun()
+
         with new_anime_tab:
             st.subheader("신작 애니")
             st.write("최근 방영을 시작한 애니메이션을 최신순으로 확인하세요.")
@@ -2484,9 +2627,14 @@ if st.session_state.view == 'main':
                                     st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                                     st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
 
-                                    spacer_col, add_col = st.columns([8, 2], gap="small")
+                                    spacer_col, wish_col, add_col = st.columns([6, 2, 2], gap="small")
                                     with spacer_col:
                                         st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
+                                    with wish_col:
+                                        wish_label = "찜해제" if is_wished(tv_id) else "찜"
+                                        if st.button(wish_label, key=f"wish_new_tab_{tv_id}"):
+                                            toggle_wish(tv_id, title, item)
+                                            st.rerun()
                                     with add_col:
                                         if title in st.session_state.my_anime_list:
                                             st.button("완료", key=f"add_new_tab_{tv_id}", disabled=True)
@@ -2513,7 +2661,8 @@ if st.session_state.view == 'main':
                         news = news_data[idx]
                         with cols[c]:
                             with st.container(border=True):
-                                st.image(news['img'], use_container_width=True)
+                                if news.get('img'):
+                                    st.image(news['img'], use_container_width=True)
                                 if st.button(news['title'], key=f"news_tab_{idx}"):
                                     st.session_state.selected_news = news
                                     st.session_state.news_return_view = 'main'
@@ -2537,12 +2686,22 @@ elif st.session_state.view == 'detail':
         st.session_state.view = 'main'
         st.rerun()
 
-    if st.button("뒤로가기", key="back_from_detail"):
-        if st.session_state.selected_season is not None:
-            st.session_state.selected_season = None
-        else:
+    if st.session_state.selected_season is not None:
+        back_col, home_col = st.columns([1, 1], gap="small")
+        with back_col:
+            if st.button("뒤로가기", key="back_from_detail", use_container_width=True):
+                st.session_state.selected_season = None
+                st.rerun()
+        with home_col:
+            if st.button("메인화면", key="home_from_episode", use_container_width=True):
+                st.session_state.selected_anime = None
+                st.session_state.selected_season = None
+                st.session_state.view = 'main'
+                st.rerun()
+    else:
+        if st.button("뒤로가기", key="back_from_detail"):
             st.session_state.view = 'main'
-        st.rerun()
+            st.rerun()
 
     if anime_info:
         if "related_movies" not in anime_info:
@@ -2610,7 +2769,7 @@ elif st.session_state.view == 'detail':
                 for offset, season in enumerate(seasons[start_idx:start_idx + cols_per_row]):
                     with cols[offset]:
                         with st.container(border=True):
-                            st.image(season['img'], use_container_width=True)
+                            st.image(get_display_season_image(season, anime_info), use_container_width=True)
                             st.markdown(f"**{anime_title} {season['name']}**")
                             
                             if season.get('subtitle'):
@@ -2665,7 +2824,7 @@ elif st.session_state.view == 'detail':
             
             st.title(f"{anime_title} {season['name']}")
             st.caption(season['subtitle'])
-            st.image(season['img'], use_container_width=True)
+            st.image(get_display_season_image(season, anime_info), use_container_width=True)
             st.divider()
             
             current_date_str = datetime.now().strftime('%Y.%m.%d')
@@ -2759,9 +2918,14 @@ elif st.session_state.view == 'new_animes':
                         st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
                         
-                        spacer_col, add_col = st.columns([8, 2], gap="small")
+                        spacer_col, wish_col, add_col = st.columns([6, 2, 2], gap="small")
                         with spacer_col:
                             st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
+                        with wish_col:
+                            wish_label = "찜해제" if is_wished(tv_id) else "찜"
+                            if st.button(wish_label, key=f"wish_new_view_{tv_id}"):
+                                toggle_wish(tv_id, title, item)
+                                st.rerun()
                         with add_col:
                             if title in st.session_state.my_anime_list:
                                 st.button("완료", key=f"add_new_view_{tv_id}", disabled=True)
@@ -2795,7 +2959,8 @@ elif st.session_state.view == 'news':
                 news = news_data[idx]
                 with cols[c]:
                     with st.container(border=True):
-                        st.image(news['img'], use_container_width=True)
+                        if news.get('img'):
+                            st.image(news['img'], use_container_width=True)
                         if st.button(news['title'], key=f"news_list_{idx}"):
                             st.session_state.selected_news = news
                             st.session_state.news_return_view = 'news'
@@ -2820,7 +2985,8 @@ elif st.session_state.view == 'news_detail':
         source_text = f" · {news.get('source')}" if news.get('source') else ""
         st.caption(f"발행일: {news['date']}{source_text}")
         st.divider()
-        st.image(news['img'], use_container_width=True)
+        if news.get('img'):
+            st.image(news['img'], use_container_width=True)
         if news.get('link'):
             st.link_button("원문 기사 보기", news['link'], use_container_width=True)
         st.write("")
