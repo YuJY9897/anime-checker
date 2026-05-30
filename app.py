@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, quote_plus, unquote, urljoin, urlparse
 import streamlit as st
 import streamlit.components.v1 as components
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 try:
     from streamlit_local_storage import LocalStorage
@@ -177,6 +177,36 @@ st.markdown("""
         white-space: normal !important; overflow-wrap: anywhere !important; word-break: keep-all !important; font-size: 0.9rem !important;
     }
     button[data-testid="baseButton-secondary"], .stLinkButton>a { width: 100% !important; max-width: 100% !important; justify-content: flex-start; }
+    .compact-actions-anchor, .search-actions-anchor, .wish-actions-anchor, .season-actions-anchor { display: none; }
+    div[data-testid="stHorizontalBlock"]:has(.compact-actions-anchor),
+    div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor),
+    div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor),
+    div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) {
+        display: flex !important; flex-direction: row !important; align-items: center !important;
+        justify-content: flex-end !important; gap: 6px !important; flex-wrap: nowrap !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.compact-actions-anchor) > div:first-child,
+    div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) > div:first-child,
+    div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) > div:first-child,
+    div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) > div:first-child {
+        flex: 1 1 auto !important; width: auto !important; min-width: 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.compact-actions-anchor) > div:not(:first-child),
+    div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) > div:not(:first-child),
+    div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) > div:not(:first-child),
+    div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) > div:not(:first-child) {
+        flex: 0 0 64px !important; width: 64px !important; min-width: 58px !important;
+        display: flex !important; align-items: center !important; justify-content: flex-end !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.compact-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) [data-testid="stButton"] button {
+        width: auto !important; max-width: 64px !important; min-width: 42px !important;
+        height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
+        font-size: 0.78rem !important; justify-content: center !important; text-align: center !important;
+        white-space: nowrap !important;
+    }
     button[data-testid="baseButton-secondary"]:hover, button[data-testid="baseButton-secondary"]:active, button[data-testid="baseButton-secondary"]:focus {
         background-color: #f0f2f6 !important; border: 1px solid #d1d5db !important; color: #31333F !important;
     }
@@ -184,19 +214,22 @@ st.markdown("""
     button[data-testid="baseButton-primary"]:hover, button[data-testid="baseButton-primary"]:active, button[data-testid="baseButton-primary"]:focus {
         background-color: #f0f2f6 !important; border: 1px solid #d1d5db !important; color: #31333F !important;
     }
-    .stImage img { object-fit: cover; height: 140px; border-radius: 8px; }
+    .stImage img { object-fit: cover; height: 132px; border-radius: 8px; }
     
-    .anime-title { 
-        display: -webkit-box; 
+.anime-title {
+        display: -webkit-box;
         -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical; 
-        overflow: hidden; 
-        text-overflow: ellipsis; 
-        height: 2.8em; 
-        line-height: 1.4em; 
-        margin-top: 5px; 
-        margin-bottom: 1px; 
-        font-weight: bold; 
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 2.35em;
+        line-height: 1.25em;
+        margin-top: 5px;
+        margin-bottom: 3px;
+        font-size: 0.9rem;
+        font-weight: bold;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
     }
     
     .anime-genre { 
@@ -211,7 +244,7 @@ st.markdown("""
     
     .date-text { display: flex; align-items: center; justify-content: flex-start; height: 100%; color: gray; font-size: 0.85em; }
     .news-date { color: gray; font-size: 0.8em; text-align: right; margin-top: 3px; }
-    .anime-date { color: gray; font-size: 0.75em; margin-bottom: 9px; line-height: 1.35; }
+    .anime-date { color: gray; font-size: 0.75em; margin-bottom: 7px; line-height: 1.5; }
     .search-hint { color: #888888; font-size: 0.78em; text-align: left; margin-top: -12px; margin-bottom: 6px; }
     .library-count {
         color: #8a8f98; font-size: 0.76rem; text-align: right;
@@ -422,11 +455,251 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.25);
     }
     .scroll-top-btn:hover { background: #111827; color: white !important; }
-    .bottom-safe-space { height: 3.25rem; }
+    .bottom-safe-space { height: 5.5rem; }
     @media (max-width: 640px) {
         .scroll-top-btn { right: 12px; bottom: 12px; width: 44px; min-width: 44px; padding: 0; }
         .scroll-top-btn span { display: none; }
-        .bottom-safe-space { height: 4.5rem; }
+        .bottom-safe-space { height: 6.25rem; }
+    }
+    /* === App polish overrides === */
+    html, body, [data-testid="stAppViewContainer"] { background: #f6f7f9 !important; }
+    div.block-container {
+        max-width: 560px !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        padding-top: 0.35rem !important;
+        padding-bottom: 6.5rem !important;
+    }
+    h1 { font-size: 1.32rem !important; font-weight: 800 !important; letter-spacing: 0 !important; margin-bottom: 0.35rem !important; }
+    h2, h3 { font-size: 1.03rem !important; font-weight: 800 !important; letter-spacing: 0 !important; }
+    div[data-testid="stVerticalBlock"] { gap: 0.38rem !important; }
+    div[data-testid="stHorizontalBlock"] { gap: 0.35rem !important; }
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: 1px solid #e6e8ee !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        padding: 0.58rem !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+    }
+    div[data-testid="stTabs"] { margin-top: 0.1rem !important; }
+    div[data-testid="stTabs"] [role="tablist"] {
+        gap: 0.25rem !important;
+        border-bottom: 0 !important;
+        overflow-x: auto !important;
+        padding: 0.2rem 0 0.35rem 0 !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"] {
+        border-radius: 999px !important;
+        background: #eceff3 !important;
+        border: 1px solid transparent !important;
+        color: #4b5563 !important;
+        padding: 0.34rem 0.62rem !important;
+        min-height: 30px !important;
+        white-space: nowrap !important;
+        font-size: 0.83rem !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stTabs"] button[aria-selected="true"] {
+        background: #111827 !important;
+        color: #ffffff !important;
+        border-color: #111827 !important;
+    }
+    div[data-testid="stTextInput"] input, textarea {
+        border-radius: 12px !important;
+        border: 1px solid #d9dde5 !important;
+        background: #ffffff !important;
+        min-height: 38px !important;
+        font-size: 0.92rem !important;
+    }
+    .stButton > button, .stDownloadButton > button, .stLinkButton > a {
+        border-radius: 10px !important;
+        min-height: 32px !important;
+        padding: 5px 9px !important;
+        font-size: 0.84rem !important;
+        font-weight: 800 !important;
+        line-height: 1.18 !important;
+        border: 1px solid #d8dde6 !important;
+        background: #f8fafc !important;
+        color: #1f2937 !important;
+        box-shadow: none !important;
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover, .stLinkButton > a:hover {
+        border-color: #b7c0cf !important;
+        background: #eef2f7 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) > div:not(:first-child),
+    div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) > div:not(:first-child),
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:not(:first-child),
+    div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) > div:not(:first-child),
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:not(:first-child),
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:not(:first-child) {
+        flex: 0 0 58px !important;
+        width: 58px !important;
+        min-width: 52px !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) [data-testid="stButton"] button {
+        width: auto !important;
+        min-width: 42px !important;
+        max-width: 58px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: 0 8px !important;
+        font-size: 0.76rem !important;
+        justify-content: center !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.episode-main) > div:last-child {
+        flex: 0 0 56px !important;
+        width: 56px !important;
+        min-width: 56px !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.episode-main) [data-testid="stButton"] button {
+        width: auto !important;
+        min-width: 44px !important;
+        max-width: 54px !important;
+        height: 29px !important;
+        min-height: 29px !important;
+        padding: 0 8px !important;
+        font-size: 0.76rem !important;
+        justify-content: center !important;
+    }
+    .anime-title, .movie-title, .episode-title {
+        color: #111827 !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
+    }
+    .anime-title { font-size: 0.86rem !important; min-height: 2.2em !important; line-height: 1.24 !important; }
+    .anime-genre, .anime-date, .movie-meta, .episode-date { color: #6b7280 !important; }
+    .episode-row-divider { background: #edf0f5 !important; margin: 6px 0 !important; }
+    .news-date, .library-count { color: #7b8290 !important; font-size: 0.72rem !important; }
+    .stImage img { height: 124px !important; border-radius: 10px !important; }
+    @media (max-width: 430px) {
+        div.block-container { padding-left: 0.55rem !important; padding-right: 0.55rem !important; }
+        .stImage img { height: 112px !important; }
+        .anime-title { font-size: 0.82rem !important; }
+        div[data-testid="stTabs"] button[role="tab"] { font-size: 0.78rem !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    }
+    div[data-testid="stAlert"] {
+        border-radius: 12px !important;
+        border: 1px solid #fde68a !important;
+        background: #fffbeb !important;
+        color: #92400e !important;
+    }
+    div[data-testid="stAlert"] * { color: #92400e !important; }
+    div[data-baseweb="segmented-control"], div[data-testid="stSegmentedControl"] {
+        width: 100% !important;
+    }
+    div[data-baseweb="segmented-control"] button,
+    div[data-testid="stSegmentedControl"] button {
+        min-height: 32px !important;
+        border-radius: 999px !important;
+        font-size: 0.8rem !important;
+        font-weight: 800 !important;
+        white-space: nowrap !important;
+    }
+    div.block-container, div.block-container p, div.block-container h1, div.block-container h2, div.block-container h3,
+    div[data-testid="stMarkdownContainer"], div[data-testid="stMarkdownContainer"] p {
+        color: #111827 !important;
+    }
+    .search-hint { margin-top: 0.18rem !important; margin-bottom: 0.35rem !important; color: #6b7280 !important; }
+    div[data-baseweb="segmented-control"] button,
+    div[data-testid="stSegmentedControl"] button {
+        background: #eef1f5 !important;
+        border: 1px solid #d9dee8 !important;
+        color: #374151 !important;
+    }
+    div[data-baseweb="segmented-control"] button p,
+    div[data-testid="stSegmentedControl"] button p { color: #374151 !important; }
+    div[data-baseweb="segmented-control"] button[aria-pressed="true"],
+    div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+    div[data-baseweb="segmented-control"] button[aria-selected="true"],
+    div[data-testid="stSegmentedControl"] button[aria-selected="true"] {
+        background: #111827 !important;
+        border-color: #111827 !important;
+        color: #ffffff !important;
+    }
+    div[data-baseweb="segmented-control"] button[aria-pressed="true"] p,
+    div[data-testid="stSegmentedControl"] button[aria-pressed="true"] p,
+    div[data-baseweb="segmented-control"] button[aria-selected="true"] p,
+    div[data-testid="stSegmentedControl"] button[aria-selected="true"] p { color: #ffffff !important; }
+    button[data-testid="baseButton-primary"] {
+        background: #111827 !important;
+        border-color: #111827 !important;
+        color: #ffffff !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+    button[data-testid="baseButton-primary"] p { color: #ffffff !important; }
+    button[data-testid="baseButton-secondary"] p { color: #1f2937 !important; }
+    div[data-testid="stHorizontalBlock"]:has(.main-nav-anchor) [data-testid="stButton"] button,
+    div[data-testid="stHorizontalBlock"]:has(.main-nav-anchor) + div[data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
+        min-height: 32px !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-size: 0.8rem !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+
+    .app-nav {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin: 0.35rem 0 0.55rem 0;
+    }
+    .app-nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 0 6px;
+        border-radius: 11px;
+        border: 1px solid #d8dde6;
+        background: #ffffff;
+        color: #1f2937 !important;
+        text-decoration: none !important;
+        font-size: 0.82rem;
+        font-weight: 800;
+        line-height: 1.1;
+        word-break: keep-all;
+        box-sizing: border-box;
+    }
+    .app-nav-item.active {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff !important;
+    }
+
+    div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 6px !important;
+        flex-wrap: nowrap !important;
+    }
+    div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] > div:first-child {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+    }
+    div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] > div:last-child {
+        flex: 0 0 64px !important;
+        width: 64px !important;
+        min-width: 64px !important;
+    }
+    div[data-testid="stForm"] [data-testid="stButton"] button {
+        width: 64px !important;
+        min-width: 64px !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        justify-content: center !important;
+        padding: 0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -872,7 +1145,15 @@ def remove_empty_seasons(info):
 
 
 def is_generic_anime_image(image_url):
-    return not image_url or "images.unsplash.com" in image_url
+    lowered = (image_url or "").lower()
+    return (
+        not lowered
+        or "images.unsplash.com" in lowered
+        or "placeholder" in lowered
+        or "default" in lowered
+        or "dummy" in lowered
+        or "noimage" in lowered
+    )
 
 
 def refresh_generic_season_images(info):
@@ -1141,7 +1422,7 @@ def get_related_anime_movies_api(title, original_title=""):
             "title": f"{title} 극장판",
             "release_date": "2024.01.01",
             "runtime": 105,
-            "img": "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop",
+            "img": "",
             "namu_link": make_info_url(title + " 극장판"),
         }]
 
@@ -1168,7 +1449,7 @@ def get_related_anime_movies_api(title, original_title=""):
                 "original_title": movie.get("original_title", ""),
                 "release_date": release_date or "개봉일 정보 없음",
                 "runtime": runtime,
-                "img": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get("poster_path") else NEWS_FALLBACK_IMAGE,
+                "img": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get("poster_path") else "",
                 "namu_link": make_info_url(movie_title),
             })
 
@@ -1190,7 +1471,7 @@ def get_anime_details_api(tv_id, title):
             "related_movies": get_related_anime_movies_api(title),
             "seasons": [{
                 "s_num": 1, "name": "1기", "subtitle": "API 자동 불러오기 테스트",
-                "img": "https://images.unsplash.com/photo-1520116468816-95b69f847357?w=500&h=300&fit=crop",
+                "img": "",
                 "episodes": [{"title": "1화", "date": "2024.01.01"}]
             }]
         }
@@ -1211,7 +1492,7 @@ def get_anime_details_api(tv_id, title):
 
     genres = " / ".join([g.get('name', '') for g in res.get('genres', []) if g.get('name')])
     original_title = res.get('original_name', '')
-    series_img = f"https://image.tmdb.org/t/p/w500{res.get('poster_path')}" if res.get('poster_path') else "https://images.unsplash.com/photo-1520116468816-95b69f847357?w=500&h=300&fit=crop"
+    series_img = f"https://image.tmdb.org/t/p/w500{res.get('poster_path')}" if res.get('poster_path') else ""
     start_date_raw = res.get('first_air_date', '')
     start_date = start_date_raw.replace('-', '.')
     status_raw = res.get('status', '')
@@ -1290,7 +1571,7 @@ def get_trending_anime_api(page=1):
 
     current_year = datetime.now().year
     recent_date = f"{current_year - 1}-01-01"
-    today_date = datetime.now().strftime('%Y-%m-%d')
+    today_date = (datetime.now() + timedelta(days=120)).strftime('%Y-%m-%d')
     res = tmdb_get("discover/tv", {
         "with_genres": 16,
         "with_original_language": "ja",
@@ -1308,10 +1589,12 @@ if 'selected_anime' not in st.session_state: st.session_state.selected_anime = N
 if 'selected_season' not in st.session_state: st.session_state.selected_season = None
 if 'is_editing' not in st.session_state: st.session_state.is_editing = False
 if 'selected_news' not in st.session_state: st.session_state.selected_news = None
-if 'search_box' not in st.session_state: st.session_state.search_box = "" 
+if 'search_box' not in st.session_state: st.session_state.search_box = ""
+if 'search_input_text' not in st.session_state: st.session_state.search_input_text = st.session_state.search_box
 if 'library_filter' not in st.session_state: st.session_state.library_filter = ""
 if 'show_library_search' not in st.session_state: st.session_state.show_library_search = False
 if 'news_return_view' not in st.session_state: st.session_state.news_return_view = 'main'
+if 'main_section' not in st.session_state: st.session_state.main_section = '새 화'
 if 'pending_local_save' not in st.session_state: st.session_state.pending_local_save = False
 if 'local_save_version' not in st.session_state: st.session_state.local_save_version = 0
 if 'loaded_from_local_storage' not in st.session_state: st.session_state.loaded_from_local_storage = False
@@ -1369,6 +1652,17 @@ if app_back_target:
         st.session_state.selected_season = None
         st.session_state.selected_news = None
         st.session_state.view = "main"
+        st.session_state.main_section = "새 화"
+    st.rerun()
+
+main_nav_target = st.query_params.get("main_nav")
+if main_nav_target:
+    st.query_params.clear()
+    st.session_state.main_section = main_nav_target
+    st.session_state.selected_anime = None
+    st.session_state.selected_season = None
+    st.session_state.selected_news = None
+    st.session_state.view = "main"
     st.rerun()
 
 # --- 과거 데이터 마이그레이션 (자가 치유 로직) ---
@@ -1505,7 +1799,14 @@ def refresh_related_movie_runtime(info):
 
 def is_generic_image_url(url):
     lowered = (url or "").lower()
-    return not lowered or "images.unsplash.com" in lowered or "placeholder" in lowered or "default" in lowered
+    return (
+        not lowered
+        or "images.unsplash.com" in lowered
+        or "placeholder" in lowered
+        or "default" in lowered
+        or "dummy" in lowered
+        or "noimage" in lowered
+    )
 
 
 def get_display_season_image(season, anime_info):
@@ -1516,7 +1817,7 @@ def get_display_season_image(season, anime_info):
         candidate = anime_info.get(key, "")
         if not is_generic_image_url(candidate):
             return candidate
-    return season_img or NEWS_FALLBACK_IMAGE
+    return ""
 
 
 def add_anime_to_list(tv_id, title):
@@ -1618,6 +1919,7 @@ def on_checkbox_change(a_title, clicked_s_idx, clicked_ep_idx, w_key):
 
 def clear_search():
     st.session_state.search_box = ""
+    st.session_state.search_input_text = ""
 
 def toggle_library_search():
     st.session_state.show_library_search = not st.session_state.show_library_search
@@ -1627,6 +1929,7 @@ def toggle_library_search():
 def add_direct_and_clear(tv_id, title):
     add_anime_to_list(tv_id, title)
     st.session_state.search_box = ""
+    st.session_state.search_input_text = ""
 
 def render_info_link(url, label="정보"):
     safe_url = html.escape(normalize_info_url(url), quote=True)
@@ -1653,7 +1956,7 @@ def normalize_info_url(url):
     return url
 
 
-NEWS_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
+NEWS_FALLBACK_IMAGE = ""
 NEWS_SEARCH_QUERY = (
     "(신작 애니 OR 애니메이션 신작 OR 애니 방영 예정 OR 애니메이션 공개일 OR "
     "애니메이션 새 시즌 OR 애니 2기 OR 애니 3기 OR 애니 후속작 OR "
@@ -1662,7 +1965,7 @@ NEWS_SEARCH_QUERY = (
 NEWS_TOPIC_KEYWORDS = [
     "방영", "방송", "공개", "공개일", "방영일", "방송일", "예정", "확정", "신작",
     "시즌", "새 시즌", "신시즌", "후속작", "속편", "2기", "3기", "4기", "5기",
-    "제작 결정", "제작 확정", "제작 발표", "티저", "PV", "예고편", "캐스트",
+    "제작 결정", "제작 확정", "제작 발표", "티저", "PV", "예고편",
     "극장판", "개봉", "재개봉", "상영", "특별상영",
     "흥행", "인기", "화제", "박스오피스", "관객", "누적 관객", "순위", "랭킹",
     "넷플릭스", "라프텔", "애니플러스", "애니맥스", "티빙", "왓챠", "OTT"
@@ -1674,7 +1977,19 @@ NEWS_ANIME_KEYWORDS = [
 NEWS_EXCLUDE_KEYWORDS = [
     "리뷰", "후기", "칼럼", "굿즈", "피규어", "게임", "할인", "이벤트",
     "웹툰", "드라마", "실사", "뮤지컬", "콘서트", "팝업", "콜라보 카페",
+    "페스티벌", "영화제", "수상", "인터뷰", "감독",
     "review", "figure", "merch", "game"
+]
+NEWS_STRONG_TOPIC_KEYWORDS = [
+    "방영 예정", "방영일", "방송일", "공개일", "공개 예정", "공개 확정",
+    "신작", "새 시즌", "신시즌", "후속작", "속편", "2기", "3기", "4기", "5기",
+    "제작 결정", "제작 확정", "제작 발표",
+    "극장판", "개봉", "재개봉", "특별상영",
+    "흥행", "박스오피스", "누적 관객", "관객 수", "관객수", "순위", "랭킹",
+]
+NEWS_WEAK_TOPIC_KEYWORDS = [
+    "티저", "PV", "예고편", "인기", "화제", "OTT", "넷플릭스",
+    "라프텔", "애니플러스", "애니맥스", "티빙", "왓챠",
 ]
 NEWS_BLOCKED_IMAGE_DOMAINS = (
     "google.com", "google.co.kr", "gstatic.com", "googleusercontent.com", "ggpht.com",
@@ -1697,7 +2012,7 @@ NEWS_FEEDS = [
     },
     {
         "name": "Google 뉴스 한국 - 신작/새 시즌",
-        "url": f"https://news.google.com/rss/search?q={quote_plus('(신작 애니 OR 애니메이션 신작 OR 애니메이션 새 시즌 OR 애니 후속작 OR 애니 2기 OR 애니 3기) when:30d')}&hl=ko&gl=KR&ceid=KR:ko",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('(신작 애니 OR 애니메이션 신작 OR 애니 방영일 OR 애니 공개일 OR 애니메이션 새 시즌 OR 애니 후속작 OR 애니 2기 OR 애니 3기) when:45d')}&hl=ko&gl=KR&ceid=KR:ko",
     },
     {
         "name": "Google 뉴스 한국 - 라프텔",
@@ -1709,7 +2024,7 @@ NEWS_FEEDS = [
     },
     {
         "name": "Google 뉴스 한국 - 인기/흥행",
-        "url": f"https://news.google.com/rss/search?q={quote_plus('(애니메이션 흥행 OR 애니메이션 인기 OR 애니 박스오피스 OR 애니 극장판 관객 OR 애니메이션 순위) when:30d')}&hl=ko&gl=KR&ceid=KR:ko",
+        "url": f"https://news.google.com/rss/search?q={quote_plus('(애니메이션 흥행 OR 애니메이션 인기 OR 애니 박스오피스 OR 애니 극장판 관객 OR 애니메이션 순위 OR 일본 애니 흥행) when:45d')}&hl=ko&gl=KR&ceid=KR:ko",
     },
 ]
 
@@ -1749,12 +2064,35 @@ def find_feed_items(root):
     return [node for node in root.iter() if local_name(node.tag) in {"item", "entry"}]
 
 
+def count_keyword_hits(text, keywords):
+    lowered = (text or "").lower()
+    return sum(1 for keyword in keywords if keyword.lower() in lowered)
+
+
+def get_news_relevance_score(item):
+    text = f"{item.get('title', '')} {item.get('content', '')} {item.get('source', '')}"
+    anime_hits = count_keyword_hits(text, NEWS_ANIME_KEYWORDS)
+    strong_hits = count_keyword_hits(text, NEWS_STRONG_TOPIC_KEYWORDS)
+    weak_hits = count_keyword_hits(text, NEWS_WEAK_TOPIC_KEYWORDS)
+    title_text = item.get("title", "")
+
+    score = anime_hits * 2 + strong_hits * 4 + weak_hits
+    if count_keyword_hits(title_text, NEWS_STRONG_TOPIC_KEYWORDS):
+        score += 3
+    if "극장판" in title_text and any(k in title_text for k in ["개봉", "재개봉", "관객", "흥행", "박스오피스"]):
+        score += 5
+    if any(k in title_text for k in ["2기", "3기", "4기", "5기", "새 시즌", "후속작"]):
+        score += 5
+    return score
+
+
 def is_schedule_news(item):
     text = f"{item.get('title', '')} {item.get('content', '')}".lower()
-    has_anime_keyword = any(keyword.lower() in text for keyword in NEWS_ANIME_KEYWORDS)
-    has_topic_keyword = any(keyword.lower() in text for keyword in NEWS_TOPIC_KEYWORDS)
-    has_excluded_keyword = any(keyword.lower() in text for keyword in NEWS_EXCLUDE_KEYWORDS)
-    return is_korean_news(item) and has_anime_keyword and has_topic_keyword and not has_excluded_keyword
+    if not is_korean_news(item):
+        return False
+    if any(keyword.lower() in text for keyword in NEWS_EXCLUDE_KEYWORDS):
+        return False
+    return get_news_relevance_score(item) >= 6
 
 
 def is_korean_news(item):
@@ -1999,15 +2337,37 @@ def is_loadable_news_image(url, headers):
     try:
         image_headers = {
             **headers,
-            "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            "Accept": "image/webp,image/png,image/jpeg,image/*;q=0.8",
             "Referer": f"{urlparse(url).scheme}://{urlparse(url).netloc}/",
         }
         res = requests.get(url, headers=image_headers, timeout=6, stream=True, allow_redirects=True)
         res.raise_for_status()
         content_type = res.headers.get("content-type", "").lower()
-        return content_type.startswith("image/")
+        return content_type.startswith("image/") and "svg" not in content_type
     except requests.RequestException:
         return False
+
+
+def fetch_news_image_bytes(url, headers):
+    if not is_usable_news_image(url):
+        return b""
+    try:
+        image_headers = {
+            **headers,
+            "Accept": "image/webp,image/png,image/jpeg,image/*;q=0.8",
+            "Referer": f"{urlparse(url).scheme}://{urlparse(url).netloc}/",
+        }
+        res = requests.get(url, headers=image_headers, timeout=8, allow_redirects=True)
+        res.raise_for_status()
+        content_type = res.headers.get("content-type", "").lower()
+        if not content_type.startswith("image/") or "svg" in content_type:
+            return b""
+        image_bytes = res.content
+        if len(image_bytes) < 4096 or len(image_bytes) > 2_500_000:
+            return b""
+        return image_bytes
+    except requests.RequestException:
+        return b""
 
 
 def normalize_image_url(raw_url, base_url):
@@ -2246,6 +2606,9 @@ def get_anime_news(max_items=12, image_extract_version=5):
         except (requests.RequestException, ET.ParseError):
             continue
 
+    for item in collected:
+        item["_relevance_score"] = get_news_relevance_score(item)
+
     schedule_items = [item for item in collected if is_schedule_news(item)]
 
     deduped = []
@@ -2257,7 +2620,7 @@ def get_anime_news(max_items=12, image_extract_version=5):
         seen_titles.add(key)
         deduped.append(item)
 
-    deduped.sort(key=lambda item: item.get("sort_date", ""), reverse=True)
+    deduped.sort(key=lambda item: (item.get("_relevance_score", 0), item.get("sort_date", "")), reverse=True)
     candidates = deduped[:max_items * 3]
 
     enriched = []
@@ -2272,9 +2635,12 @@ def get_anime_news(max_items=12, image_extract_version=5):
         item["full_content"] = summary or "요약을 불러오지 못했습니다. 원문 링크에서 자세한 내용을 확인하세요."
         item["link"] = article_link
         image_url = item.get("img", "")
-        if not is_loadable_news_image(image_url, headers):
+        image_bytes = fetch_news_image_bytes(image_url, headers)
+        if not image_bytes:
             image_url = get_article_image(article_link, headers)
-        item["img"] = image_url if is_loadable_news_image(image_url, headers) else ""
+            image_bytes = fetch_news_image_bytes(image_url, headers)
+        item["img"] = image_url if image_bytes else ""
+        item["img_bytes"] = image_bytes
         enriched.append(item)
         if len(enriched) >= max_items:
             break
@@ -2294,12 +2660,45 @@ def get_anime_news(max_items=12, image_extract_version=5):
 
 
 if "news_loaded_at" not in st.session_state:
-    st.session_state.news_loaded_at = datetime.now()
+    st.session_state.news_loaded_at = None
 if "news_data" not in st.session_state:
-    st.session_state.news_data = get_anime_news()
+    st.session_state.news_data = []
+
+
+def ensure_news_loaded(force=False):
+    if force or not st.session_state.get("news_data"):
+        with st.spinner("애니 소식을 갱신하는 중입니다..."):
+            st.session_state.news_data = get_anime_news()
+            st.session_state.news_loaded_at = datetime.now()
+    return st.session_state.news_data
+
 
 news_data = st.session_state.news_data
-news_loaded_label = st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
+news_loaded_label = (
+    st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
+    if st.session_state.news_loaded_at else "갱신 전"
+)
+
+
+def render_news_image(news):
+    image_bytes = news.get("img_bytes")
+    if image_bytes:
+        st.image(image_bytes, use_container_width=True)
+        return
+    image_url = news.get("img", "")
+    if image_url and not is_generic_image_url(image_url):
+        st.image(image_url, use_container_width=True)
+
+
+def render_main_nav(active_label):
+    labels = ["새 화", "목록", "보류", "찜", "신작 애니", "애니 소식"]
+    links = []
+    for label in labels:
+        active_class = " active" if label == active_label else ""
+        safe_label = html.escape(label)
+        href = f"?main_nav={quote_plus(label)}"
+        links.append(f"<a class='app-nav-item{active_class}' href='{href}'>{safe_label}</a>")
+    st.markdown(f"<nav class='app-nav'>{''.join(links)}</nav>", unsafe_allow_html=True)
 
 current_view_marker = html.escape(str(st.session_state.get("view", "main")), quote=True)
 selected_season_marker = "none" if st.session_state.get("selected_season") is None else "selected"
@@ -2323,8 +2722,16 @@ components.html(
 # --- 화면 1: 메인 화면 ---
 if st.session_state.view == 'main':
     
-    search_input = st.text_input("애니메이션 검색", key="search_box", placeholder="작품명 검색 (API 연동)", label_visibility="collapsed")
-    st.markdown("<div class='search-hint'>[안내] 검색어를 입력하고 키보드의 완료나 엔터를 누르세요.</div>", unsafe_allow_html=True)
+    with st.form("anime_search_form"):
+        search_col, search_btn_col = st.columns([7, 2], gap="small", vertical_alignment="center")
+        with search_col:
+            st.text_input("애니메이션 검색", key="search_input_text", placeholder="작품명 검색", label_visibility="collapsed")
+        with search_btn_col:
+            search_submitted = st.form_submit_button("검색", use_container_width=True)
+    if search_submitted:
+        st.session_state.search_box = st.session_state.search_input_text.strip()
+        st.rerun()
+    st.markdown("<div class='search-hint'>작품명을 입력한 뒤 검색 버튼이나 Enter를 누르세요.</div>", unsafe_allow_html=True)
     
     if st.session_state.search_box:
         col1, col2 = st.columns([8, 2])
@@ -2340,23 +2747,26 @@ if st.session_state.view == 'main':
         if not search_results:
             st.write("검색 결과가 없습니다.")
         else:
-            result_cols = st.columns(3)
+            result_cols = st.columns(2)
             for idx, item in enumerate(search_results):
                 title = item['name']
                 tv_id = item['id']
-                rep_img = f"https://image.tmdb.org/t/p/w500{item['poster_path']}" if item.get('poster_path') else "https://images.unsplash.com/photo-1520116468816-95b69f847357?w=500&h=300&fit=crop"
+                rep_img = f"https://image.tmdb.org/t/p/w500{item['poster_path']}" if item.get('poster_path') else ""
                 
-                with result_cols[idx % 3]:
+                with result_cols[idx % 2]:
                     with st.container(border=True):
-                        st.image(rep_img, use_container_width=True)
-                        st.markdown(f"<div class='anime-title'>{title}</div>", unsafe_allow_html=True)
-                        
+                        if rep_img:
+                            st.image(rep_img, use_container_width=True)
+                        st.markdown(f"<div class='anime-title'>{html.escape(title)}</div>", unsafe_allow_html=True)
+
                         if title in st.session_state.my_anime_list:
                             st.caption("목록에 있음")
                         else:
-                            add_col, wish_col = st.columns([2, 1], gap="small")
+                            spacer_col, add_col, wish_col = st.columns([5, 3, 2], gap="small")
+                            with spacer_col:
+                                st.markdown("<span class='search-actions-anchor'></span>", unsafe_allow_html=True)
                             with add_col:
-                                st.button("목록 추가", key=f"add_api_{tv_id}", on_click=add_direct_and_clear, args=(tv_id, title))
+                                st.button("추가", key=f"add_api_{tv_id}", on_click=add_direct_and_clear, args=(tv_id, title))
                             with wish_col:
                                 wish_label = "찜해제" if is_wished(tv_id) else "찜"
                                 if st.button(wish_label, key=f"wish_api_{tv_id}"):
@@ -2444,9 +2854,10 @@ if st.session_state.view == 'main':
                                 st.session_state.view = 'detail'
                                 st.rerun()
 
-        update_tab, list_tab, dropped_tab, wish_tab, new_anime_tab, news_tab = st.tabs(["새 화", "목록", "보류", "찜", "신작 애니", "애니 소식"])
+        active_main_tab = st.session_state.get("main_section", "새 화")
+        render_main_nav(active_main_tab)
 
-        with update_tab:
+        if active_main_tab == "새 화":
             st.session_state.is_editing = False
             st.subheader("새 화")
 
@@ -2465,7 +2876,7 @@ if st.session_state.view == 'main':
 
                 render_library_schedule("update")
 
-        with list_tab:
+        elif active_main_tab == "목록":
             title_col, search_btn_col = st.columns([8, 1], gap="small", vertical_alignment="center")
             with title_col:
                 st.markdown("<span class='library-title-actions-anchor'></span>", unsafe_allow_html=True)
@@ -2550,7 +2961,7 @@ if st.session_state.view == 'main':
 
             render_library_schedule("list")
 
-        with dropped_tab:
+        elif active_main_tab == "보류":
             st.subheader("보류 목록")
             dropped_items = [(title, info) for title, info in st.session_state.my_anime_list.items() if is_dropped(info)]
             st.markdown(f"<div class='library-count'>총 {len(dropped_items)}개</div>", unsafe_allow_html=True)
@@ -2571,7 +2982,7 @@ if st.session_state.view == 'main':
                                 st.session_state.view = 'detail'
                                 st.rerun()
 
-        with wish_tab:
+        elif active_main_tab == "찜":
             st.subheader("찜 목록")
             wish_items = list(st.session_state.wish_list.values())
             wish_items.sort(key=lambda item: item.get("title", ""))
@@ -2592,11 +3003,13 @@ if st.session_state.view == 'main':
                                 if rep_img:
                                     st.image(rep_img, use_container_width=True)
                                 st.markdown(f"<div class='anime-title'>{html.escape(title)}</div>", unsafe_allow_html=True)
-                                add_col, remove_col = st.columns([2, 1], gap="small")
+                                spacer_col, add_col, remove_col = st.columns([5, 3, 2], gap="small")
+                                with spacer_col:
+                                    st.markdown("<span class='wish-actions-anchor'></span>", unsafe_allow_html=True)
                                 with add_col:
                                     if title in st.session_state.my_anime_list:
-                                        st.button("추가됨", key=f"wish_added_{tv_id}", disabled=True)
-                                    elif st.button("목록 추가", key=f"wish_add_{tv_id}"):
+                                        st.button("완료", key=f"wish_added_{tv_id}", disabled=True)
+                                    elif st.button("추가", key=f"wish_add_{tv_id}"):
                                         add_anime_to_list(tv_id, title)
                                         st.rerun()
                                 with remove_col:
@@ -2605,7 +3018,7 @@ if st.session_state.view == 'main':
                                         save_app_data()
                                         st.rerun()
 
-        with new_anime_tab:
+        elif active_main_tab == "신작 애니":
             st.subheader("신작 애니")
             st.write("최근 방영을 시작한 애니메이션을 최신순으로 확인하세요.")
             st.divider()
@@ -2626,7 +3039,7 @@ if st.session_state.view == 'main':
                             item = sorted_all_animes[idx]
                             title = item['name']
                             tv_id = item['id']
-                            rep_img = f"https://image.tmdb.org/t/p/w500{item['poster_path']}" if item.get('poster_path') else "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
+                            rep_img = f"https://image.tmdb.org/t/p/w500{item['poster_path']}" if item.get('poster_path') else ""
 
                             genre_names = [TMDB_GENRE_MAP.get(gid, "") for gid in item.get('genre_ids', [])]
                             genre_names = [g for g in genre_names if g]
@@ -2634,8 +3047,9 @@ if st.session_state.view == 'main':
 
                             with cols[c]:
                                 with st.container(border=True):
-                                    st.image(rep_img, use_container_width=True)
-                                    st.markdown(f"<div class='anime-title'>{title}</div>", unsafe_allow_html=True)
+                                    if rep_img:
+                                        st.image(rep_img, use_container_width=True)
+                                    st.markdown(f"<div class='anime-title'>{html.escape(title)}</div>", unsafe_allow_html=True)
                                     st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                                     st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
 
@@ -2655,7 +3069,9 @@ if st.session_state.view == 'main':
                                                 add_anime_to_list(tv_id, title)
                                                 st.rerun()
 
-        with news_tab:
+        elif active_main_tab == "애니 소식":
+            news_data = ensure_news_loaded()
+            news_loaded_label = st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
             news_title_col, news_time_col = st.columns([5, 4], gap="small", vertical_alignment="center")
             with news_title_col:
                 st.subheader("최신 애니 소식")
@@ -2664,7 +3080,7 @@ if st.session_state.view == 'main':
             st.write("방영 예정, 신작 공개일, 시즌 발표 중심의 소식을 확인하세요.")
             st.divider()
 
-            rows = (len(news_data) + 2) // 3
+            rows = len(news_data)
             for r in range(rows):
                 cols = st.columns(3)
                 for c in range(3):
@@ -2673,8 +3089,7 @@ if st.session_state.view == 'main':
                         news = news_data[idx]
                         with cols[c]:
                             with st.container(border=True):
-                                if news.get('img'):
-                                    st.image(news['img'], use_container_width=True)
+                                render_news_image(news)
                                 if st.button(news['title'], key=f"news_tab_{idx}"):
                                     st.session_state.selected_news = news
                                     st.session_state.news_return_view = 'main'
@@ -2781,7 +3196,9 @@ elif st.session_state.view == 'detail':
                 for offset, season in enumerate(seasons[start_idx:start_idx + cols_per_row]):
                     with cols[offset]:
                         with st.container(border=True):
-                            st.image(get_display_season_image(season, anime_info), use_container_width=True)
+                            season_img = get_display_season_image(season, anime_info)
+                            if season_img:
+                                st.image(season_img, use_container_width=True)
                             st.markdown(f"**{anime_title} {season['name']}**")
                             
                             if season.get('subtitle'):
@@ -2789,15 +3206,16 @@ elif st.session_state.view == 'detail':
                             else:
                                 st.caption("\u200b") 
                             
-                            view_col, count_col = st.columns([5, 5], gap="small")
+                            count_col, view_col = st.columns([7, 3], gap="small")
+                            with count_col:
+                                st.markdown("<span class='season-actions-anchor'></span>", unsafe_allow_html=True)
+                                ep_count = len(season.get('episodes', []))
+                                st.markdown(f"<div style='line-height: 1.9em; color: gray; font-size: 0.82em;'>총 {ep_count}부작</div>", unsafe_allow_html=True)
                             with view_col:
                                 season_idx = start_idx + offset
-                                if st.button("보기", key=f"sel_{season_idx}", use_container_width=True):
+                                if st.button("보기", key=f"sel_{season_idx}"):
                                     st.session_state.selected_season = season_idx
                                     st.rerun()
-                            with count_col:
-                                ep_count = len(season.get('episodes', []))
-                                st.markdown(f"<div style='line-height: 2.35em; text-align: right; color: gray; font-size: 0.9em;'>총 {ep_count}부작</div>", unsafe_allow_html=True)
 
             if related_movies:
                 st.divider()
@@ -2808,7 +3226,9 @@ elif st.session_state.view == 'detail':
                     for offset, movie in enumerate(related_movies[start_idx:start_idx + cols_per_row]):
                         with cols[offset]:
                             with st.container(border=True):
-                                st.image(movie.get("img", NEWS_FALLBACK_IMAGE), use_container_width=True)
+                                movie_img = movie.get("img", "")
+                                if movie_img and not is_generic_image_url(movie_img):
+                                    st.image(movie_img, use_container_width=True)
                                 st.markdown(
                                     f"<div class='movie-title'>{html.escape(movie.get('title', '제목 없음'))}</div>",
                                     unsafe_allow_html=True
@@ -2836,7 +3256,9 @@ elif st.session_state.view == 'detail':
             
             st.title(f"{anime_title} {season['name']}")
             st.caption(season['subtitle'])
-            st.image(get_display_season_image(season, anime_info), use_container_width=True)
+            season_img = get_display_season_image(season, anime_info)
+            if season_img:
+                st.image(season_img, use_container_width=True)
             st.divider()
             
             current_date_str = datetime.now().strftime('%Y.%m.%d')
@@ -2916,7 +3338,7 @@ elif st.session_state.view == 'new_animes':
                 item = sorted_all_animes[idx]
                 title = item['name']
                 tv_id = item['id']
-                rep_img = f"https://image.tmdb.org/t/p/w500{item['poster_path']}" if item.get('poster_path') else "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&h=300&fit=crop"
+                rep_img = f"https://image.tmdb.org/t/p/w500{item['poster_path']}" if item.get('poster_path') else ""
 
                 genre_names = [TMDB_GENRE_MAP.get(gid, "") for gid in item.get('genre_ids', [])]
                 genre_names = [g for g in genre_names if g]
@@ -2924,8 +3346,9 @@ elif st.session_state.view == 'new_animes':
 
                 with cols[c]:
                     with st.container(border=True):
-                        st.image(rep_img, use_container_width=True)
-                        st.markdown(f"<div class='anime-title'>{title}</div>", unsafe_allow_html=True)
+                        if rep_img:
+                            st.image(rep_img, use_container_width=True)
+                        st.markdown(f"<div class='anime-title'>{html.escape(title)}</div>", unsafe_allow_html=True)
                         
                         st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='anime-date'>방영일: {item.get('first_air_date', '').replace('-','.')}</div>", unsafe_allow_html=True)
@@ -2948,6 +3371,8 @@ elif st.session_state.view == 'new_animes':
 
 # --- 화면 5: 애니 소식 목록 화면 ---
 elif st.session_state.view == 'news':
+    news_data = ensure_news_loaded()
+    news_loaded_label = st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
     components.html("<script>window.parent.scrollTo(0,0);</script>", height=0)
 
     if st.button("목록으로 돌아가기", key="back_from_news"):
@@ -2962,7 +3387,7 @@ elif st.session_state.view == 'news':
     st.write("관심 있는 소식을 골라 자세히 확인하세요.")
     st.divider()
 
-    rows = (len(news_data) + 2) // 3
+    rows = len(news_data)
     for r in range(rows):
         cols = st.columns(3)
         for c in range(3):
@@ -2971,8 +3396,7 @@ elif st.session_state.view == 'news':
                 news = news_data[idx]
                 with cols[c]:
                     with st.container(border=True):
-                        if news.get('img'):
-                            st.image(news['img'], use_container_width=True)
+                        render_news_image(news)
                         if st.button(news['title'], key=f"news_list_{idx}"):
                             st.session_state.selected_news = news
                             st.session_state.news_return_view = 'news'
@@ -2997,8 +3421,7 @@ elif st.session_state.view == 'news_detail':
         source_text = f" · {news.get('source')}" if news.get('source') else ""
         st.caption(f"발행일: {news['date']}{source_text}")
         st.divider()
-        if news.get('img'):
-            st.image(news['img'], use_container_width=True)
+        render_news_image(news)
         if news.get('link'):
             st.link_button("원문 기사 보기", news['link'], use_container_width=True)
         st.write("")
@@ -3006,4 +3429,14 @@ elif st.session_state.view == 'news_detail':
         st.divider()
 
 st.markdown("<div class='bottom-safe-space'></div>", unsafe_allow_html=True)
+
+
+
+
+
+
+
+
+
+
 
