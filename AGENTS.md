@@ -384,3 +384,11 @@ streamlit-local-storage
 - 애니 소식 탭에서 갱신 기준 시각 표시와 스피너 종료 확인
 
 추가 메모: Streamlit 1.57 기준 `st.components.v1.html`은 제거 예정 경고가 있으므로 JS 삽입은 `st.html(..., unsafe_allow_javascript=True)`를 사용한다. 이 방식으로 뒤로가기 JS 실행 여부를 확인했다.
+
+## 2026-05-31 재수정 메모
+
+- 메인 메뉴는 `st.pills`를 사용한다. `st.columns` 버튼 메뉴는 모바일에서 버튼 하나가 한 줄씩 먹을 수 있으므로 다시 쓰지 않는다.
+- 폰 자체 뒤로가기는 popstate 시작 시 보이는 `뒤로가기` 버튼을 가장 먼저 자동 클릭한다. JS handler version은 8이다.
+- 애니 소식은 enrich 기사만 반환하지 말고 RSS fallback 기사로 `max_items`까지 채운다. 한두 개만 보이는 상태로 만들지 않는다.
+- 신작 애니는 `popularity.desc`가 아니라 `first_air_date.desc` 기준이며, 현재 연도 이후 날짜만 가져온다. 페이지는 1~3까지 합쳐 중복 제거한다.
+- TMDB 키가 없는 데모 신작 날짜는 현재 날짜를 사용한다.

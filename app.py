@@ -701,6 +701,26 @@ st.markdown("""
         justify-content: center !important;
         padding: 0 !important;
     }
+    div[data-testid="stPills"] div[role="radiogroup"],
+    div[data-testid="stPills"] div[role="group"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        align-items: center !important;
+    }
+    div[data-testid="stPills"] label,
+    div[data-testid="stPills"] button {
+        width: auto !important;
+        min-width: 48px !important;
+        flex: 0 0 auto !important;
+        border-radius: 999px !important;
+        min-height: 30px !important;
+        padding: 3px 9px !important;
+        font-size: 0.78rem !important;
+        font-weight: 800 !important;
+        white-space: nowrap !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -712,8 +732,8 @@ st.html(
     (function () {
         const appWindow = window.parent;
         const appDocument = appWindow.document;
-        const handlerVersion = 7;
-        const guardKey = "__animeCheckerBackGuardInstalledV7";
+        const handlerVersion = 8;
+        const guardKey = "__animeCheckerBackGuardInstalledV8";
         const lastBackKey = "__animeCheckerLastBackAt";
         const suppressExitUntilKey = "__animeCheckerSuppressExitUntil";
         const delayMs = 1800;
@@ -821,6 +841,13 @@ st.html(
             }
 
             const state = getCurrentAppState();
+
+            if (clickVisibleAppBackButton()) {
+                appWindow[lastBackKey] = 0;
+                appWindow[suppressExitUntilKey] = Date.now() + delayMs + 1200;
+                appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+                return;
+            }
 
             if (state.view === "detail") {
                 appWindow[lastBackKey] = 0;
@@ -1553,18 +1580,19 @@ def get_trending_anime_api(page=1):
         if page != 1:
             return []
         return [
-            {"id": "demo_recent_1", "name": "최근 핫한 애니 1", "poster_path": "", "first_air_date": "2024-05-01", "genre_ids": [16]}
+            {"id": "demo_recent_1", "name": "최근 핫한 애니 1", "poster_path": "", "first_air_date": datetime.now().strftime("%Y-%m-%d"), "genre_ids": [16]}
         ]
 
     current_year = datetime.now().year
-    recent_date = f"{current_year - 1}-01-01"
+    recent_date = f"{current_year}-01-01"
     today_date = (datetime.now() + timedelta(days=120)).strftime('%Y-%m-%d')
     res = tmdb_get("discover/tv", {
         "with_genres": 16,
         "with_original_language": "ja",
-        "sort_by": "popularity.desc",
+        "sort_by": "first_air_date.desc",
         "first_air_date.gte": recent_date,
         "first_air_date.lte": today_date,
+        "include_null_first_air_dates": "false",
         "page": page,
     })
     return res.get('results', [])
@@ -2589,8 +2617,8 @@ def get_anime_news(max_items=12, image_extract_version=5):
     def news_elapsed():
         return (datetime.now() - started_at).total_seconds()
 
-    for feed in NEWS_FEEDS[:3]:
-        if news_elapsed() > 5:
+    for feed in NEWS_FEEDS:
+        if news_elapsed() > 7:
             break
         try:
             res = requests.get(feed["url"], headers=headers, timeout=1.5)
@@ -2618,7 +2646,7 @@ def get_anime_news(max_items=12, image_extract_version=5):
 
     enriched = []
     for item in candidates:
-        if news_elapsed() > 8:
+        if news_elapsed() > 10:
             break
         description_raw = item.pop("_description_raw", "")
         article_link = resolve_original_article_link(item.get("link", ""), description_raw, headers)
@@ -2639,19 +2667,23 @@ def get_anime_news(max_items=12, image_extract_version=5):
         enriched.append(item)
         if len(enriched) >= max_items:
             break
-    if enriched:
-        return enriched
+    fallback_items = []
+    enriched_titles = {re.sub(r"\W+", "", item["title"].lower()) for item in enriched}
+    for item in deduped:
+        key = re.sub(r"\W+", "", item["title"].lower())
+        if key in enriched_titles:
+            continue
+        item.pop("_description_raw", None)
+        item.pop("_summary", None)
+        item["img_bytes"] = b""
+        if not is_probable_article_link(item.get("link", "")):
+            item["link"] = ""
+        fallback_items.append(item)
+        if len(enriched) + len(fallback_items) >= max_items:
+            break
 
-    if deduped:
-        fallback_items = []
-        for item in deduped[:min(max_items, 6)]:
-            item.pop("_description_raw", None)
-            item.pop("_summary", None)
-            item["img_bytes"] = b""
-            if not is_probable_article_link(item.get("link", "")):
-                item["link"] = ""
-            fallback_items.append(item)
-        return fallback_items
+    if enriched or fallback_items:
+        return (enriched + fallback_items)[:max_items]
 
     return [{
         "title": "방영 예정 소식을 불러오지 못했습니다",
@@ -2698,23 +2730,23 @@ def render_news_image(news):
 
 def render_main_nav(active_label):
     labels = ["새 화", "목록", "보류", "찜", "신작 애니", "애니 소식"]
-    for row_start in range(0, len(labels), 3):
-        cols = st.columns(3, gap="small")
-        for offset, label in enumerate(labels[row_start:row_start + 3]):
-            with cols[offset]:
-                st.markdown("<span class='main-nav-anchor'></span>", unsafe_allow_html=True)
-                if st.button(
-                    label,
-                    key=f"main_nav_btn_{row_start}_{offset}_{label}",
-                    use_container_width=True,
-                    type="primary" if label == active_label else "secondary",
-                ):
-                    st.session_state.main_section = label
-                    st.session_state.selected_anime = None
-                    st.session_state.selected_season = None
-                    st.session_state.selected_news = None
-                    st.session_state.view = "main"
-                    st.rerun()
+    if active_label not in labels:
+        active_label = "새 화"
+    selected = st.pills(
+        "메인 메뉴",
+        labels,
+        default=active_label,
+        key="main_section_pills",
+        label_visibility="collapsed",
+        width="stretch",
+    )
+    if selected and selected != st.session_state.get("main_section", "새 화"):
+        st.session_state.main_section = selected
+        st.session_state.selected_anime = None
+        st.session_state.selected_season = None
+        st.session_state.selected_news = None
+        st.session_state.view = "main"
+        st.rerun()
 
 
 current_view_marker = html.escape(str(st.session_state.get("view", "main")), quote=True)
@@ -3043,7 +3075,7 @@ if st.session_state.view == 'main':
             st.write("최근 방영을 시작한 애니메이션을 최신순으로 확인하세요.")
             st.divider()
 
-            raw_new_animes = get_trending_anime_api(page=1) + get_trending_anime_api(page=2)
+            raw_new_animes = get_trending_anime_api(page=1) + get_trending_anime_api(page=2) + get_trending_anime_api(page=3)
             seen_new_ids = set()
             sorted_all_animes = []
             for item in raw_new_animes:
@@ -3342,7 +3374,7 @@ elif st.session_state.view == 'new_animes':
     st.write("최근 방영을 시작한 애니메이션을 최신순으로 확인하세요.")
     st.divider()
 
-    raw_new_animes = get_trending_anime_api(page=1) + get_trending_anime_api(page=2)
+    raw_new_animes = get_trending_anime_api(page=1) + get_trending_anime_api(page=2) + get_trending_anime_api(page=3)
     seen_new_ids = set()
     sorted_all_animes = []
     for item in raw_new_animes:
@@ -3451,6 +3483,7 @@ elif st.session_state.view == 'news_detail':
         st.divider()
 
 st.markdown("<div class='bottom-safe-space'></div>", unsafe_allow_html=True)
+
 
 
 
