@@ -706,14 +706,14 @@ st.markdown("""
 
 st.markdown("<a class='scroll-top-btn' href='#top' title='맨 위로'>↑<span>맨 위</span></a>", unsafe_allow_html=True)
 
-components.html(
+st.html(
     """
     <script>
     (function () {
         const appWindow = window.parent;
         const appDocument = appWindow.document;
-        const handlerVersion = 4;
-        const guardKey = "__animeCheckerBackGuardInstalledV4";
+        const handlerVersion = 7;
+        const guardKey = "__animeCheckerBackGuardInstalledV7";
         const lastBackKey = "__animeCheckerLastBackAt";
         const suppressExitUntilKey = "__animeCheckerSuppressExitUntil";
         const delayMs = 1800;
@@ -754,32 +754,15 @@ components.html(
             }, 1500);
         }
 
-        function getTabByText(label) {
-            const tabs = Array.from(appDocument.querySelectorAll('[role="tab"]'));
-            return tabs.find(function (tab) {
-                return (tab.textContent || "").trim() === label;
-            });
-        }
-
-        function isTabSelected(tab) {
-            return tab && (
-                tab.getAttribute("aria-selected") === "true" ||
-                tab.getAttribute("tabindex") === "0"
-            );
-        }
-
         function getCurrentAppState() {
-            if (appWindow.__animeCheckerCurrentView) {
-                return appWindow.__animeCheckerCurrentView;
-            }
             const marker = appDocument.getElementById("anime-current-view");
-            if (!marker) {
-                return { view: "unknown", selectedSeason: "unknown" };
-            }
-            return {
+            const markerState = marker ? {
                 view: marker.getAttribute("data-view") || "unknown",
-                selectedSeason: marker.getAttribute("data-selected-season") || "none"
-            };
+                selectedSeason: marker.getAttribute("data-selected-season") || "none",
+                mainSection: marker.getAttribute("data-main-section") || "새 화"
+            } : null;
+            const liveState = appWindow.__animeCheckerCurrentView || markerState;
+            return liveState || { view: "unknown", selectedSeason: "unknown", mainSection: "새 화" };
         }
 
         function findVisibleAppBackButton() {
@@ -802,29 +785,29 @@ components.html(
             return true;
         }
 
-        function requestAppBack(target) {
+        function updateUrlParam(name, value) {
             const url = new URL(appWindow.location.href);
-            url.searchParams.set("app_back", target || "main");
+            url.searchParams.set(name, value);
             appWindow.location.href = url.toString();
         }
 
+        function requestAppBack(target) {
+            updateUrlParam("app_back", target || "main");
+        }
+
+        function requestMainSection(label) {
+            updateUrlParam("main_nav", label || "새 화");
+        }
+
         function isMainLibraryTabSelected() {
-            const libraryTab = getTabByText("새 화");
-            return !!libraryTab && isTabSelected(libraryTab);
+            const state = getCurrentAppState();
+            return state.view === "main" && (state.mainSection || "새 화") === "새 화";
         }
 
         function returnToMainTabIfNeeded() {
-            const libraryTab = getTabByText("새 화");
-            const listTab = getTabByText("목록");
-            const droppedTab = getTabByText("보류");
-            const wishTab = getTabByText("찜");
-            const newAnimeTab = getTabByText("신작 애니");
-            const newsTab = getTabByText("애니 소식");
-            if (!libraryTab) {
-                return false;
-            }
-            if (isTabSelected(listTab) || isTabSelected(droppedTab) || isTabSelected(wishTab) || isTabSelected(newAnimeTab) || isTabSelected(newsTab)) {
-                libraryTab.click();
+            const state = getCurrentAppState();
+            if (state.view === "main" && (state.mainSection || "새 화") !== "새 화") {
+                requestMainSection("새 화");
                 appWindow.scrollTo({ top: 0, behavior: "smooth" });
                 return true;
             }
@@ -842,8 +825,11 @@ components.html(
             if (state.view === "detail") {
                 appWindow[lastBackKey] = 0;
                 appWindow[suppressExitUntilKey] = Date.now() + delayMs + 1200;
+                if (clickVisibleAppBackButton()) {
+                    appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
+                    return;
+                }
                 requestAppBack(state.selectedSeason === "selected" ? "season_list" : "main");
-                appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
                 return;
             }
 
@@ -885,7 +871,6 @@ components.html(
             if (returnToMainTabIfNeeded()) {
                 appWindow[lastBackKey] = 0;
                 appWindow[suppressExitUntilKey] = Date.now() + delayMs + 800;
-                appWindow.history.pushState({ animeCheckerGuard: true }, "", appWindow.location.href);
                 return;
             }
 
@@ -912,7 +897,7 @@ components.html(
     })();
     </script>
     """,
-    height=0,
+    unsafe_allow_javascript=True,
 )
 
 
@@ -928,7 +913,7 @@ def tmdb_get(endpoint, params=None):
         request_params.update(params)
 
     try:
-        res = requests.get(url, params=request_params, timeout=10)
+        res = requests.get(url, params=request_params, timeout=1.5)
         res.raise_for_status()
         return res.json()
     except (requests.RequestException, ValueError):
@@ -1029,7 +1014,7 @@ def get_jikan_anime_poster(query):
         res = requests.get(
             "https://api.jikan.moe/v4/anime",
             params={"q": query, "limit": 1},
-            timeout=8,
+            timeout=1.5,
         )
         res.raise_for_status()
         results = res.json().get("data", [])
@@ -1565,8 +1550,10 @@ def get_anime_details_api(tv_id, title):
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_trending_anime_api(page=1):
     if not TMDB_API_KEY:
+        if page != 1:
+            return []
         return [
-            {"id": 1, "name": "최근 핫한 애니 1", "poster_path": "", "first_air_date": "2024-05-01", "genre_ids": [16]}
+            {"id": "demo_recent_1", "name": "최근 핫한 애니 1", "poster_path": "", "first_air_date": "2024-05-01", "genre_ids": [16]}
         ]
 
     current_year = datetime.now().year
@@ -2203,7 +2190,7 @@ def decode_google_news_url_online(link, headers):
         return ""
 
     try:
-        res = requests.get(link, headers=headers, timeout=8)
+        res = requests.get(link, headers=headers, timeout=1.5)
         res.raise_for_status()
     except requests.RequestException:
         return ""
@@ -2250,7 +2237,7 @@ def decode_google_news_url_online(link, headers):
                 "Referer": "https://news.google.com/",
             },
             data={"f.req": json.dumps(request_payload, ensure_ascii=False, separators=(",", ":"))},
-            timeout=8,
+            timeout=1.5,
         )
         decode_res.raise_for_status()
         response_json = json.loads(decode_res.text.split("\n\n", 1)[1])
@@ -2305,7 +2292,7 @@ def resolve_original_article_link(link, description, headers):
         return link
 
     try:
-        res = requests.get(link, headers=headers, timeout=8, allow_redirects=True)
+        res = requests.get(link, headers=headers, timeout=1.5, allow_redirects=True)
         res.raise_for_status()
         if is_probable_article_link(res.url):
             return res.url
@@ -2340,7 +2327,7 @@ def is_loadable_news_image(url, headers):
             "Accept": "image/webp,image/png,image/jpeg,image/*;q=0.8",
             "Referer": f"{urlparse(url).scheme}://{urlparse(url).netloc}/",
         }
-        res = requests.get(url, headers=image_headers, timeout=6, stream=True, allow_redirects=True)
+        res = requests.get(url, headers=image_headers, timeout=1.5, stream=True, allow_redirects=True)
         res.raise_for_status()
         content_type = res.headers.get("content-type", "").lower()
         return content_type.startswith("image/") and "svg" not in content_type
@@ -2357,7 +2344,7 @@ def fetch_news_image_bytes(url, headers):
             "Accept": "image/webp,image/png,image/jpeg,image/*;q=0.8",
             "Referer": f"{urlparse(url).scheme}://{urlparse(url).netloc}/",
         }
-        res = requests.get(url, headers=image_headers, timeout=8, allow_redirects=True)
+        res = requests.get(url, headers=image_headers, timeout=1.5, allow_redirects=True)
         res.raise_for_status()
         content_type = res.headers.get("content-type", "").lower()
         if not content_type.startswith("image/") or "svg" in content_type:
@@ -2548,7 +2535,7 @@ def get_article_image(link, headers):
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.6,en;q=0.5",
         }
-        res = requests.get(link, headers=article_headers, timeout=8, allow_redirects=True)
+        res = requests.get(link, headers=article_headers, timeout=1.5, allow_redirects=True)
         res.raise_for_status()
         content_type = res.headers.get("content-type", "")
         if "html" not in content_type:
@@ -2597,10 +2584,16 @@ def parse_rss_feed(xml_bytes, feed_name):
 def get_anime_news(max_items=12, image_extract_version=5):
     collected = []
     headers = {"User-Agent": "Mozilla/5.0 anime-checker/1.0"}
+    started_at = datetime.now()
 
-    for feed in NEWS_FEEDS:
+    def news_elapsed():
+        return (datetime.now() - started_at).total_seconds()
+
+    for feed in NEWS_FEEDS[:3]:
+        if news_elapsed() > 5:
+            break
         try:
-            res = requests.get(feed["url"], headers=headers, timeout=10)
+            res = requests.get(feed["url"], headers=headers, timeout=1.5)
             res.raise_for_status()
             collected.extend(parse_rss_feed(res.content, feed["name"]))
         except (requests.RequestException, ET.ParseError):
@@ -2621,10 +2614,12 @@ def get_anime_news(max_items=12, image_extract_version=5):
         deduped.append(item)
 
     deduped.sort(key=lambda item: (item.get("_relevance_score", 0), item.get("sort_date", "")), reverse=True)
-    candidates = deduped[:max_items * 3]
+    candidates = deduped[:min(max_items, 6)]
 
     enriched = []
     for item in candidates:
+        if news_elapsed() > 8:
+            break
         description_raw = item.pop("_description_raw", "")
         article_link = resolve_original_article_link(item.get("link", ""), description_raw, headers)
         if not is_probable_article_link(article_link):
@@ -2646,6 +2641,17 @@ def get_anime_news(max_items=12, image_extract_version=5):
             break
     if enriched:
         return enriched
+
+    if deduped:
+        fallback_items = []
+        for item in deduped[:min(max_items, 6)]:
+            item.pop("_description_raw", None)
+            item.pop("_summary", None)
+            item["img_bytes"] = b""
+            if not is_probable_article_link(item.get("link", "")):
+                item["link"] = ""
+            fallback_items.append(item)
+        return fallback_items
 
     return [{
         "title": "방영 예정 소식을 불러오지 못했습니다",
@@ -2692,31 +2698,45 @@ def render_news_image(news):
 
 def render_main_nav(active_label):
     labels = ["새 화", "목록", "보류", "찜", "신작 애니", "애니 소식"]
-    links = []
-    for label in labels:
-        active_class = " active" if label == active_label else ""
-        safe_label = html.escape(label)
-        href = f"?main_nav={quote_plus(label)}"
-        links.append(f"<a class='app-nav-item{active_class}' href='{href}'>{safe_label}</a>")
-    st.markdown(f"<nav class='app-nav'>{''.join(links)}</nav>", unsafe_allow_html=True)
+    for row_start in range(0, len(labels), 3):
+        cols = st.columns(3, gap="small")
+        for offset, label in enumerate(labels[row_start:row_start + 3]):
+            with cols[offset]:
+                st.markdown("<span class='main-nav-anchor'></span>", unsafe_allow_html=True)
+                if st.button(
+                    label,
+                    key=f"main_nav_btn_{row_start}_{offset}_{label}",
+                    use_container_width=True,
+                    type="primary" if label == active_label else "secondary",
+                ):
+                    st.session_state.main_section = label
+                    st.session_state.selected_anime = None
+                    st.session_state.selected_season = None
+                    st.session_state.selected_news = None
+                    st.session_state.view = "main"
+                    st.rerun()
+
 
 current_view_marker = html.escape(str(st.session_state.get("view", "main")), quote=True)
 selected_season_marker = "none" if st.session_state.get("selected_season") is None else "selected"
+main_section_marker = html.escape(str(st.session_state.get("main_section", "새 화")), quote=True)
 st.markdown(
     f"<div id='anime-current-view' data-view='{current_view_marker}' "
-    f"data-selected-season='{selected_season_marker}' style='display:none;'></div>",
+    f"data-selected-season='{selected_season_marker}' data-main-section='{main_section_marker}' "
+    f"style='display:none;'></div>",
     unsafe_allow_html=True,
 )
-components.html(
+st.html(
     f"""
     <script>
     window.parent.__animeCheckerCurrentView = {json.dumps({
         "view": st.session_state.get("view", "main"),
         "selectedSeason": selected_season_marker,
+        "mainSection": st.session_state.get("main_section", "새 화"),
     }, ensure_ascii=False)};
     </script>
     """,
-    height=0,
+    unsafe_allow_javascript=True,
 )
 
 # --- 화면 1: 메인 화면 ---
@@ -3023,7 +3043,15 @@ if st.session_state.view == 'main':
             st.write("최근 방영을 시작한 애니메이션을 최신순으로 확인하세요.")
             st.divider()
 
-            sorted_all_animes = get_trending_anime_api(page=1) + get_trending_anime_api(page=2)
+            raw_new_animes = get_trending_anime_api(page=1) + get_trending_anime_api(page=2)
+            seen_new_ids = set()
+            sorted_all_animes = []
+            for item in raw_new_animes:
+                tv_id = item.get('id') or f"idx_{len(sorted_all_animes)}"
+                if tv_id in seen_new_ids:
+                    continue
+                seen_new_ids.add(tv_id)
+                sorted_all_animes.append(item)
             sorted_all_animes.sort(key=lambda item: item.get('first_air_date') or "0000-00-00", reverse=True)
 
             if not sorted_all_animes:
@@ -3058,14 +3086,14 @@ if st.session_state.view == 'main':
                                         st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
                                     with wish_col:
                                         wish_label = "찜해제" if is_wished(tv_id) else "찜"
-                                        if st.button(wish_label, key=f"wish_new_tab_{tv_id}"):
+                                        if st.button(wish_label, key=f"wish_new_tab_{tv_id}_{idx}"):
                                             toggle_wish(tv_id, title, item)
                                             st.rerun()
                                     with add_col:
                                         if title in st.session_state.my_anime_list:
-                                            st.button("완료", key=f"add_new_tab_{tv_id}", disabled=True)
+                                            st.button("완료", key=f"add_new_tab_{tv_id}_{idx}", disabled=True)
                                         else:
-                                            if st.button("추가", key=f"add_new_tab_{tv_id}"):
+                                            if st.button("추가", key=f"add_new_tab_{tv_id}_{idx}"):
                                                 add_anime_to_list(tv_id, title)
                                                 st.rerun()
 
@@ -3080,25 +3108,18 @@ if st.session_state.view == 'main':
             st.write("방영 예정, 신작 공개일, 시즌 발표 중심의 소식을 확인하세요.")
             st.divider()
 
-            rows = len(news_data)
-            for r in range(rows):
-                cols = st.columns(3)
-                for c in range(3):
-                    idx = r * 3 + c
-                    if idx < len(news_data):
-                        news = news_data[idx]
-                        with cols[c]:
-                            with st.container(border=True):
-                                render_news_image(news)
-                                if st.button(news['title'], key=f"news_tab_{idx}"):
-                                    st.session_state.selected_news = news
-                                    st.session_state.news_return_view = 'main'
-                                    st.session_state.view = 'news_detail'
-                                    st.rerun()
-                                st.caption(news['content'])
-                                if news.get('source'):
-                                    st.caption(f"출처: {news['source']}")
-                                st.markdown(f"<div class='news-date'>{news['date']}</div>", unsafe_allow_html=True)
+            for idx, news in enumerate(news_data):
+                with st.container(border=True):
+                    render_news_image(news)
+                    if st.button(news['title'], key=f"news_tab_{idx}"):
+                        st.session_state.selected_news = news
+                        st.session_state.news_return_view = 'main'
+                        st.session_state.view = 'news_detail'
+                        st.rerun()
+                    st.caption(news['content'])
+                    if news.get('source'):
+                        st.caption(f"출처: {news['source']}")
+                    st.markdown(f"<div class='news-date'>{news['date']}</div>", unsafe_allow_html=True)
 
 # --- 화면 2: 애니메이션 상세 화면 ---
 elif st.session_state.view == 'detail':
@@ -3311,7 +3332,7 @@ elif st.session_state.view == 'detail':
 
 # --- 화면 4: 신작 애니 모아보기 화면 ---
 elif st.session_state.view == 'new_animes':
-    components.html("<script>window.parent.scrollTo(0,0);</script>", height=0)
+    st.html("<script>window.parent.scrollTo(0,0);</script>", unsafe_allow_javascript=True)
     
     if st.button("목록으로 돌아가기", key="back_from_new_animes"):
         st.session_state.view = 'main'
@@ -3321,7 +3342,15 @@ elif st.session_state.view == 'new_animes':
     st.write("최근 방영을 시작한 애니메이션을 최신순으로 확인하세요.")
     st.divider()
 
-    sorted_all_animes = get_trending_anime_api(page=1) + get_trending_anime_api(page=2)
+    raw_new_animes = get_trending_anime_api(page=1) + get_trending_anime_api(page=2)
+    seen_new_ids = set()
+    sorted_all_animes = []
+    for item in raw_new_animes:
+        tv_id = item.get('id') or f"idx_{len(sorted_all_animes)}"
+        if tv_id in seen_new_ids:
+            continue
+        seen_new_ids.add(tv_id)
+        sorted_all_animes.append(item)
     
     def get_safe_date(item):
         return item.get('first_air_date') or "0000-00-00"
@@ -3358,14 +3387,14 @@ elif st.session_state.view == 'new_animes':
                             st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
                         with wish_col:
                             wish_label = "찜해제" if is_wished(tv_id) else "찜"
-                            if st.button(wish_label, key=f"wish_new_view_{tv_id}"):
+                            if st.button(wish_label, key=f"wish_new_view_{tv_id}_{idx}"):
                                 toggle_wish(tv_id, title, item)
                                 st.rerun()
                         with add_col:
                             if title in st.session_state.my_anime_list:
-                                st.button("완료", key=f"add_new_view_{tv_id}", disabled=True)
+                                st.button("완료", key=f"add_new_view_{tv_id}_{idx}", disabled=True)
                             else:
-                                if st.button("추가", key=f"add_new_view_{tv_id}"):
+                                if st.button("추가", key=f"add_new_view_{tv_id}_{idx}"):
                                     add_anime_to_list(tv_id, title)
                                     st.rerun()
 
@@ -3373,7 +3402,7 @@ elif st.session_state.view == 'new_animes':
 elif st.session_state.view == 'news':
     news_data = ensure_news_loaded()
     news_loaded_label = st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
-    components.html("<script>window.parent.scrollTo(0,0);</script>", height=0)
+    st.html("<script>window.parent.scrollTo(0,0);</script>", unsafe_allow_javascript=True)
 
     if st.button("목록으로 돌아가기", key="back_from_news"):
         st.session_state.view = 'main'
@@ -3387,25 +3416,18 @@ elif st.session_state.view == 'news':
     st.write("관심 있는 소식을 골라 자세히 확인하세요.")
     st.divider()
 
-    rows = len(news_data)
-    for r in range(rows):
-        cols = st.columns(3)
-        for c in range(3):
-            idx = r * 3 + c
-            if idx < len(news_data):
-                news = news_data[idx]
-                with cols[c]:
-                    with st.container(border=True):
-                        render_news_image(news)
-                        if st.button(news['title'], key=f"news_list_{idx}"):
-                            st.session_state.selected_news = news
-                            st.session_state.news_return_view = 'news'
-                            st.session_state.view = 'news_detail'
-                            st.rerun()
-                        st.caption(news['content'])
-                        if news.get('source'):
-                            st.caption(f"출처: {news['source']}")
-                        st.markdown(f"<div class='news-date'>{news['date']}</div>", unsafe_allow_html=True)
+    for idx, news in enumerate(news_data):
+        with st.container(border=True):
+            render_news_image(news)
+            if st.button(news['title'], key=f"news_list_{idx}"):
+                st.session_state.selected_news = news
+                st.session_state.news_return_view = 'news'
+                st.session_state.view = 'news_detail'
+                st.rerun()
+            st.caption(news['content'])
+            if news.get('source'):
+                st.caption(f"출처: {news['source']}")
+            st.markdown(f"<div class='news-date'>{news['date']}</div>", unsafe_allow_html=True)
 
 # --- 화면 6: 기사 상세 보기 화면 ---
 elif st.session_state.view == 'news_detail':
@@ -3429,6 +3451,9 @@ elif st.session_state.view == 'news_detail':
         st.divider()
 
 st.markdown("<div class='bottom-safe-space'></div>", unsafe_allow_html=True)
+
+
+
 
 
 
