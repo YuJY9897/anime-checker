@@ -37,11 +37,6 @@ TMDB_GENRE_MAP = {
     80: "범죄", 10768: "전쟁/정치", 37: "서부", 99: "다큐멘터리"
 }
 
-KR_OTT_PROVIDER_KEYWORDS = (
-    "Netflix", "TVING", "Wavve", "Watcha", "Disney", "Prime Video",
-    "Amazon", "Coupang", "Laftel", "Crunchyroll", "Apple TV",
-)
-
 st.set_page_config(page_title="애니 업데이트 체크", layout="centered")
 
 if not TMDB_API_KEY:
@@ -121,14 +116,33 @@ def restore_backup_text(raw_text):
     save_app_data()
     return True, "백업을 불러왔습니다."
 
+
+def inject_browser_script(script):
+    components.html(
+        f"""
+        <script>
+        (function () {{
+            const code = {json.dumps(script)};
+            const targets = [window.parent, window.top, window];
+            for (const target of targets) {{
+                try {{
+                    if (target && target.eval) {{
+                        target.eval(code);
+                    }}
+                }} catch (error) {{}}
+            }}
+        }})();
+        </script>
+        """,
+        height=1,
+    )
+
+
 st.markdown(APP_CSS, unsafe_allow_html=True)
 
 st.markdown(SCROLL_TOP_LINK, unsafe_allow_html=True)
 
-components.html(
-    f"<script>window.parent.eval({json.dumps(PARENT_BACK_HANDLER_JS)});</script>",
-    height=1,
-)
+inject_browser_script(PARENT_BACK_HANDLER_JS)
 
 
 # === 2. 외부 API 통신 함수 ===
@@ -777,49 +791,33 @@ def get_anime_details_api(tv_id, title):
     return apply_season_split_rules(title, anime_info)
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
-def get_kr_ott_provider_ids():
-    if not TMDB_API_KEY:
-        return []
-    providers = tmdb_get("watch/providers/tv", {"watch_region": "KR"}).get("results", [])
-    provider_ids = []
-    for provider in providers:
-        name = provider.get("provider_name", "")
-        if any(keyword.lower() in name.lower() for keyword in KR_OTT_PROVIDER_KEYWORDS):
-            provider_ids.append(provider.get("provider_id"))
-    return [provider_id for provider_id in provider_ids if provider_id]
-
-
 def has_korean_title(item):
     return bool(re.search(r"[가-힣]", item.get("name", "")))
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def get_trending_anime_api(page=1):
+def get_trending_anime_api(page=1, ott_only=True):
     if not TMDB_API_KEY:
-        if page != 1:
+        if page != 1 or not ott_only:
             return []
         return [
             {"id": "demo_recent_1", "name": "최근 핫한 애니 1", "poster_path": "", "first_air_date": datetime.now().strftime("%Y-%m-%d"), "genre_ids": [16]}
         ]
 
-    current_year = datetime.now().year
-    recent_date = f"{current_year}-01-01"
-    today_date = (datetime.now() + timedelta(days=120)).strftime('%Y-%m-%d')
+    recent_date = (datetime.now() - timedelta(days=240)).strftime('%Y-%m-%d')
+    future_date = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d')
     request_params = {
         "with_genres": 16,
         "with_original_language": "ja",
-        "watch_region": "KR",
-        "with_watch_monetization_types": "flatrate|free|ads",
         "sort_by": "first_air_date.desc",
         "first_air_date.gte": recent_date,
-        "first_air_date.lte": today_date,
+        "first_air_date.lte": future_date,
         "include_null_first_air_dates": "false",
         "page": page,
     }
-    kr_provider_ids = get_kr_ott_provider_ids()
-    if kr_provider_ids:
-        request_params["with_watch_providers"] = "|".join(str(provider_id) for provider_id in kr_provider_ids)
+    if ott_only:
+        request_params["watch_region"] = "KR"
+        request_params["with_watch_monetization_types"] = "flatrate|free|ads"
     res = tmdb_get("discover/tv", request_params)
     return [item for item in res.get('results', []) if has_korean_title(item)]
 
@@ -1263,8 +1261,10 @@ def render_news_image(news):
 
 def get_new_anime_collection():
     raw_new_animes = []
-    for page in range(1, 4):
-        raw_new_animes.extend(get_trending_anime_api(page=page))
+    for page in range(1, 9):
+        raw_new_animes.extend(get_trending_anime_api(page=page, ott_only=True))
+    for page in range(1, 5):
+        raw_new_animes.extend(get_trending_anime_api(page=page, ott_only=False))
 
     seen_new_ids = set()
     sorted_all_animes = []
@@ -1275,7 +1275,7 @@ def get_new_anime_collection():
         seen_new_ids.add(tv_id)
         sorted_all_animes.append(item)
     sorted_all_animes.sort(key=lambda item: item.get('first_air_date') or "0000-00-00", reverse=True)
-    return sorted_all_animes
+    return sorted_all_animes[:30]
 
 
 def ensure_new_animes_loaded(force=False):
@@ -1393,10 +1393,7 @@ components.html(
     """,
     height=1,
 )
-components.html(
-    f"<script>window.parent.eval({json.dumps(PARENT_BACK_HANDLER_JS)});</script>",
-    height=1,
-)
+inject_browser_script(PARENT_BACK_HANDLER_JS)
 
 # --- 화면 1: 메인 화면 ---
 if st.session_state.view == 'main':

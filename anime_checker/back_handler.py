@@ -1,7 +1,9 @@
 PARENT_BACK_HANDLER_JS = r"""
 (function () {
-    const handlerVersion = 14;
-    const guardKey = "__animeCheckerBackGuardInstalledV14";
+    const handlerVersion = 17;
+    const guardKey = "__animeCheckerBackGuardInstalledV17";
+    const listenerKey = "__animeCheckerBackPopHandlerV17";
+    const hashGuardKey = "__animeCheckerHashGuardUntil";
     const lastBackKey = "__animeCheckerLastBackAt";
     const suppressExitUntilKey = "__animeCheckerSuppressExitUntil";
     const delayMs = 1800;
@@ -9,19 +11,28 @@ PARENT_BACK_HANDLER_JS = r"""
     window.__animeCheckerBackHandlerVersion = handlerVersion;
     document.documentElement.setAttribute("data-anime-back-handler-version", String(handlerVersion));
 
+    function normalizeState(state) {
+        state = state || {};
+        return {
+            view: state.view || "main",
+            selectedSeason: state.selectedSeason || "none",
+            mainSection: state.mainSection || "새 화"
+        };
+    }
+
     function getCurrentAppState() {
         const marker = document.getElementById("anime-current-view");
         if (marker) {
-            return {
+            return normalizeState({
                 view: marker.getAttribute("data-view") || "main",
                 selectedSeason: marker.getAttribute("data-selected-season") || "none",
                 mainSection: marker.getAttribute("data-main-section") || "새 화"
-            };
+            });
         }
         if (window.__animeCheckerCurrentView) {
-            return window.__animeCheckerCurrentView;
+            return normalizeState(window.__animeCheckerCurrentView);
         }
-        return window.__animeCheckerCurrentView || { view: "main", selectedSeason: "none", mainSection: "새 화" };
+        return normalizeState(window.__animeCheckerCurrentView);
     }
 
     function refreshHistoryGuard() {
@@ -34,7 +45,16 @@ PARENT_BACK_HANDLER_JS = r"""
             window.history.replaceState(guardState, "", window.location.href);
             window.history.pushState(guardState, "", window.location.href);
         } catch (error) {
-            window.history.pushState({ animeCheckerGuard: true }, "", window.location.href);
+            try {
+                window.history.pushState({ animeCheckerGuard: true }, "", window.location.href);
+            } catch (innerError) {}
+        }
+        try {
+            if (!window.location.hash || !window.location.hash.startsWith("#anime-checker-guard-v")) {
+                window[hashGuardKey] = Date.now() + 700;
+                window.location.hash = "anime-checker-guard-v" + handlerVersion;
+            }
+        } catch (error) {
         }
     }
 
@@ -99,20 +119,27 @@ PARENT_BACK_HANDLER_JS = r"""
         updateUrlParam("main_nav", label || "새 화");
     }
 
+    function getBackState(event) {
+        const currentState = getCurrentAppState();
+        const eventState = normalizeState(event && event.state && event.state.animeCheckerView);
+        if (currentState.view === "main" && eventState.view !== "main") {
+            return eventState;
+        }
+        return currentState;
+    }
+
     function handleBack(event) {
         if (window.__animeCheckerBackHandlerVersion !== handlerVersion) {
             return;
         }
+        if (Date.now() < (window[hashGuardKey] || 0)) {
+            return;
+        }
 
-        const state = getCurrentAppState();
+        const state = getBackState(event);
         if (state.view !== "main") {
             window[lastBackKey] = 0;
             window[suppressExitUntilKey] = Date.now() + 350;
-
-            if (clickVisibleAppBackButton()) {
-                refreshHistoryGuard();
-                return;
-            }
 
             if (state.view === "detail") {
                 requestAppBack(state.selectedSeason === "selected" ? "season_list" : "main_root");
@@ -120,6 +147,10 @@ PARENT_BACK_HANDLER_JS = r"""
             }
             if (state.view === "news_detail") {
                 requestAppBack("news_return");
+                return;
+            }
+            if (clickVisibleAppBackButton()) {
+                refreshHistoryGuard();
                 return;
             }
             requestAppBack("main_root");
@@ -149,10 +180,18 @@ PARENT_BACK_HANDLER_JS = r"""
         refreshHistoryGuard();
     }
 
+    try {
+        window.history.scrollRestoration = "manual";
+    } catch (error) {}
     refreshHistoryGuard();
-    if (!window[guardKey]) {
-        window[guardKey] = true;
-        window.addEventListener("popstate", handleBack);
+    if (window[listenerKey]) {
+        window.removeEventListener("popstate", window[listenerKey], true);
+        window.removeEventListener("hashchange", window[listenerKey], true);
     }
+    window[listenerKey] = handleBack;
+    window[guardKey] = true;
+    window.addEventListener("popstate", handleBack, true);
+    window.addEventListener("hashchange", handleBack, true);
+    window.onpopstate = handleBack;
 })();
 """

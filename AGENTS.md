@@ -383,7 +383,7 @@ streamlit-local-storage
 
 이번 수정에서 메인 탭 전환은 HTML 링크가 아니라 Streamlit 버튼 기반 메뉴로 바꿨다. `새 화`, `목록`, `보류`, `찜`, `신작 애니`, `애니 소식`은 3개씩 2줄로 보이고, 버튼을 누르면 `st.session_state.main_section`이 직접 바뀐다. 앞으로 메인 메뉴를 고칠 때는 단순 `<a href="?main_nav=...">` 방식으로 되돌리지 않는다. Streamlit 상태와 URL query가 어긋나 탭이 눌리지 않는 문제가 생긴다.
 
-기기 자체 뒤로가기는 JS handler version 14 기준이다. handler는 `components.html` iframe에서 부모 문서로 `eval`해 top window에 직접 설치한다. `popstate`의 예전 history state보다 현재 DOM의 `anime-current-view` 상태를 우선한다. 상세/에피소드 화면에서는 화면에 보이는 `뒤로가기` 버튼을 자동 클릭하는 방식을 최우선으로 사용하고, 버튼을 찾지 못할 때만 `app_back` query fallback으로 상위 화면을 복구한다. 매 렌더링마다 history guard를 다시 보강해서 메인 탭에서 뒤로가기 시 이전 상세 화면 history로 튀지 않게 한다. 에피소드 화면에서 뒤로가기 시 시즌 선택으로, 시즌 선택에서 뒤로가기 시 메인으로 돌아와야 한다. 메인 화면에서만 두 번 뒤로가기 종료 안내가 떠야 한다.
+기기 자체 뒤로가기는 JS handler version 17 기준이다. handler는 `components.html` iframe에서 `parent`, `top`, 현재 `window`에 순서대로 `eval` 주입한다. 현재 DOM의 `anime-current-view` 상태를 우선하되, 폰 WebView에서 DOM 상태를 놓치는 경우를 줄이기 위해 `popstate` event state의 하위 화면 상태도 fallback으로 사용한다. WebView가 `history.pushState` 항목을 뒤로가기 대상으로 보지 못하는 경우가 있어 `#anime-checker-guard-v17` hash guard와 `hashchange` handler도 함께 사용한다. 폰 자체 뒤로가기에서는 Streamlit 버튼 자동 클릭보다 `app_back` query fallback을 우선해 상위 화면을 복구한다. 화면에 보이는 `뒤로가기` 버튼은 사용자가 직접 누르는 버튼으로 유지한다. 매 렌더링마다 history guard를 다시 보강해서 메인 탭에서 뒤로가기 시 이전 상세 화면 history로 튀지 않게 한다. 에피소드 화면에서 뒤로가기 시 시즌 선택으로, 시즌 선택에서 뒤로가기 시 메인으로 돌아와야 한다. 메인 화면에서만 두 번 뒤로가기 종료 안내가 떠야 한다.
 
 신작 애니는 TMDB API 키가 없을 때 데모 데이터가 중복 key를 만들지 않도록 page 1에서만 demo item을 반환한다. 실제 신작 목록도 id 기준으로 중복 제거 후 렌더링한다. `찜`/`추가` 버튼 key에는 index를 함께 넣어 중복 key를 피한다.
 
@@ -406,14 +406,14 @@ streamlit-local-storage
 ## 2026-05-31 재수정 메모
 
 - 메인 메뉴는 `st.pills`를 사용한다. `st.columns` 버튼 메뉴는 모바일에서 버튼 하나가 한 줄씩 먹을 수 있으므로 다시 쓰지 않는다.
-- 폰 자체 뒤로가기는 메인 화면이 아닌 하위 화면에서만 보이는 `뒤로가기` 버튼을 먼저 자동 클릭한다. JS handler version은 14이다.
+- 폰 자체 뒤로가기는 메인 화면이 아닌 하위 화면에서 `app_back` query fallback을 먼저 사용한다. JS handler version은 17이다.
 - 메인 화면에서는 `새 화`가 아닌 메인 탭에서 뒤로가기 시 `새 화`로 돌아가고, `새 화`에서만 뒤로가기 두 번으로 종료 흐름을 허용한다.
 - 애니 소식은 enrich 기사만 반환하지 말고 RSS fallback 기사로 `max_items`까지 채운다. 한두 개만 보이는 상태로 만들지 않는다.
-- 신작 애니는 `popularity.desc`가 아니라 `first_air_date.desc` 기준이며, 현재 연도 이후 날짜만 가져온다. 페이지는 1~3까지 합쳐 중복 제거한다.
+- 신작 애니는 `popularity.desc`가 아니라 `first_air_date.desc` 기준이다. 한국 지역 OTT 결과는 1~8페이지까지 가져오고, provider 데이터가 늦게 갱신되는 문제를 줄이기 위해 한국어 제목이 있는 최신 일본 애니 후보도 1~4페이지까지 합쳐 중복 제거한다.
 - TMDB 키가 없는 데모 신작 날짜는 현재 날짜를 사용한다.
 
 ## 2026-06-25 파일 분리 메모
 
 - 기능별 충돌을 줄이기 위해 CSS/레이아웃은 `anime_checker/ui_assets.py`, 폰 뒤로가기는 `anime_checker/back_handler.py`, 애니 소식은 `anime_checker/news.py`, 저장/백업 JSON 처리는 `anime_checker/storage.py`로 분리했다.
-- 현재 폰 뒤로가기 JS는 `handlerVersion = 14`이며, `streamlit.components.v1.html`로 부모 window에 주입한다. `st.html(..., unsafe_allow_javascript=True)`는 이 앱에서 JS 실행이 안정적으로 되지 않았으므로 현재 방식으로 되돌리지 않는다.
+- 현재 폰 뒤로가기 JS는 `handlerVersion = 17`이며, `streamlit.components.v1.html`로 `parent`, `top`, 현재 `window`에 주입한다. hash guard와 `hashchange` listener를 함께 사용한다. `st.html(..., unsafe_allow_javascript=True)`는 이 앱에서 JS 실행이 안정적으로 되지 않았으므로 현재 방식으로 되돌리지 않는다.
 - 앞으로 버튼 크기/화면 잘림은 `ui_assets.py`, 뒤로가기 동작은 `back_handler.py`, 뉴스 필터는 `news.py`, 백업/저장은 `storage.py`를 먼저 수정한다.
