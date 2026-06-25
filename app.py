@@ -1,4 +1,5 @@
 ﻿import json
+import hashlib
 import html
 import re
 from pathlib import Path
@@ -796,6 +797,7 @@ if 'main_section' not in st.session_state: st.session_state.main_section = '새 
 if 'pending_local_save' not in st.session_state: st.session_state.pending_local_save = False
 if 'local_save_version' not in st.session_state: st.session_state.local_save_version = 0
 if 'loaded_from_local_storage' not in st.session_state: st.session_state.loaded_from_local_storage = False
+if 'backup_notice' not in st.session_state: st.session_state.backup_notice = None
 
 local_storage = LocalStorage() if LocalStorage is not None else None
 local_storage_raw = None
@@ -843,8 +845,16 @@ if local_storage_data and not st.session_state.loaded_from_local_storage:
 app_back_target = st.query_params.get("app_back")
 if app_back_target:
     st.query_params.clear()
-    if app_back_target == "season_list" and st.session_state.view == "detail":
-        st.session_state.selected_season = None
+    if app_back_target == "season_list":
+        if st.session_state.get("selected_anime"):
+            st.session_state.view = "detail"
+            st.session_state.selected_season = None
+        else:
+            st.session_state.selected_anime = None
+            st.session_state.selected_season = None
+            st.session_state.selected_news = None
+            st.session_state.view = "main"
+            st.session_state.main_section = "새 화"
     elif app_back_target == "detail":
         st.session_state.view = "detail"
         st.session_state.selected_season = None
@@ -956,6 +966,14 @@ if local_storage is not None and st.session_state.get("pending_local_save", Fals
         st.session_state.pending_local_save = False
     except Exception:
         pass
+
+backup_notice = st.session_state.pop("backup_notice", None)
+if backup_notice:
+    notice_type, notice_text = backup_notice
+    if notice_type == "success":
+        st.success(notice_text)
+    else:
+        st.error(notice_text)
 # --------------------------------------------------------
 
 def get_anime_uid(title, info=None):
@@ -1424,20 +1442,28 @@ if st.session_state.view == 'main':
                     )
                 with restore_col:
                     backup_file = st.file_uploader(
-                        "백업 불러오기",
+                        "백업 파일 업로드",
                         type=["json"],
-                        label_visibility="collapsed",
                         key="restore_backup_file"
                     )
                 if backup_file is not None:
-                    st.caption("불러오면 현재 목록과 시청 기록이 백업 파일 내용으로 바뀝니다.")
-                    if st.button("불러오기", key="restore_backup_btn", use_container_width=True):
-                        ok, message = restore_backup_file(backup_file)
-                        if ok:
-                            st.success(message)
-                            st.rerun()
-                        else:
-                            st.error(message)
+                    backup_bytes = backup_file.getvalue()
+                    backup_hash = hashlib.sha256(backup_bytes).hexdigest()[:12]
+                    parsed_backup = parse_app_data_json(backup_bytes)
+                    if parsed_backup is None:
+                        st.error("업로드한 백업 파일 형식이 맞지 않습니다.")
+                    else:
+                        anime_count = len(parsed_backup.get("my_anime_list", {}))
+                        wish_count = len(parsed_backup.get("wish_list", {}))
+                        st.success(f"백업 파일 확인됨: 목록 {anime_count}개, 찜 {wish_count}개")
+                        st.caption("적용하면 현재 목록과 시청 기록이 백업 파일 내용으로 바뀝니다.")
+                        if st.button("업로드한 백업 적용", key=f"restore_backup_btn_{backup_hash}", use_container_width=True):
+                            ok, message = restore_backup_file(backup_file)
+                            if ok:
+                                st.session_state.backup_notice = ("success", message)
+                                st.rerun()
+                            else:
+                                st.error(message)
                 restore_text = st.text_area(
                     "백업 붙여넣기",
                     value="",
@@ -1448,7 +1474,7 @@ if st.session_state.view == 'main':
                 if st.button("붙여넣은 백업 불러오기", key="restore_backup_text_btn", use_container_width=True):
                     ok, message = restore_backup_text(restore_text)
                     if ok:
-                        st.success(message)
+                        st.session_state.backup_notice = ("success", message)
                         st.rerun()
                     else:
                         st.error(message)

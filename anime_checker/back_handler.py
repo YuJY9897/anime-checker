@@ -1,7 +1,7 @@
 PARENT_BACK_HANDLER_JS = r"""
 (function () {
-    const handlerVersion = 11;
-    const guardKey = "__animeCheckerBackGuardInstalledV11";
+    const handlerVersion = 14;
+    const guardKey = "__animeCheckerBackGuardInstalledV14";
     const lastBackKey = "__animeCheckerLastBackAt";
     const suppressExitUntilKey = "__animeCheckerSuppressExitUntil";
     const delayMs = 1800;
@@ -10,9 +10,6 @@ PARENT_BACK_HANDLER_JS = r"""
     document.documentElement.setAttribute("data-anime-back-handler-version", String(handlerVersion));
 
     function getCurrentAppState() {
-        if (window.__animeCheckerCurrentView) {
-            return window.__animeCheckerCurrentView;
-        }
         const marker = document.getElementById("anime-current-view");
         if (marker) {
             return {
@@ -20,6 +17,9 @@ PARENT_BACK_HANDLER_JS = r"""
                 selectedSeason: marker.getAttribute("data-selected-season") || "none",
                 mainSection: marker.getAttribute("data-main-section") || "새 화"
             };
+        }
+        if (window.__animeCheckerCurrentView) {
+            return window.__animeCheckerCurrentView;
         }
         return window.__animeCheckerCurrentView || { view: "main", selectedSeason: "none", mainSection: "새 화" };
     }
@@ -104,15 +104,10 @@ PARENT_BACK_HANDLER_JS = r"""
             return;
         }
 
-        const state = (event && event.state && event.state.animeCheckerView) || getCurrentAppState();
+        const state = getCurrentAppState();
         if (state.view !== "main") {
             window[lastBackKey] = 0;
-            window[suppressExitUntilKey] = Date.now() + delayMs + 1200;
-
-            if (state.view === "detail" && state.selectedSeason === "selected") {
-                requestAppBack("season_list");
-                return;
-            }
+            window[suppressExitUntilKey] = Date.now() + 350;
 
             if (clickVisibleAppBackButton()) {
                 refreshHistoryGuard();
@@ -133,7 +128,7 @@ PARENT_BACK_HANDLER_JS = r"""
 
         if ((state.mainSection || "새 화") !== "새 화") {
             window[lastBackKey] = 0;
-            window[suppressExitUntilKey] = Date.now() + delayMs + 800;
+            window[suppressExitUntilKey] = Date.now() + 350;
             requestMainSection("새 화");
             return;
         }
