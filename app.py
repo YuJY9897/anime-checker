@@ -1191,7 +1191,9 @@ def add_direct_and_clear(tv_id, title):
 def render_article_link(url):
     if not url:
         return
-    st.link_button("원문 기사 보기", url, use_container_width=True)
+    link_key = hashlib.sha256(url.encode("utf-8")).hexdigest()[:12]
+    if st.button("원문 기사 보기", key=f"open_article_{link_key}", use_container_width=True):
+        inject_browser_script(f"window.location.href = {json.dumps(url)};")
 
 
 if "news_loaded_at" not in st.session_state:
