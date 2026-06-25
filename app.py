@@ -3,7 +3,6 @@ import hashlib
 import html
 import re
 from pathlib import Path
-from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -652,7 +651,6 @@ def get_related_anime_movies_api(title, original_title=""):
             "release_date": "2024.01.01",
             "runtime": 105,
             "img": "",
-            "namu_link": make_info_url(title + " 극장판"),
         }]
 
     title_candidates = [title, original_title]
@@ -679,7 +677,6 @@ def get_related_anime_movies_api(title, original_title=""):
                 "release_date": release_date or "개봉일 정보 없음",
                 "runtime": runtime,
                 "img": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get("poster_path") else "",
-                "namu_link": make_info_url(movie_title),
             })
 
     collected.sort(key=lambda movie: movie.get("release_date", "9999.99.99"))
@@ -696,7 +693,6 @@ def get_anime_details_api(tv_id, title):
             "display_status": "API 연동 대기중",
             "start_date": "2024.01.01",
             "genre": "애니메이션",
-            "namu_link": make_info_url(title),
             "related_movies": get_related_anime_movies_api(title),
             "seasons": [{
                 "s_num": 1, "name": "1기", "subtitle": "API 자동 불러오기 테스트",
@@ -714,7 +710,6 @@ def get_anime_details_api(tv_id, title):
             "display_status": "상세 정보 불러오기 실패",
             "start_date": "",
             "genre": "",
-            "namu_link": make_info_url(title),
             "related_movies": [],
             "seasons": []
         }
@@ -782,7 +777,6 @@ def get_anime_details_api(tv_id, title):
         "display_status": display_status,
         "start_date": start_date,
         "genre": genres,
-        "namu_link": make_info_url(title),
         "original_title": original_title,
         "poster_img": series_img,
         "related_movies": get_related_anime_movies_api(title, original_title),
@@ -900,7 +894,8 @@ if app_back_target:
         st.session_state.selected_season = None
     elif app_back_target == "news_return":
         st.session_state.selected_news = None
-        st.session_state.view = st.session_state.get("news_return_view", "main")
+        st.session_state.view = "main"
+        st.session_state.news_return_view = "main"
     else:
         st.session_state.selected_anime = None
         st.session_state.selected_season = None
@@ -1193,39 +1188,10 @@ def add_direct_and_clear(tv_id, title):
     st.session_state.search_box = ""
     st.session_state.search_input_text = ""
 
-def render_info_link(url, label="정보"):
-    safe_url = html.escape(normalize_info_url(url), quote=True)
-    safe_label = html.escape(label, quote=True)
-    st.markdown(
-        f"<a class='inline-info-link' href='{safe_url}' target='_self' rel='noopener noreferrer'>{safe_label}</a>",
-        unsafe_allow_html=True
-    )
-
-def make_info_url(query):
-    return f"https://www.google.com/search?q={quote_plus((query or '').strip() + ' 나무위키')}"
-
-def normalize_info_url(url):
-    if not url or url == "#":
-        return "#"
-
-    parsed = urlparse(url)
-    if "namu.wiki" in (parsed.netloc or ""):
-        query = parse_qs(parsed.query).get("q", [""])[0]
-        if not query and parsed.path.startswith("/w/"):
-            query = unquote(parsed.path.removeprefix("/w/"))
-        return make_info_url(query or "나무위키")
-
-    return url
-
-
 def render_article_link(url):
     if not url:
         return
-    safe_url = html.escape(url, quote=True)
-    st.markdown(
-        f"<a class='article-link-button' href='{safe_url}' target='_self' rel='noopener noreferrer'>원문 기사 보기</a>",
-        unsafe_allow_html=True,
-    )
+    st.link_button("원문 기사 보기", url, use_container_width=True)
 
 
 if "news_loaded_at" not in st.session_state:
@@ -1955,63 +1921,14 @@ elif st.session_state.view == 'detail':
                             st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 화면 4: 신작 애니 모아보기 화면 ---
-elif st.session_state.view == 'new_animes':
-    components.html("<script>window.parent.scrollTo(0,0);</script>", height=0)
-    
-    if st.button("목록으로 돌아가기", key="back_from_new_animes"):
-        st.session_state.view = 'main'
-        st.rerun()
-
-    sorted_all_animes = ensure_new_animes_loaded()
-    loaded_label = get_loaded_at_label(st.session_state.get("new_animes_loaded_at"))
-    news_title_col, news_time_col = st.columns([5, 4], gap="small", vertical_alignment="center")
-    with news_title_col:
-        st.title("신작 애니 모아보기")
-    with news_time_col:
-        st.markdown(f"<div class='library-count'>{loaded_label}</div>", unsafe_allow_html=True)
-    st.write("한국 OTT에서 서비스 중이거나 서비스 예정인 애니메이션을 최신순으로 확인하세요.")
-    st.divider()
-    render_new_anime_cards(sorted_all_animes, "new_view")
-
-# --- 화면 5: 애니 소식 목록 화면 ---
-elif st.session_state.view == 'news':
-    news_data = ensure_news_loaded()
-    news_loaded_label = st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
-    components.html("<script>window.parent.scrollTo(0,0);</script>", height=0)
-
-    if st.button("목록으로 돌아가기", key="back_from_news"):
-        st.session_state.view = 'main'
-        st.rerun()
-
-    news_title_col, news_time_col = st.columns([5, 4], gap="small", vertical_alignment="center")
-    with news_title_col:
-        st.title("최신 애니 소식")
-    with news_time_col:
-        st.markdown(f"<div class='library-count'>{news_loaded_label}</div>", unsafe_allow_html=True)
-    st.write("관심 있는 소식을 골라 자세히 확인하세요.")
-    st.divider()
-
-    for idx, news in enumerate(news_data):
-        with st.container(border=True):
-            render_news_image(news)
-            if st.button(news['title'], key=f"news_list_{idx}"):
-                st.session_state.selected_news = news
-                st.session_state.news_return_view = 'news'
-                st.session_state.view = 'news_detail'
-                st.rerun()
-            st.caption(news['content'])
-            if news.get('source'):
-                st.caption(f"출처: {news['source']}")
-            st.markdown(f"<div class='news-date'>{news['date']}</div>", unsafe_allow_html=True)
-
-# --- 화면 6: 기사 상세 보기 화면 ---
+# --- 화면 4: 기사 상세 보기 화면 ---
 elif st.session_state.view == 'news_detail':
     news = st.session_state.selected_news
     
     if st.button("목록으로 돌아가기", key="back_from_news_detail"):
         st.session_state.selected_news = None
-        st.session_state.view = st.session_state.get('news_return_view', 'main')
+        st.session_state.view = "main"
+        st.session_state.news_return_view = "main"
         st.rerun()
 
     if news:
@@ -2022,7 +1939,6 @@ elif st.session_state.view == 'news_detail':
         render_news_image(news)
         if news.get('link'):
             render_article_link(news['link'])
-        st.write("")
         st.markdown(f"<div style='line-height: 1.8; font-size: 1.1em;'>{news.get('full_content', news['content'])}</div>", unsafe_allow_html=True)
         st.divider()
 

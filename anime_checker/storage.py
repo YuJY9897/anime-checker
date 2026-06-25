@@ -30,14 +30,15 @@ def parse_app_data_json(raw):
 
 
 def load_app_data_file(data_file):
+    empty_data = {"my_anime_list": {}, "watched_db": {}, "wish_list": {}, "updated_at": ""}
     if not data_file.exists():
-        return {"my_anime_list": {}, "watched_db": {}}
+        return empty_data
     try:
         with data_file.open("r", encoding="utf-8") as f:
             data = json.load(f)
-        return normalize_app_data(data) or {"my_anime_list": {}, "watched_db": {}}
+        return normalize_app_data(data) or empty_data
     except (json.JSONDecodeError, OSError):
-        return {"my_anime_list": {}, "watched_db": {}}
+        return empty_data
 
 
 def build_app_data(my_anime_list, watched_db, wish_list):
