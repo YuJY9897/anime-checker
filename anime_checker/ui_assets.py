@@ -13,10 +13,10 @@ APP_CSS = """
         pointer-events: none !important;
     }
     div.block-container { padding-top: 0.5rem !important; padding-bottom: 4.25rem !important; }
-    div[data-testid="stVerticalBlock"] { gap: 0.45rem !important; }
-    div[data-testid="stHorizontalBlock"] { gap: 0.4rem !important; }
-    div[data-testid="stVerticalBlockBorderWrapper"] { padding: 0.45rem !important; }
-    div[data-testid="stMarkdownContainer"] p { margin-bottom: 0.2rem !important; }
+    div[data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
+    div[data-testid="stHorizontalBlock"] { gap: 0.48rem !important; }
+    div[data-testid="stVerticalBlockBorderWrapper"] { padding: 0.68rem !important; }
+    div[data-testid="stMarkdownContainer"] p { margin-bottom: 0.28rem !important; line-height: 1.45 !important; }
     div[data-testid="stCaptionContainer"] { margin-top: -0.1rem !important; }
     div[data-testid="stDivider"] { margin-top: 0.45rem !important; margin-bottom: 0.45rem !important; }
     div[data-testid="stTabs"] button[role="tab"] { padding-top: 0.35rem !important; padding-bottom: 0.35rem !important; }
@@ -83,10 +83,10 @@ APP_CSS = """
         -webkit-box-orient: vertical;
         overflow: hidden;
         text-overflow: ellipsis;
-        min-height: 2.35em;
-        line-height: 1.25em;
-        margin-top: 5px;
-        margin-bottom: 3px;
+        min-height: 2.55em;
+        line-height: 1.32em;
+        margin-top: 6px;
+        margin-bottom: 5px;
         font-size: 0.9rem;
         font-weight: bold;
         word-break: keep-all;
@@ -96,59 +96,24 @@ APP_CSS = """
     .anime-genre { 
         color: #666666; 
         font-size: 0.75em; 
-        margin-bottom: 4px; 
-        line-height: 1.35;
-        white-space: nowrap; 
+        margin-bottom: 6px; 
+        line-height: 1.45;
+        white-space: normal; 
         overflow: hidden; 
         text-overflow: ellipsis; 
     }
     
     .date-text { display: flex; align-items: center; justify-content: flex-start; height: 100%; color: gray; font-size: 0.85em; }
     .news-date { color: gray; font-size: 0.8em; text-align: right; margin-top: 3px; }
-    .anime-date { color: gray; font-size: 0.75em; margin-bottom: 7px; line-height: 1.5; }
+    .anime-date { color: gray; font-size: 0.75em; margin-top: 2px; margin-bottom: 8px; line-height: 1.45; }
     .search-hint { color: #888888; font-size: 0.78em; text-align: left; margin-top: -12px; margin-bottom: 6px; }
     .library-count {
         color: #8a8f98; font-size: 0.76rem; text-align: right;
         margin-top: -0.2rem; margin-bottom: 0.2rem;
     }
-    .detail-meta-actions {
-        display: flex; align-items: center; justify-content: space-between; gap: 8px;
-        margin: 2px 0 4px 0;
-    }
     .detail-meta-text {
-        min-width: 0; flex: 1; color: #4b5563; font-size: 0.86rem; line-height: 1.35;
+        min-width: 0; flex: 1; color: #4b5563; font-size: 0.86rem; line-height: 1.5;
     }
-    .detail-action-row { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
-    .detail-action-btn {
-        display: inline-flex; align-items: center; justify-content: center;
-        min-width: 42px; height: 30px; padding: 0 9px; border-radius: 9px;
-        background: #f0f2f6; border: 1px solid #d1d5db; color: #31333F !important;
-        text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
-    }
-    .inline-info-link {
-        display: inline-flex; align-items: center; justify-content: center;
-        width: auto !important; max-width: 58px !important; min-width: 42px !important;
-        height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
-        border-radius: 9px; background: #f0f2f6; border: 1px solid #d1d5db;
-        color: #31333F !important; text-decoration: none !important;
-        font-size: 0.78rem !important; font-weight: 700; line-height: 1 !important;
-        box-sizing: border-box;
-    }
-    .inline-info-link:visited, .inline-info-link:hover, .inline-info-link:active {
-        color: #31333F !important; text-decoration: none !important;
-    }
-    .article-link-button {
-        display: flex !important; width: 100% !important; min-height: 2.35em !important;
-        align-items: center !important; justify-content: center !important;
-        border-radius: 10px !important; padding: 7px 10px !important;
-        background: #f0f2f6 !important; border: 1px solid #d1d5db !important;
-        color: #31333F !important; text-decoration: none !important;
-        font-size: 0.9rem !important; font-weight: 700 !important; line-height: 1.25 !important;
-    }
-    .article-link-button:visited, .article-link-button:hover, .article-link-button:active {
-        color: #31333F !important; text-decoration: none !important;
-    }
-    .detail-action-btn.danger { color: #b91c1c !important; }
     .library-title-actions-anchor, .detail-actions-anchor { display: none; }
     div[data-testid="stHorizontalBlock"]:has(.library-title-actions-anchor),
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) {
@@ -171,8 +136,7 @@ APP_CSS = """
     }
     div[data-testid="stHorizontalBlock"]:has(.library-title-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) [data-testid="stButton"] button,
-    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) .stLinkButton > a,
-    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) .inline-info-link {
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) .stLinkButton > a {
         width: auto !important; max-width: 58px !important; min-width: 42px !important;
         height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
         font-size: 0.78rem !important; justify-content: center !important;
@@ -183,26 +147,16 @@ APP_CSS = """
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(4) [data-testid="stButton"] button {
         color: #b91c1c !important;
     }
-    .movie-action-row {
-        display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px;
-    }
     .movie-title {
         display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
         overflow: hidden; text-overflow: ellipsis; min-height: 2.5em;
-        line-height: 1.25; font-size: 0.92rem; font-weight: 700; color: #31333F;
-        margin: 3px 0 2px 0; word-break: keep-all; overflow-wrap: anywhere;
+        line-height: 1.34; font-size: 0.92rem; font-weight: 700; color: #31333F;
+        margin: 4px 0 4px 0; word-break: keep-all; overflow-wrap: anywhere;
     }
     .movie-meta {
-        color: #6b7280; font-size: 0.74rem; line-height: 1.25;
-        margin-bottom: 4px; word-break: keep-all; overflow-wrap: anywhere;
+        color: #6b7280; font-size: 0.74rem; line-height: 1.42;
+        margin-bottom: 6px; word-break: keep-all; overflow-wrap: anywhere;
     }
-    .movie-action-btn {
-        display: inline-flex; align-items: center; justify-content: center;
-        min-width: 44px; height: 30px; padding: 0 9px; border-radius: 9px;
-        background: #f0f2f6; border: 1px solid #d1d5db; color: #31333F !important;
-        text-decoration: none !important; font-size: 0.8rem; font-weight: 700;
-    }
-    .movie-action-btn.done { color: #047857 !important; border-color: #6ee7b7; background: #ecfdf5; }
     .watch-done button {
         color: #047857 !important; border-color: #6ee7b7 !important; background: #ecfdf5 !important;
     }
@@ -237,8 +191,7 @@ APP_CSS = """
         margin: 0 !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stButton"] button,
-    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) .stLinkButton > a,
-    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) .inline-info-link {
+    div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) .stLinkButton > a {
         width: auto !important; max-width: 58px !important; min-width: 42px !important;
         height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
         font-size: 0.78rem !important; justify-content: center !important;
@@ -262,26 +215,14 @@ APP_CSS = """
         flex: 0 0 58px !important; width: 58px !important; min-width: 58px !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) [data-testid="stButton"] button,
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) .stLinkButton > a,
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) .inline-info-link {
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) .stLinkButton > a {
         width: auto !important; max-width: 58px !important; min-width: 42px !important;
         height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
         font-size: 0.78rem !important; justify-content: center !important;
     }
-    .episode-watch-action {
-        display: inline-flex; align-items: center; justify-content: center;
-        min-width: 42px; height: 28px; padding: 0 8px; border-radius: 9px;
-        background: #f0f2f6; border: 1px solid #d1d5db; color: #31333F !important;
-        text-decoration: none !important; font-size: 0.78rem; font-weight: 700;
-    }
-    .episode-watch-action.done { color: #047857 !important; border-color: #6ee7b7; background: #ecfdf5; }
-    .episode-row {
-        display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        min-height: 42px;
-    }
     .episode-main { min-width: 0; flex: 1; }
-    .episode-title { font-size: 0.95rem; line-height: 1.3; font-weight: 700; color: #31333F; }
-    .episode-date { margin-top: 2px; font-size: 0.78rem; line-height: 1.2; color: #6b7280; }
+    .episode-title { font-size: 0.95rem; line-height: 1.38; font-weight: 700; color: #31333F; }
+    .episode-date { margin-top: 4px; font-size: 0.78rem; line-height: 1.35; color: #6b7280; }
     .episode-actions { flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
     .episode-actions [data-testid="stButton"] button {
         width: auto !important; max-width: 48px !important; min-width: 42px !important;
@@ -290,7 +231,7 @@ APP_CSS = """
         justify-content: center !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.episode-main) {
-        display: flex !important; flex-direction: row !important; align-items: center !important; gap: 8px !important;
+        display: flex !important; flex-direction: row !important; align-items: center !important; gap: 10px !important;
         flex-wrap: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.episode-main) > div:first-child {
@@ -307,7 +248,7 @@ APP_CSS = """
         color: #374151 !important; border-color: #d1d5db !important; background: #f3f4f6 !important;
     }
     .episode-row-divider {
-        height: 1px; background: #eef0f3; margin: 4px 0 5px 0;
+        height: 1px; background: #eef0f3; margin: 8px 0;
     }
     div[data-testid="stCheckbox"] {
         width: 100% !important; display: flex !important; justify-content: flex-end !important;
@@ -344,13 +285,13 @@ APP_CSS = """
     }
     h1 { font-size: 1.32rem !important; font-weight: 800 !important; letter-spacing: 0 !important; margin-bottom: 0.35rem !important; }
     h2, h3 { font-size: 1.03rem !important; font-weight: 800 !important; letter-spacing: 0 !important; }
-    div[data-testid="stVerticalBlock"] { gap: 0.38rem !important; }
-    div[data-testid="stHorizontalBlock"] { gap: 0.35rem !important; }
+    div[data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
+    div[data-testid="stHorizontalBlock"] { gap: 0.48rem !important; }
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid #e6e8ee !important;
         border-radius: 12px !important;
         background: #ffffff !important;
-        padding: 0.58rem !important;
+        padding: 0.72rem !important;
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
     }
     div[data-testid="stTabs"] { margin-top: 0.1rem !important; }
@@ -365,17 +306,23 @@ APP_CSS = """
         background: #eceff3 !important;
         border: 1px solid transparent !important;
         color: #4b5563 !important;
-        padding: 0.34rem 0.62rem !important;
-        min-height: 30px !important;
+        padding: 0.42rem 0.72rem !important;
+        min-height: 34px !important;
         white-space: nowrap !important;
         font-size: 0.83rem !important;
         font-weight: 800 !important;
+        line-height: 1.25 !important;
     }
     div[data-testid="stTabs"] button[aria-selected="true"] {
-        background: #111827 !important;
-        color: #ffffff !important;
-        border-color: #111827 !important;
+        background: #e8f1ff !important;
+        color: #0f3f8c !important;
+        border-color: #93b7f7 !important;
+        box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.16) !important;
     }
+    div[data-testid="stTabs"] button[role="tab"] p,
+    div[data-testid="stTabs"] button[role="tab"] span { color: inherit !important; line-height: 1.25 !important; }
+    div[data-testid="stTabs"] button[aria-selected="true"] p,
+    div[data-testid="stTabs"] button[aria-selected="true"] span { color: #0f3f8c !important; }
     div[data-testid="stTextInput"] input, textarea {
         border-radius: 12px !important;
         border: 1px solid #d9dde5 !important;
@@ -389,7 +336,7 @@ APP_CSS = """
         padding: 5px 9px !important;
         font-size: 0.84rem !important;
         font-weight: 800 !important;
-        line-height: 1.18 !important;
+        line-height: 1.25 !important;
         border: 1px solid #d8dde6 !important;
         background: #f8fafc !important;
         color: #1f2937 !important;
@@ -446,16 +393,21 @@ APP_CSS = """
         word-break: keep-all !important;
         overflow-wrap: anywhere !important;
     }
-    .anime-title { font-size: 0.86rem !important; min-height: 2.2em !important; line-height: 1.24 !important; }
-    .anime-genre, .anime-date, .movie-meta, .episode-date { color: #6b7280 !important; }
-    .episode-row-divider { background: #edf0f5 !important; margin: 6px 0 !important; }
-    .news-date, .library-count { color: #7b8290 !important; font-size: 0.72rem !important; }
+    .anime-title { font-size: 0.86rem !important; min-height: 2.55em !important; line-height: 1.32 !important; margin-bottom: 5px !important; }
+    .anime-genre { color: #6b7280 !important; line-height: 1.45 !important; margin-bottom: 6px !important; white-space: normal !important; }
+    .anime-date, .movie-meta, .episode-date { color: #6b7280 !important; line-height: 1.4 !important; }
+    .movie-title { line-height: 1.34 !important; min-height: 2.68em !important; margin-bottom: 4px !important; }
+    .episode-title { line-height: 1.38 !important; }
+    .episode-date { margin-top: 4px !important; }
+    .episode-row-divider { background: #edf0f5 !important; margin: 8px 0 !important; }
+    .news-date, .library-count { color: #7b8290 !important; font-size: 0.74rem !important; line-height: 1.35 !important; }
+    div[data-testid="stMarkdownContainer"] p { line-height: 1.45 !important; margin-bottom: 0.28rem !important; }
     .stImage img { height: 124px !important; border-radius: 10px !important; }
     @media (max-width: 430px) {
         div.block-container { padding-left: 0.55rem !important; padding-right: 0.55rem !important; }
         .stImage img { height: 112px !important; }
-        .anime-title { font-size: 0.82rem !important; }
-        div[data-testid="stTabs"] button[role="tab"] { font-size: 0.78rem !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        .anime-title { font-size: 0.84rem !important; }
+        div[data-testid="stTabs"] button[role="tab"] { font-size: 0.8rem !important; padding-left: 0.58rem !important; padding-right: 0.58rem !important; }
     }
     div[data-testid="stAlert"] {
         border-radius: 12px !important;
@@ -666,7 +618,7 @@ APP_CSS = """
         display: grid !important;
         grid-template-columns: minmax(0, 1fr) max-content !important;
         align-items: center !important;
-        gap: 8px !important;
+        gap: 10px !important;
         width: 100% !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.episode-main) > div {
@@ -703,6 +655,52 @@ APP_CSS = """
         justify-content: center !important;
         text-align: center !important;
         white-space: nowrap !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"] {
+        background: #eceff3 !important;
+        border: 1px solid transparent !important;
+        color: #4b5563 !important;
+        min-height: 34px !important;
+        line-height: 1.25 !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"] p,
+    div[data-testid="stTabs"] button[role="tab"] span {
+        color: inherit !important;
+        line-height: 1.25 !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        background: #e8f1ff !important;
+        border-color: #93b7f7 !important;
+        color: #0f3f8c !important;
+        box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.16) !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] p,
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] span {
+        color: #0f3f8c !important;
+    }
+    div[data-testid="stPills"] button,
+    .st-key-main_section_pills button[data-testid^="stBaseButton-pills"],
+    div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"] {
+        background: #eef1f5 !important;
+        border: 1px solid #d9dee8 !important;
+        color: #374151 !important;
+    }
+    div[data-testid="stPills"] button p,
+    .st-key-main_section_pills button[data-testid^="stBaseButton-pills"] p,
+    div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"] p {
+        color: #374151 !important;
+    }
+    div[data-testid="stPills"] button[aria-selected="true"],
+    .st-key-main_section_pills button[data-testid^="stBaseButton-pills"][aria-selected="true"],
+    div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"][aria-selected="true"] {
+        background: #e8f1ff !important;
+        border-color: #93b7f7 !important;
+        color: #0f3f8c !important;
+    }
+    div[data-testid="stPills"] button[aria-selected="true"] p,
+    .st-key-main_section_pills button[data-testid^="stBaseButton-pills"][aria-selected="true"] p,
+    div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"][aria-selected="true"] p {
+        color: #0f3f8c !important;
     }
     </style>
 """
