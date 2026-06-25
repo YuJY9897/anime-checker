@@ -36,9 +36,22 @@ streamlit run app.py
 보통 아래 파일만 올린다.
 
 - `app.py`
+- `anime_checker/`
 - `requirements.txt`
 - `.gitignore`
 - `AGENTS.md`
+
+## 파일 분리 구조
+
+기능 수정은 가능한 한 해당 모듈만 건드린다. 다른 기능이 갑자기 바뀌지 않게 공통 파일 수정은 최소화한다.
+
+- `app.py`: Streamlit 화면 흐름, 세션 상태 연결, 화면 렌더링 진입점
+- `anime_checker/ui_assets.py`: 전체 CSS, 모바일 레이아웃, 상단 이동 링크
+- `anime_checker/back_handler.py`: 폰 자체 뒤로가기 처리 JS
+- `anime_checker/news.py`: 애니 소식 RSS 수집, 뉴스 필터링, 이미지 추출
+- `anime_checker/storage.py`: 백업 JSON 구조, 파일 저장/불러오기
+
+수정 요청을 받으면 관련 모듈부터 고치고, 수정 후에는 최소 `python -m py_compile app.py anime_checker/*.py` 검증을 실행한다. 앱 동작에 영향이 있는 변경이면 로컬 Streamlit 실행까지 확인한다.
 
 ## GitHub에 올리면 안 되는 파일
 
@@ -365,7 +378,7 @@ streamlit-local-storage
 
 이번 수정에서 메인 탭 전환은 HTML 링크가 아니라 Streamlit 버튼 기반 메뉴로 바꿨다. `새 화`, `목록`, `보류`, `찜`, `신작 애니`, `애니 소식`은 3개씩 2줄로 보이고, 버튼을 누르면 `st.session_state.main_section`이 직접 바뀐다. 앞으로 메인 메뉴를 고칠 때는 단순 `<a href="?main_nav=...">` 방식으로 되돌리지 않는다. Streamlit 상태와 URL query가 어긋나 탭이 눌리지 않는 문제가 생긴다.
 
-기기 자체 뒤로가기는 JS handler version 7 기준이다. 상세/에피소드 화면에서 URL을 억지로 바꾸기보다 화면에 보이는 `뒤로가기` 버튼을 자동 클릭하는 방식이 가장 안정적이었다. 에피소드 화면에서 뒤로가기 시 시즌 선택으로, 시즌 선택에서 뒤로가기 시 메인으로 돌아와야 한다. 메인 화면에서만 두 번 뒤로가기 종료 안내가 떠야 한다.
+기기 자체 뒤로가기는 JS handler version 11 기준이다. handler는 `components.html` iframe에서 부모 문서로 `eval`해 top window에 직접 설치한다. 상세/에피소드 화면에서는 화면에 보이는 `뒤로가기` 버튼을 자동 클릭하는 방식을 우선하고, 버튼을 찾지 못하면 `app_back` query fallback으로 상위 화면을 복구한다. 매 렌더링마다 history guard를 다시 보강해서 메인 탭에서 뒤로가기 시 이전 상세 화면 history로 튀지 않게 한다. 에피소드 화면에서 뒤로가기 시 시즌 선택으로, 시즌 선택에서 뒤로가기 시 메인으로 돌아와야 한다. 메인 화면에서만 두 번 뒤로가기 종료 안내가 떠야 한다.
 
 신작 애니는 TMDB API 키가 없을 때 데모 데이터가 중복 key를 만들지 않도록 page 1에서만 demo item을 반환한다. 실제 신작 목록도 id 기준으로 중복 제거 후 렌더링한다. `찜`/`추가` 버튼 key에는 index를 함께 넣어 중복 key를 피한다.
 
@@ -383,12 +396,19 @@ streamlit-local-storage
 - 시즌 선택 화면에서 기기 뒤로가기 흐름: 시즌 선택 -> 메인 확인
 - 애니 소식 탭에서 갱신 기준 시각 표시와 스피너 종료 확인
 
-추가 메모: Streamlit 1.57 기준 `st.components.v1.html`은 제거 예정 경고가 있으므로 JS 삽입은 `st.html(..., unsafe_allow_javascript=True)`를 사용한다. 이 방식으로 뒤로가기 JS 실행 여부를 확인했다.
+추가 메모: 현재 뒤로가기 JS는 실제 실행이 필요하므로 `streamlit.components.v1.html(..., height=1)`을 사용한다. scroll JS처럼 1회성인 경우만 `height=0`을 쓸 수 있다. `st.html(..., unsafe_allow_javascript=True)`는 `<script>`가 DOM에 남아도 실행되지 않는 사례가 있어 뒤로가기 handler에는 쓰지 않는다.
 
 ## 2026-05-31 재수정 메모
 
 - 메인 메뉴는 `st.pills`를 사용한다. `st.columns` 버튼 메뉴는 모바일에서 버튼 하나가 한 줄씩 먹을 수 있으므로 다시 쓰지 않는다.
-- 폰 자체 뒤로가기는 popstate 시작 시 보이는 `뒤로가기` 버튼을 가장 먼저 자동 클릭한다. JS handler version은 8이다.
+- 폰 자체 뒤로가기는 메인 화면이 아닌 하위 화면에서만 보이는 `뒤로가기` 버튼을 먼저 자동 클릭한다. JS handler version은 11이다.
+- 메인 화면에서는 `새 화`가 아닌 메인 탭에서 뒤로가기 시 `새 화`로 돌아가고, `새 화`에서만 뒤로가기 두 번으로 종료 흐름을 허용한다.
 - 애니 소식은 enrich 기사만 반환하지 말고 RSS fallback 기사로 `max_items`까지 채운다. 한두 개만 보이는 상태로 만들지 않는다.
 - 신작 애니는 `popularity.desc`가 아니라 `first_air_date.desc` 기준이며, 현재 연도 이후 날짜만 가져온다. 페이지는 1~3까지 합쳐 중복 제거한다.
 - TMDB 키가 없는 데모 신작 날짜는 현재 날짜를 사용한다.
+
+## 2026-06-25 파일 분리 메모
+
+- 기능별 충돌을 줄이기 위해 CSS/레이아웃은 `anime_checker/ui_assets.py`, 폰 뒤로가기는 `anime_checker/back_handler.py`, 애니 소식은 `anime_checker/news.py`, 저장/백업 JSON 처리는 `anime_checker/storage.py`로 분리했다.
+- 현재 폰 뒤로가기 JS는 `handlerVersion = 11`이며, `streamlit.components.v1.html`로 부모 window에 주입한다. `st.html(..., unsafe_allow_javascript=True)`는 이 앱에서 JS 실행이 안정적으로 되지 않았으므로 현재 방식으로 되돌리지 않는다.
+- 앞으로 버튼 크기/화면 잘림은 `ui_assets.py`, 뒤로가기 동작은 `back_handler.py`, 뉴스 필터는 `news.py`, 백업/저장은 `storage.py`를 먼저 수정한다.

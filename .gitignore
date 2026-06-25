@@ -1,4 +1,6 @@
-﻿.streamlit/secrets.toml
+.streamlit/secrets.toml
+.venv/
+venv/
 anime_check_data.json
 anime_check_data.tmp
 __pycache__/
