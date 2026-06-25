@@ -137,6 +137,17 @@ APP_CSS = """
     .inline-info-link:visited, .inline-info-link:hover, .inline-info-link:active {
         color: #31333F !important; text-decoration: none !important;
     }
+    .article-link-button {
+        display: flex !important; width: 100% !important; min-height: 2.35em !important;
+        align-items: center !important; justify-content: center !important;
+        border-radius: 10px !important; padding: 7px 10px !important;
+        background: #f0f2f6 !important; border: 1px solid #d1d5db !important;
+        color: #31333F !important; text-decoration: none !important;
+        font-size: 0.9rem !important; font-weight: 700 !important; line-height: 1.25 !important;
+    }
+    .article-link-button:visited, .article-link-button:hover, .article-link-button:active {
+        color: #31333F !important; text-decoration: none !important;
+    }
     .detail-action-btn.danger { color: #b91c1c !important; }
     .library-title-actions-anchor, .detail-actions-anchor { display: none; }
     div[data-testid="stHorizontalBlock"]:has(.library-title-actions-anchor),
