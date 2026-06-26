@@ -893,32 +893,70 @@ APP_CSS = """
         font-size: 0.7rem !important;
         line-height: 1.2 !important;
     }
-    [class*="st-key-new_anime_row_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"]) {
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        align-items: start !important;
-        gap: 0.5rem !important;
-        width: 100% !important;
+    .new-anime-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
     }
-    [class*="st-key-new_anime_row_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"]) > div {
-        min-width: 0 !important;
-        width: auto !important;
+    .new-anime-card {
+        min-width: 0;
+        padding: 0.5rem;
+        border: 1px solid rgba(18, 24, 38, 0.12);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 4px 12px rgba(18, 24, 38, 0.05);
     }
-    [class*="st-key-new_anime_actions_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stButton"]) {
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 0.32rem !important;
-        width: 100% !important;
+    .new-anime-card img {
+        display: block;
+        width: 100%;
+        height: 116px;
+        border-radius: 6px;
+        object-fit: cover;
     }
-    [class*="st-key-new_anime_actions_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stButton"]) > div {
-        min-width: 0 !important;
-        width: auto !important;
+    .new-anime-card-title {
+        display: -webkit-box;
+        margin: 0.38rem 0 0.22rem;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        color: var(--ink);
+        font-size: 0.82rem;
+        font-weight: 900;
+        line-height: 1.32;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
     }
-    [class*="st-key-new_anime_actions_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stButton"]) [data-testid="stButton"] button {
-        width: 100% !important;
-        min-width: 0 !important;
-        justify-content: center !important;
-        padding: 2px 4px !important;
+    .new-anime-card-meta {
+        color: var(--muted);
+        font-size: 0.7rem;
+        line-height: 1.35;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+    }
+    .new-anime-card-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.32rem;
+        margin-top: 0.42rem;
+    }
+    .new-anime-card-actions a {
+        display: flex;
+        min-width: 0;
+        min-height: 28px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #d8e0eb;
+        border-radius: 7px;
+        background: #ffffff;
+        color: #1f2937 !important;
+        font-size: 0.74rem;
+        font-weight: 900;
+        text-decoration: none !important;
+    }
+    .new-anime-card-actions .new-anime-add-action {
+        border-color: #93b7f7;
+        background: var(--blue-soft);
+        color: #0f3f8c !important;
     }
     /* Compact mobile rhythm: keep repeated actions and list content dense. */
     div.block-container {

@@ -1275,48 +1275,30 @@ def render_new_anime_cards(sorted_all_animes, key_prefix):
         st.write("한국 OTT 서비스 기준 신작 애니 정보를 불러오지 못했습니다.")
         return
 
-    cols_per_row = 2
-    rows = (len(sorted_all_animes) + cols_per_row - 1) // cols_per_row
-    for r in range(rows):
-        with st.container(key=f"new_anime_row_{r}"):
-            cols = st.columns(cols_per_row, gap="small")
-            for c in range(cols_per_row):
-                idx = r * cols_per_row + c
-                if idx >= len(sorted_all_animes):
-                    continue
-                item = sorted_all_animes[idx]
-                title = item['name']
-                tv_id = item['id']
-                rep_img = f"https://image.tmdb.org/t/p/w500{item['poster_path']}" if item.get('poster_path') else ""
-
-                genre_names = [TMDB_GENRE_MAP.get(gid, "") for gid in item.get('genre_ids', [])]
-                genre_names = [g for g in genre_names if g]
-                genre_str = ", ".join(genre_names) if genre_names else "애니메이션"
-
-                with cols[c]:
-                    with st.container(border=True):
-                        if rep_img:
-                            st.image(rep_img, use_container_width=True)
-                        st.markdown(f"<div class='anime-title'>{html.escape(title)}</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='anime-genre'>장르: {genre_str}</div>", unsafe_allow_html=True)
-                        st.markdown(
-                            f"<div class='anime-date'>{html.escape(format_new_anime_air_date(item.get('first_air_date', '')))}</div>",
-                            unsafe_allow_html=True
-                        )
-
-                        with st.container(key=f"new_anime_actions_{idx}"):
-                            wish_col, add_col = st.columns(2, gap="small")
-                            with wish_col:
-                                wish_label = "찜해제" if is_wished(tv_id) else "찜"
-                                if st.button(wish_label, key=f"wish_{key_prefix}_{tv_id}_{idx}"):
-                                    toggle_wish(tv_id, title, item)
-                                    st.rerun()
-                            with add_col:
-                                if title in st.session_state.my_anime_list:
-                                    st.button("완료", key=f"add_{key_prefix}_{tv_id}_{idx}", disabled=True)
-                                elif st.button("추가", key=f"add_{key_prefix}_{tv_id}_{idx}"):
-                                    add_anime_to_list(tv_id, title)
-                                    st.rerun()
+    cards = []
+    for item in sorted_all_animes:
+        title = item["name"]
+        tv_id = item["id"]
+        poster_path = item.get("poster_path")
+        rep_img = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else ""
+        genre_names = [TMDB_GENRE_MAP.get(gid, "") for gid in item.get("genre_ids", [])]
+        genre_str = ", ".join(g for g in genre_names if g) or "애니메이션"
+        wish_label = "찜해제" if is_wished(tv_id) else "찜"
+        add_label = "완료" if title in st.session_state.my_anime_list else "추가"
+        poster_html = f"<img src='{html.escape(rep_img, quote=True)}' alt='' />" if rep_img else ""
+        cards.append(
+            "<article class='new-anime-card'>"
+            f"{poster_html}"
+            f"<div class='new-anime-card-title'>{html.escape(title)}</div>"
+            f"<div class='new-anime-card-meta'>장르: {html.escape(genre_str)}</div>"
+            f"<div class='new-anime-card-meta'>{html.escape(format_new_anime_air_date(item.get('first_air_date', '')))}</div>"
+            "<div class='new-anime-card-actions'>"
+            f"<a href='?new_action=wish&amp;new_id={tv_id}'>{wish_label}</a>"
+            f"<a class='new-anime-add-action' href='?new_action=add&amp;new_id={tv_id}'>{add_label}</a>"
+            "</div>"
+            "</article>"
+        )
+    st.markdown(f"<div class='new-anime-grid'>{''.join(cards)}</div>", unsafe_allow_html=True)
 
 
 def render_main_nav(active_label):
@@ -1695,6 +1677,19 @@ if st.session_state.view == 'main':
 
         elif active_main_tab == "신작 애니":
             sorted_all_animes = ensure_new_animes_loaded()
+            new_action = st.query_params.get("new_action")
+            new_id = st.query_params.get("new_id")
+            if new_action and new_id:
+                selected_item = next((item for item in sorted_all_animes if str(item.get("id")) == str(new_id)), None)
+                if selected_item:
+                    title = selected_item["name"]
+                    if new_action == "wish":
+                        toggle_wish(new_id, title, selected_item)
+                    elif new_action == "add" and title not in st.session_state.my_anime_list:
+                        add_anime_to_list(new_id, title)
+                del st.query_params["new_action"]
+                del st.query_params["new_id"]
+                st.rerun()
             loaded_label = get_loaded_at_label(st.session_state.get("new_animes_loaded_at"))
             st.subheader("신작 애니")
             st.markdown(f"<div class='library-count section-timestamp'>{loaded_label}</div>", unsafe_allow_html=True)
