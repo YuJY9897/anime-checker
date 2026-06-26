@@ -911,6 +911,12 @@ APP_CSS = """
         text-align: left !important;
         margin: -0.16rem 0 0.36rem !important;
     }
+    .library-count:not(.section-timestamp) {
+        display: block !important;
+        min-height: 1.3em !important;
+        margin: 0 0 0.24rem !important;
+        text-align: right !important;
+    }
     /* Compact mobile rhythm: keep repeated actions and list content dense. */
     div.block-container {
         padding: 0.3rem 0.58rem 5rem !important;
