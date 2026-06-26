@@ -1340,6 +1340,22 @@ def render_main_nav(active_label):
         st.rerun()
 
 
+def render_app_header():
+    today_label = datetime.now().strftime("%Y.%m.%d")
+    st.markdown(
+        f"""
+        <div class="app-shell-header">
+            <div>
+                <div class="app-brand-kicker">ANIME CHECKER</div>
+                <div class="app-brand-title">애니 체크</div>
+            </div>
+            <div class="app-brand-date">{today_label}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 current_view_marker = html.escape(str(st.session_state.get("view", "main")), quote=True)
 selected_season_marker = "none" if st.session_state.get("selected_season") is None else "selected"
 main_section_marker = html.escape(str(st.session_state.get("main_section", "새 화")), quote=True)
@@ -1365,7 +1381,8 @@ inject_browser_script(PARENT_BACK_HANDLER_JS)
 
 # --- 화면 1: 메인 화면 ---
 if st.session_state.view == 'main':
-    
+    render_app_header()
+
     with st.form("anime_search_form"):
         search_col, search_btn_col = st.columns([7, 2], gap="small", vertical_alignment="center")
         with search_col:

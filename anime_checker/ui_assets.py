@@ -702,6 +702,373 @@ APP_CSS = """
     div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"][aria-selected="true"] p {
         color: #0f3f8c !important;
     }
+
+    /* === Store-grade mobile visual system === */
+    :root {
+        --app-bg: #f4f6f8;
+        --surface: #ffffff;
+        --surface-soft: #f8fafc;
+        --ink: #121826;
+        --muted: #667085;
+        --line: #dfe4ec;
+        --blue: #2563eb;
+        --blue-soft: #eaf2ff;
+        --jade: #0f766e;
+        --jade-soft: #e6f7f4;
+        --rose: #be123c;
+        --rose-soft: #fff1f2;
+        --amber: #b45309;
+        --amber-soft: #fff7ed;
+    }
+    html, body, [data-testid="stAppViewContainer"] {
+        background: var(--app-bg) !important;
+        color: var(--ink) !important;
+    }
+    [data-testid="stAppViewContainer"] > .main {
+        background: var(--app-bg) !important;
+    }
+    div.block-container {
+        max-width: 560px !important;
+        padding: 0.55rem 0.72rem 6.75rem !important;
+    }
+    .app-shell-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0.15rem 0 0.68rem;
+        padding: 0.75rem 0.82rem;
+        border: 1px solid rgba(18, 24, 38, 0.08);
+        border-radius: 8px;
+        background:
+            linear-gradient(135deg, rgba(37, 99, 235, 0.10), rgba(15, 118, 110, 0.07)),
+            var(--surface);
+        box-shadow: 0 12px 28px rgba(18, 24, 38, 0.08);
+    }
+    .app-brand-kicker {
+        color: var(--blue);
+        font-size: 0.66rem;
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.1;
+    }
+    .app-brand-title {
+        color: var(--ink);
+        font-size: 1.28rem;
+        font-weight: 900;
+        line-height: 1.18;
+        letter-spacing: 0;
+        margin-top: 2px;
+    }
+    .app-brand-date {
+        flex: 0 0 auto;
+        color: #334155;
+        background: rgba(255, 255, 255, 0.74);
+        border: 1px solid rgba(18, 24, 38, 0.08);
+        border-radius: 999px;
+        padding: 0.34rem 0.55rem;
+        font-size: 0.76rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    h1, h2, h3 {
+        color: var(--ink) !important;
+        letter-spacing: 0 !important;
+    }
+    h1 {
+        font-size: 1.38rem !important;
+        font-weight: 900 !important;
+        line-height: 1.23 !important;
+        margin: 0.2rem 0 0.46rem !important;
+    }
+    h2, h3 {
+        font-size: 1.05rem !important;
+        font-weight: 900 !important;
+        line-height: 1.28 !important;
+        margin: 0.36rem 0 0.38rem !important;
+    }
+    div[data-testid="stForm"] {
+        border: 1px solid rgba(18, 24, 38, 0.08) !important;
+        border-radius: 8px !important;
+        background: var(--surface) !important;
+        padding: 0.56rem !important;
+        box-shadow: 0 10px 24px rgba(18, 24, 38, 0.06) !important;
+    }
+    div[data-testid="stForm"] input {
+        background: var(--surface-soft) !important;
+        border-color: #dbe3ef !important;
+        color: var(--ink) !important;
+        font-weight: 700 !important;
+    }
+    div[data-testid="stForm"] input::placeholder {
+        color: #8a94a6 !important;
+    }
+    .search-hint {
+        color: var(--muted) !important;
+        font-size: 0.76rem !important;
+        margin: 0.32rem 0 0.55rem !important;
+        padding-left: 0.1rem !important;
+    }
+    div[data-testid="stPills"] div[role="radiogroup"],
+    .st-key-main_section_pills div[role="radiogroup"],
+    div[data-testid="stButtonGroup"] div[role="radiogroup"] {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 7px !important;
+        width: 100% !important;
+        padding: 0.2rem 0 0.46rem !important;
+    }
+    div[data-testid="stPills"] button,
+    .st-key-main_section_pills button[data-testid^="stBaseButton-pills"],
+    div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"] {
+        width: 100% !important;
+        min-height: 34px !important;
+        border-radius: 8px !important;
+        border: 1px solid #dbe2ec !important;
+        background: #ffffff !important;
+        color: #334155 !important;
+        box-shadow: 0 1px 2px rgba(18, 24, 38, 0.04) !important;
+        font-size: 0.78rem !important;
+        font-weight: 900 !important;
+        white-space: nowrap !important;
+        justify-content: center !important;
+    }
+    div[data-testid="stPills"] button p,
+    .st-key-main_section_pills button[data-testid^="stBaseButton-pills"] p,
+    div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"] p {
+        color: inherit !important;
+        line-height: 1.12 !important;
+    }
+    div[data-testid="stPills"] button[aria-selected="true"],
+    div[data-testid="stPills"] button[data-testid="stBaseButton-pillsActive"],
+    .st-key-main_section_pills button[data-testid^="stBaseButton-pills"][aria-selected="true"],
+    .st-key-main_section_pills button[data-testid="stBaseButton-pillsActive"],
+    div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"][aria-selected="true"] {
+        background: var(--blue-soft) !important;
+        border-color: #93b7f7 !important;
+        color: #0f3f8c !important;
+        box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12), 0 6px 14px rgba(37, 99, 235, 0.12) !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: 1px solid rgba(18, 24, 38, 0.08) !important;
+        border-radius: 8px !important;
+        background: var(--surface) !important;
+        padding: 0.64rem !important;
+        box-shadow: 0 10px 24px rgba(18, 24, 38, 0.07) !important;
+        overflow: hidden !important;
+    }
+    .stImage img {
+        width: 100% !important;
+        height: 150px !important;
+        border-radius: 7px !important;
+        object-fit: cover !important;
+        background: #e5e7eb !important;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45) !important;
+    }
+    .anime-title, .movie-title {
+        color: var(--ink) !important;
+        font-weight: 900 !important;
+        letter-spacing: 0 !important;
+    }
+    .anime-title {
+        font-size: 0.91rem !important;
+        line-height: 1.32 !important;
+        min-height: 2.6em !important;
+        margin: 0.48rem 0 0.28rem !important;
+    }
+    .anime-genre, .anime-date, .movie-meta, .episode-date, .detail-meta-text {
+        color: var(--muted) !important;
+        line-height: 1.48 !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
+    }
+    .anime-genre {
+        font-size: 0.76rem !important;
+        margin-bottom: 0.32rem !important;
+    }
+    .anime-date, .movie-meta {
+        font-size: 0.75rem !important;
+        margin-bottom: 0.42rem !important;
+    }
+    .library-count, .news-date {
+        color: #6b7280 !important;
+        font-size: 0.74rem !important;
+        font-weight: 800 !important;
+        line-height: 1.3 !important;
+    }
+    .stButton > button,
+    .stDownloadButton > button,
+    .stLinkButton > a {
+        border-radius: 8px !important;
+        border: 1px solid #d8e0eb !important;
+        background: #ffffff !important;
+        color: #1f2937 !important;
+        box-shadow: 0 1px 2px rgba(18, 24, 38, 0.04) !important;
+        font-weight: 900 !important;
+        letter-spacing: 0 !important;
+        transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease !important;
+    }
+    .stButton > button:hover,
+    .stDownloadButton > button:hover,
+    .stLinkButton > a:hover {
+        border-color: #9db2cf !important;
+        background: #f8fbff !important;
+        box-shadow: 0 6px 16px rgba(18, 24, 38, 0.08) !important;
+    }
+    button[data-testid="baseButton-primary"],
+    button[data-testid="stBaseButton-primary"],
+    button[data-testid="stBaseButton-secondaryFormSubmit"],
+    div[data-testid="stForm"] button[data-testid="baseButton-secondary"] {
+        background: var(--blue) !important;
+        border-color: var(--blue) !important;
+        color: #ffffff !important;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2) !important;
+    }
+    button[data-testid="baseButton-primary"] p,
+    button[data-testid="stBaseButton-primary"] p,
+    button[data-testid="stBaseButton-secondaryFormSubmit"] p,
+    div[data-testid="stForm"] button[data-testid="baseButton-secondary"] p {
+        color: #ffffff !important;
+    }
+    div[data-testid="stTabs"] [role="tablist"] {
+        gap: 6px !important;
+        border-bottom: 0 !important;
+        padding-bottom: 0.38rem !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"] {
+        border-radius: 8px !important;
+        border: 1px solid #dce3ed !important;
+        background: #ffffff !important;
+        color: #475569 !important;
+        min-height: 34px !important;
+        font-size: 0.8rem !important;
+        font-weight: 900 !important;
+        box-shadow: 0 1px 2px rgba(18, 24, 38, 0.04) !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        background: var(--jade-soft) !important;
+        border-color: #76c7bb !important;
+        color: #075e56 !important;
+        box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.12), 0 6px 14px rgba(15, 118, 110, 0.12) !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"] p,
+    div[data-testid="stTabs"] button[role="tab"] span,
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] p,
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] span {
+        color: inherit !important;
+    }
+    .episode-title {
+        color: var(--ink) !important;
+        font-size: 0.94rem !important;
+        font-weight: 900 !important;
+        line-height: 1.4 !important;
+    }
+    .episode-row-divider {
+        height: 1px !important;
+        background: #e7ecf3 !important;
+        margin: 0.58rem 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.episode-main) {
+        border-radius: 8px !important;
+        padding: 0.24rem 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.episode-watch-done) > div:last-child [data-testid="stButton"] button,
+    .watch-done button,
+    div[data-testid="stVerticalBlock"]:has(.watch-done) div[data-testid="stButton"] button {
+        color: var(--jade) !important;
+        border-color: #93d8ce !important;
+        background: var(--jade-soft) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.episode-watch-pending) > div:last-child [data-testid="stButton"] button,
+    .watch-pending button,
+    div[data-testid="stVerticalBlock"]:has(.watch-pending) div[data-testid="stButton"] button {
+        color: #334155 !important;
+        border-color: #d8e0eb !important;
+        background: #ffffff !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(3) [data-testid="stButton"] button {
+        color: var(--amber) !important;
+        border-color: #fed7aa !important;
+        background: var(--amber-soft) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:nth-child(4) [data-testid="stButton"] button {
+        color: var(--rose) !important;
+        border-color: #fecdd3 !important;
+        background: var(--rose-soft) !important;
+    }
+    div[data-testid="stExpander"] details {
+        border: 1px solid rgba(18, 24, 38, 0.08) !important;
+        border-radius: 8px !important;
+        background: #ffffff !important;
+        box-shadow: 0 6px 16px rgba(18, 24, 38, 0.05) !important;
+    }
+    div[data-testid="stExpander"] summary {
+        font-weight: 900 !important;
+        color: var(--ink) !important;
+    }
+    div[data-testid="stFileUploader"] {
+        border-radius: 8px !important;
+    }
+    div[data-testid="stAlert"] {
+        border-radius: 8px !important;
+    }
+    .scroll-top-btn {
+        border-radius: 999px !important;
+        background: #121826 !important;
+        box-shadow: 0 10px 22px rgba(18, 24, 38, 0.24) !important;
+    }
+    @media (max-width: 430px) {
+        div.block-container {
+            padding-left: 0.58rem !important;
+            padding-right: 0.58rem !important;
+        }
+        .app-shell-header {
+            padding: 0.68rem 0.72rem;
+            margin-bottom: 0.58rem;
+        }
+        .app-brand-title {
+            font-size: 1.18rem;
+        }
+        .app-brand-date {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.46rem;
+        }
+        .stImage img {
+            height: 128px !important;
+        }
+        .anime-title {
+            font-size: 0.86rem !important;
+        }
+        div[data-testid="stPills"] button,
+        .st-key-main_section_pills button[data-testid^="stBaseButton-pills"],
+        div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"] {
+            min-height: 32px !important;
+            padding-left: 6px !important;
+            padding-right: 6px !important;
+            font-size: 0.74rem !important;
+        }
+        .scroll-top-btn {
+            display: none !important;
+        }
+    }
+    @media (max-width: 640px) {
+        .scroll-top-btn {
+            display: none !important;
+        }
+    }
+    div[data-testid="stPills"] button[data-testid="stBaseButton-pillsActive"],
+    .st-key-main_section_pills button[data-testid="stBaseButton-pillsActive"],
+    div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-pillsActive"] {
+        background: var(--blue-soft) !important;
+        border-color: #93b7f7 !important;
+        color: #0f3f8c !important;
+        box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12), 0 6px 14px rgba(37, 99, 235, 0.12) !important;
+    }
+    div[data-testid="stPills"] button[data-testid="stBaseButton-pillsActive"] p,
+    .st-key-main_section_pills button[data-testid="stBaseButton-pillsActive"] p,
+    div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-pillsActive"] p {
+        color: #0f3f8c !important;
+    }
     </style>
 """
 
