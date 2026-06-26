@@ -911,6 +911,32 @@ APP_CSS = """
         text-align: left !important;
         margin: -0.16rem 0 0.36rem !important;
     }
+    div[data-testid="stHorizontalBlock"]:has(.wish-card-anchor),
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-card-anchor) {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        align-items: start !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.wish-card-anchor) > div,
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-card-anchor) > div {
+        min-width: 0 !important;
+        width: auto !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.wish-card-anchor) div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-card-anchor) div[data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 0.5rem !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.wish-card-anchor) .stImage img,
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-card-anchor) .stImage img {
+        height: 116px !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.wish-card-anchor) .anime-title,
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-card-anchor) .anime-title {
+        margin-top: 0.36rem !important;
+        font-size: 0.82rem !important;
+    }
     .stButton > button,
     .stDownloadButton > button,
     .stLinkButton > a {
