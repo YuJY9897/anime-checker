@@ -893,28 +893,28 @@ APP_CSS = """
         font-size: 0.7rem !important;
         line-height: 1.2 !important;
     }
-    [class*="st-key-new_anime_row_"] > div[data-testid="stHorizontalBlock"] {
+    [class*="st-key-new_anime_row_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"]) {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         align-items: start !important;
         gap: 0.5rem !important;
         width: 100% !important;
     }
-    [class*="st-key-new_anime_row_"] > div[data-testid="stHorizontalBlock"] > div {
+    [class*="st-key-new_anime_row_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"]) > div {
         min-width: 0 !important;
         width: auto !important;
     }
-    [class*="st-key-new_anime_actions_"] > div[data-testid="stHorizontalBlock"] {
+    [class*="st-key-new_anime_actions_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stButton"]) {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         gap: 0.32rem !important;
         width: 100% !important;
     }
-    [class*="st-key-new_anime_actions_"] > div[data-testid="stHorizontalBlock"] > div {
+    [class*="st-key-new_anime_actions_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stButton"]) > div {
         min-width: 0 !important;
         width: auto !important;
     }
-    [class*="st-key-new_anime_actions_"] [data-testid="stButton"] button {
+    [class*="st-key-new_anime_actions_"] div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"] [data-testid="stButton"]) [data-testid="stButton"] button {
         width: 100% !important;
         min-width: 0 !important;
         justify-content: center !important;
