@@ -206,24 +206,6 @@ APP_CSS = """
     div[data-testid="stHorizontalBlock"]:has(.movie-watch-pending) > div:nth-child(2) [data-testid="stButton"] button {
         color: #374151 !important; border-color: #d1d5db !important; background: #f3f4f6 !important;
     }
-    .new-anime-actions-anchor { display: none; }
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) {
-        display: flex !important; flex-direction: row !important; align-items: center !important;
-        justify-content: flex-end !important; gap: 6px !important; flex-wrap: nowrap !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:first-child {
-        flex: 1 1 auto !important; width: auto !important; min-width: 0 !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:nth-child(2),
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:nth-child(3) {
-        flex: 0 0 58px !important; width: 58px !important; min-width: 58px !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) [data-testid="stButton"] button,
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) .stLinkButton > a {
-        width: auto !important; max-width: 58px !important; min-width: 42px !important;
-        height: 28px !important; min-height: 28px !important; padding: 0 8px !important;
-        font-size: 0.78rem !important; justify-content: center !important;
-    }
     .episode-main { min-width: 0; flex: 1; }
     .episode-title { font-size: 0.95rem; line-height: 1.38; font-weight: 700; color: #31333F; }
     .episode-date { margin-top: 4px; font-size: 0.78rem; line-height: 1.35; color: #6b7280; }
@@ -352,7 +334,6 @@ APP_CSS = """
     }
     div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) > div:not(:first-child),
     div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) > div:not(:first-child),
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:not(:first-child),
     div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) > div:not(:first-child),
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:not(:first-child),
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:not(:first-child) {
@@ -362,7 +343,6 @@ APP_CSS = """
     }
     div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) [data-testid="stButton"] button,
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) [data-testid="stButton"] button {
@@ -543,7 +523,6 @@ APP_CSS = """
 
     div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor),
     div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor),
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor),
     div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor),
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor),
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor),
@@ -562,7 +541,6 @@ APP_CSS = """
     }
     div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) > div,
     div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) > div,
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div,
     div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) > div,
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div,
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div,
@@ -573,7 +551,6 @@ APP_CSS = """
     }
     div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) > div:first-child,
     div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) > div:first-child,
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:first-child,
     div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) > div:first-child,
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:first-child,
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:first-child,
@@ -582,7 +559,6 @@ APP_CSS = """
     }
     div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) > div:not(:first-child),
     div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) > div:not(:first-child),
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) > div:not(:first-child),
     div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) > div:not(:first-child),
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) > div:not(:first-child),
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) > div:not(:first-child),
@@ -594,7 +570,6 @@ APP_CSS = """
     }
     div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) [data-testid="stButton"],
     div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) [data-testid="stButton"],
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) [data-testid="stButton"],
     div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) [data-testid="stButton"],
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stButton"],
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) [data-testid="stButton"],
@@ -603,7 +578,6 @@ APP_CSS = """
     }
     div[data-testid="stHorizontalBlock"]:has(.search-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.wish-actions-anchor) [data-testid="stButton"] button,
-    div[data-testid="stHorizontalBlock"]:has(.new-anime-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.season-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.movie-actions-anchor) [data-testid="stButton"] button,
     div[data-testid="stHorizontalBlock"]:has(.detail-actions-anchor) [data-testid="stButton"] button,

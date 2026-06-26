@@ -1303,9 +1303,7 @@ def render_new_anime_cards(sorted_all_animes, key_prefix):
                         unsafe_allow_html=True
                     )
 
-                    spacer_col, wish_col, add_col = st.columns([6, 2, 2], gap="small")
-                    with spacer_col:
-                        st.markdown("<span class='new-anime-actions-anchor'></span>", unsafe_allow_html=True)
+                    wish_col, add_col = st.columns(2, gap="small")
                     with wish_col:
                         wish_label = "찜해제" if is_wished(tv_id) else "찜"
                         if st.button(wish_label, key=f"wish_{key_prefix}_{tv_id}_{idx}"):
