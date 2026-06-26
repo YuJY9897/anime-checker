@@ -893,59 +893,28 @@ APP_CSS = """
         font-size: 0.7rem !important;
         line-height: 1.2 !important;
     }
-    .new-anime-card-row-anchor,
-    .new-anime-action-row-anchor {
-        display: none !important;
-    }
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .new-anime-card-row-anchor) > div[data-testid="stHorizontalBlock"] {
+    [class*="st-key-new_anime_row_"] > div[data-testid="stHorizontalBlock"] {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         align-items: start !important;
         gap: 0.5rem !important;
         width: 100% !important;
     }
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .new-anime-card-row-anchor) > div[data-testid="stHorizontalBlock"] > div {
+    [class*="st-key-new_anime_row_"] > div[data-testid="stHorizontalBlock"] > div {
         min-width: 0 !important;
         width: auto !important;
     }
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .new-anime-action-row-anchor) > div[data-testid="stHorizontalBlock"] {
+    [class*="st-key-new_anime_actions_"] > div[data-testid="stHorizontalBlock"] {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         gap: 0.32rem !important;
         width: 100% !important;
     }
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .new-anime-action-row-anchor) > div[data-testid="stHorizontalBlock"] > div {
+    [class*="st-key-new_anime_actions_"] > div[data-testid="stHorizontalBlock"] > div {
         min-width: 0 !important;
         width: auto !important;
     }
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .new-anime-action-row-anchor) [data-testid="stButton"] button {
-        width: 100% !important;
-        min-width: 0 !important;
-        justify-content: center !important;
-        padding: 2px 4px !important;
-    }
-    div.element-container:has(.new-anime-card-row-anchor) + div[data-testid="stHorizontalBlock"] {
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        align-items: start !important;
-        gap: 0.5rem !important;
-        width: 100% !important;
-    }
-    div.element-container:has(.new-anime-card-row-anchor) + div[data-testid="stHorizontalBlock"] > div {
-        min-width: 0 !important;
-        width: auto !important;
-    }
-    div.element-container:has(.new-anime-action-row-anchor) + div[data-testid="stHorizontalBlock"] {
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 0.32rem !important;
-        width: 100% !important;
-    }
-    div.element-container:has(.new-anime-action-row-anchor) + div[data-testid="stHorizontalBlock"] > div {
-        min-width: 0 !important;
-        width: auto !important;
-    }
-    div.element-container:has(.new-anime-action-row-anchor) + div[data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
+    [class*="st-key-new_anime_actions_"] [data-testid="stButton"] button {
         width: 100% !important;
         min-width: 0 !important;
         justify-content: center !important;

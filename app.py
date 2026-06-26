@@ -1278,8 +1278,7 @@ def render_new_anime_cards(sorted_all_animes, key_prefix):
     cols_per_row = 2
     rows = (len(sorted_all_animes) + cols_per_row - 1) // cols_per_row
     for r in range(rows):
-        with st.container():
-            st.markdown("<span class='new-anime-card-row-anchor'></span>", unsafe_allow_html=True)
+        with st.container(key=f"new_anime_row_{r}"):
             cols = st.columns(cols_per_row, gap="small")
             for c in range(cols_per_row):
                 idx = r * cols_per_row + c
@@ -1305,8 +1304,7 @@ def render_new_anime_cards(sorted_all_animes, key_prefix):
                             unsafe_allow_html=True
                         )
 
-                        with st.container():
-                            st.markdown("<span class='new-anime-action-row-anchor'></span>", unsafe_allow_html=True)
+                        with st.container(key=f"new_anime_actions_{idx}"):
                             wish_col, add_col = st.columns(2, gap="small")
                             with wish_col:
                                 wish_label = "찜해제" if is_wished(tv_id) else "찜"
