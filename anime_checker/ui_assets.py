@@ -880,6 +880,13 @@ APP_CSS = """
         min-height: 2.6em !important;
         margin: 0.48rem 0 0.28rem !important;
     }
+    .detail-title {
+        font-size: 1.22rem !important;
+        line-height: 1.34 !important;
+        margin: 0.2rem 0 0.58rem !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
+    }
     .anime-genre, .anime-date, .movie-meta, .episode-date, .detail-meta-text {
         color: var(--muted) !important;
         line-height: 1.48 !important;

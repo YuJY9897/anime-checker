@@ -1776,7 +1776,10 @@ elif st.session_state.view == 'detail':
                     last_watched_episode = i
 
         if st.session_state.selected_season is None:
-            st.title(f"{anime_title}")
+            st.markdown(
+                f"<h1 class='detail-title'>{html.escape(anime_title)}</h1>",
+                unsafe_allow_html=True
+            )
             
             status_text = anime_info.get('display_status', '정보 없음')
             if last_watched_season and last_watched_episode:
