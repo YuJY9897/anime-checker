@@ -924,6 +924,33 @@ APP_CSS = """
         justify-content: center !important;
         padding: 2px 4px !important;
     }
+    div.element-container:has(.new-anime-card-row-anchor) + div[data-testid="stHorizontalBlock"] {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        align-items: start !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+    }
+    div.element-container:has(.new-anime-card-row-anchor) + div[data-testid="stHorizontalBlock"] > div {
+        min-width: 0 !important;
+        width: auto !important;
+    }
+    div.element-container:has(.new-anime-action-row-anchor) + div[data-testid="stHorizontalBlock"] {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.32rem !important;
+        width: 100% !important;
+    }
+    div.element-container:has(.new-anime-action-row-anchor) + div[data-testid="stHorizontalBlock"] > div {
+        min-width: 0 !important;
+        width: auto !important;
+    }
+    div.element-container:has(.new-anime-action-row-anchor) + div[data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
+        width: 100% !important;
+        min-width: 0 !important;
+        justify-content: center !important;
+        padding: 2px 4px !important;
+    }
     /* Compact mobile rhythm: keep repeated actions and list content dense. */
     div.block-container {
         padding: 0.3rem 0.58rem 5rem !important;
