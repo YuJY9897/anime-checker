@@ -900,6 +900,10 @@ APP_CSS = """
         font-weight: 800 !important;
         line-height: 1.3 !important;
     }
+    .section-timestamp {
+        text-align: left !important;
+        margin: -0.16rem 0 0.36rem !important;
+    }
     .stButton > button,
     .stDownloadButton > button,
     .stLinkButton > a {

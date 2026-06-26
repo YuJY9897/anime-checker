@@ -1696,11 +1696,8 @@ if st.session_state.view == 'main':
         elif active_main_tab == "신작 애니":
             sorted_all_animes = ensure_new_animes_loaded()
             loaded_label = get_loaded_at_label(st.session_state.get("new_animes_loaded_at"))
-            new_title_col, new_time_col = st.columns([5, 4], gap="small", vertical_alignment="center")
-            with new_title_col:
-                st.subheader("신작 애니")
-            with new_time_col:
-                st.markdown(f"<div class='library-count'>{loaded_label}</div>", unsafe_allow_html=True)
+            st.subheader("신작 애니")
+            st.markdown(f"<div class='library-count section-timestamp'>{loaded_label}</div>", unsafe_allow_html=True)
             st.write("한국 OTT에서 서비스 중이거나 서비스 예정인 애니메이션을 최신순으로 확인하세요.")
             st.divider()
 
@@ -1709,11 +1706,8 @@ if st.session_state.view == 'main':
         elif active_main_tab == "애니 소식":
             news_data = ensure_news_loaded()
             news_loaded_label = st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
-            news_title_col, news_time_col = st.columns([5, 4], gap="small", vertical_alignment="center")
-            with news_title_col:
-                st.subheader("최신 애니 소식")
-            with news_time_col:
-                st.markdown(f"<div class='library-count'>{news_loaded_label}</div>", unsafe_allow_html=True)
+            st.subheader("최신 애니 소식")
+            st.markdown(f"<div class='library-count section-timestamp'>{news_loaded_label}</div>", unsafe_allow_html=True)
             st.write("방영 예정, 신작 공개일, 시즌 발표 중심의 소식을 확인하세요.")
             st.divider()
 
