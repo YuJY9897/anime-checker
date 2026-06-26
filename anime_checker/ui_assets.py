@@ -7,7 +7,11 @@ APP_CSS = """
         height: 0 !important;
     }
     .viewerBadge_container__1QSob, .viewerBadge_link__1S137,
-    a[href*="streamlit.io/cloud"], a[href*="streamlit.io"] {
+    a[href*="streamlit.io/cloud"], a[href*="streamlit.io"],
+    div[class*="viewerBadge"], div[class*="ViewerBadge"],
+    div[class*="viewer-badge"], div[class*="ViewerBadge"],
+    div:has(> a[href*="streamlit.io/cloud"]),
+    div:has(> a[href*="streamlit.io"]) {
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;
