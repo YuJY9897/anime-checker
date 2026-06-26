@@ -911,6 +911,91 @@ APP_CSS = """
         text-align: left !important;
         margin: -0.16rem 0 0.36rem !important;
     }
+    /* Compact mobile rhythm: keep repeated actions and list content dense. */
+    div.block-container {
+        padding: 0.3rem 0.58rem 5rem !important;
+    }
+    div[data-testid="stVerticalBlock"] {
+        gap: 0.32rem !important;
+    }
+    div[data-testid="stHorizontalBlock"] {
+        gap: 0.36rem !important;
+    }
+    div[data-testid="stMarkdownContainer"] p {
+        margin-bottom: 0.16rem !important;
+        line-height: 1.36 !important;
+    }
+    div[data-testid="stDivider"] {
+        margin: 0.28rem 0 !important;
+    }
+    .app-shell-header {
+        margin: 0.04rem 0 0.4rem !important;
+        padding: 0.56rem 0.66rem !important;
+        box-shadow: 0 6px 16px rgba(18, 24, 38, 0.06) !important;
+    }
+    .app-brand-title {
+        font-size: 1.12rem !important;
+    }
+    .app-brand-date {
+        padding: 0.28rem 0.46rem !important;
+    }
+    h1 {
+        margin: 0.14rem 0 0.3rem !important;
+    }
+    h2, h3 {
+        margin: 0.22rem 0 0.24rem !important;
+    }
+    div[data-testid="stForm"] {
+        padding: 0.4rem !important;
+        box-shadow: 0 5px 14px rgba(18, 24, 38, 0.04) !important;
+    }
+    div[data-testid="stForm"] [data-testid="stButton"] button {
+        min-height: 34px !important;
+        height: 34px !important;
+    }
+    div[data-testid="stPills"] div[role="radiogroup"],
+    .st-key-main_section_pills div[role="radiogroup"],
+    div[data-testid="stButtonGroup"] div[role="radiogroup"] {
+        gap: 5px !important;
+        padding: 0.08rem 0 0.26rem !important;
+    }
+    div[data-testid="stPills"] button,
+    .st-key-main_section_pills button[data-testid^="stBaseButton-pills"],
+    div[data-testid="stButtonGroup"] button[data-testid^="stBaseButton-pills"] {
+        min-height: 29px !important;
+        padding: 2px 6px !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 0.48rem !important;
+        box-shadow: 0 4px 12px rgba(18, 24, 38, 0.05) !important;
+    }
+    .stButton > button,
+    .stDownloadButton > button,
+    .stLinkButton > a {
+        min-height: 28px !important;
+        padding: 3px 7px !important;
+        font-size: 0.78rem !important;
+    }
+    div[data-testid="stTabs"] [role="tablist"] {
+        gap: 4px !important;
+        padding-bottom: 0.22rem !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"] {
+        min-height: 30px !important;
+        padding: 0.22rem 0.5rem !important;
+    }
+    div[data-testid="stTabs"] [data-baseweb="tab-panel"] {
+        padding-top: 0.32rem !important;
+    }
+    .episode-row-divider {
+        margin: 0.36rem 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.episode-main) {
+        padding: 0.12rem 0 !important;
+    }
+    div[data-testid="stExpander"] summary {
+        padding: 0.44rem 0.56rem !important;
+    }
     div[data-testid="stHorizontalBlock"]:has(.wish-card-anchor),
     div[data-testid="stHorizontalBlock"]:has(.new-anime-card-anchor) {
         display: grid !important;
