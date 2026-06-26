@@ -1278,7 +1278,7 @@ def render_new_anime_cards(sorted_all_animes, key_prefix):
     cols_per_row = 2
     rows = (len(sorted_all_animes) + cols_per_row - 1) // cols_per_row
     for r in range(rows):
-        cols = st.columns(cols_per_row)
+        cols = st.columns(cols_per_row, gap="small")
         for c in range(cols_per_row):
             idx = r * cols_per_row + c
             if idx >= len(sorted_all_animes):
@@ -1294,7 +1294,6 @@ def render_new_anime_cards(sorted_all_animes, key_prefix):
 
             with cols[c]:
                 with st.container(border=True):
-                    st.markdown("<span class='new-anime-card-anchor'></span>", unsafe_allow_html=True)
                     if rep_img:
                         st.image(rep_img, use_container_width=True)
                     st.markdown(f"<div class='anime-title'>{html.escape(title)}</div>", unsafe_allow_html=True)
@@ -1676,7 +1675,6 @@ if st.session_state.view == 'main':
                         rep_img = item.get("img") or (f"https://image.tmdb.org/t/p/w500{item.get('poster_path')}" if item.get("poster_path") else "")
                         with cols[offset]:
                             with st.container(border=True):
-                                st.markdown("<span class='wish-card-anchor'></span>", unsafe_allow_html=True)
                                 if rep_img:
                                     st.image(rep_img, use_container_width=True)
                                 st.markdown(f"<div class='anime-title'>{html.escape(title)}</div>", unsafe_allow_html=True)
