@@ -3,6 +3,7 @@ import hashlib
 import html
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -842,10 +843,7 @@ if local_storage is not None:
         local_storage_raw = None
 
 if 'data_loaded' not in st.session_state:
-    if local_storage is not None:
-        saved_data = {"my_anime_list": {}, "watched_db": {}, "wish_list": {}, "updated_at": ""}
-    else:
-        saved_data = load_app_data()
+    saved_data = load_app_data()
     st.session_state.watched_db = saved_data.get("watched_db", {})
     st.session_state.my_anime_list = saved_data.get("my_anime_list", {})
     st.session_state.wish_list = saved_data.get("wish_list", {})
@@ -908,6 +906,8 @@ main_nav_target = st.query_params.get("main_nav")
 if main_nav_target:
     st.query_params.clear()
     st.session_state.main_section = main_nav_target
+    st.session_state.show_library_search = False
+    st.session_state.library_filter = ""
     st.session_state.selected_anime = None
     st.session_state.selected_season = None
     st.session_state.selected_news = None
@@ -1191,9 +1191,10 @@ def add_direct_and_clear(tv_id, title):
 def render_article_link(url):
     if not url:
         return
-    link_key = hashlib.sha256(url.encode("utf-8")).hexdigest()[:12]
-    if st.button("원문 기사 보기", key=f"open_article_{link_key}", use_container_width=True):
-        inject_browser_script(f"window.location.href = {json.dumps(url)};")
+    st.markdown(
+        f"<a class='article-link-button' href='{html.escape(url, quote=True)}'>원문 기사 보기</a>",
+        unsafe_allow_html=True,
+    )
 
 
 if "news_loaded_at" not in st.session_state:
@@ -1301,10 +1302,80 @@ def render_new_anime_cards(sorted_all_animes, key_prefix):
     st.markdown(f"<div class='new-anime-grid'>{''.join(cards)}</div>", unsafe_allow_html=True)
 
 
+def find_anime_title_by_uid(uid):
+    uid = str(uid or "")
+    for title, info in st.session_state.my_anime_list.items():
+        if get_anime_uid(title, info) == uid:
+            return title
+    return None
+
+
+def render_library_tile_grid(cards, extra_class=""):
+    if not cards:
+        return
+
+    rendered_cards = []
+    for card in cards:
+        title = card["title"]
+        info = card["info"]
+        anime_uid = get_anime_uid(title, info)
+        badge_html = "<span class='library-tile-badge'>N</span>" if card.get("needs_n_badge") else ""
+        meta_text = card.get("meta", "")
+        meta_html = f"<div class='library-tile-meta'>{html.escape(meta_text)}</div>" if meta_text else ""
+        rendered_cards.append(
+            f"<a class='library-tile-card {html.escape(extra_class)}' "
+            f"href='?open_anime={quote(anime_uid, safe='')}'>"
+            f"<span class='library-tile-title'>{html.escape(title)} {badge_html}</span>"
+            f"{meta_html}"
+            "</a>"
+        )
+
+    st.markdown(f"<div class='library-tile-grid'>{''.join(rendered_cards)}</div>", unsafe_allow_html=True)
+
+
+def render_wish_cards(wish_items):
+    cards = []
+    for item in wish_items:
+        tv_id = str(item.get("id", ""))
+        title = item.get("title", "제목 없음")
+        rep_img = item.get("img") or (f"https://image.tmdb.org/t/p/w500{item.get('poster_path')}" if item.get("poster_path") else "")
+        image_html = f"<img src='{html.escape(rep_img, quote=True)}' alt='' />" if rep_img else ""
+        if title in st.session_state.my_anime_list:
+            add_html = "<span class='wish-card-action disabled'>완료</span>"
+        else:
+            add_html = f"<a class='wish-card-action primary' href='?wish_action=add&amp;wish_id={quote(tv_id, safe='')}'>추가</a>"
+        cards.append(
+            "<article class='wish-card'>"
+            f"{image_html}"
+            f"<div class='wish-card-title'>{html.escape(title)}</div>"
+            "<div class='wish-card-actions'>"
+            f"{add_html}"
+            f"<a class='wish-card-action' href='?wish_action=remove&amp;wish_id={quote(tv_id, safe='')}'>삭제</a>"
+            "</div>"
+            "</article>"
+        )
+    st.markdown(f"<div class='wish-card-grid'>{''.join(cards)}</div>", unsafe_allow_html=True)
+
+
+open_anime_uid = st.query_params.get("open_anime")
+if open_anime_uid:
+    opened_title = find_anime_title_by_uid(open_anime_uid)
+    if opened_title:
+        del st.query_params["open_anime"]
+        st.session_state.selected_anime = opened_title
+        st.session_state.selected_season = None
+        st.session_state.selected_news = None
+        st.session_state.view = "detail"
+        st.rerun()
+    else:
+        del st.query_params["open_anime"]
+
+
 def render_main_nav(active_label):
     labels = ["새 화", "목록", "보류", "찜", "신작 애니", "애니 소식"]
     if active_label not in labels:
         active_label = "새 화"
+    current_label = st.session_state.get("main_section", "새 화")
     selected = st.pills(
         "메인 메뉴",
         labels,
@@ -1313,13 +1384,16 @@ def render_main_nav(active_label):
         label_visibility="collapsed",
         width="stretch",
     )
-    if selected and selected != st.session_state.get("main_section", "새 화"):
+    if selected and selected != current_label:
         st.session_state.main_section = selected
+        st.session_state.show_library_search = False
+        st.session_state.library_filter = ""
         st.session_state.selected_anime = None
         st.session_state.selected_season = None
         st.session_state.selected_news = None
         st.session_state.view = "main"
-        st.rerun()
+        return selected
+    return selected or current_label
 
 
 def render_app_header():
@@ -1456,20 +1530,7 @@ if st.session_state.view == 'main':
             return cards
 
         def render_anime_card_grid(cards, key_prefix):
-            cols_per_row = 3
-            for start_idx in range(0, len(cards), cols_per_row):
-                cols = st.columns(cols_per_row, gap="small")
-                for offset, card in enumerate(cards[start_idx:start_idx + cols_per_row]):
-                    title = card['title']
-                    info = card['info']
-                    anime_uid = get_anime_uid(title, info)
-                    with cols[offset]:
-                        badge = " :red[**N**]" if card['needs_n_badge'] else ""
-                        if st.button(f"{title}{badge}", key=f"{key_prefix}_{anime_uid}_{start_idx}_{offset}", use_container_width=True):
-                            st.session_state.selected_anime = title
-                            st.session_state.selected_season = None
-                            st.session_state.view = 'detail'
-                            st.rerun()
+            render_library_tile_grid(cards, key_prefix)
 
         def render_library_schedule(key_prefix):
             st.write("")
@@ -1489,16 +1550,14 @@ if st.session_state.view == 'main':
                     if not day_animes:
                         st.write("해당 요일에 맵핑된 애니가 없습니다.")
                     else:
-                        for t_name, t_info in day_animes.items():
-                            anime_uid = get_anime_uid(t_name, t_info)
-                            if st.button(t_name, key=f"{key_prefix}_sched_{day_en}_{anime_uid}", use_container_width=True):
-                                st.session_state.selected_anime = t_name
-                                st.session_state.selected_season = None
-                                st.session_state.view = 'detail'
-                                st.rerun()
+                        schedule_cards = [
+                            {"title": t_name, "info": t_info, "needs_n_badge": False}
+                            for t_name, t_info in day_animes.items()
+                        ]
+                        render_library_tile_grid(schedule_cards, "schedule")
 
         active_main_tab = st.session_state.get("main_section", "새 화")
-        render_main_nav(active_main_tab)
+        active_main_tab = render_main_nav(active_main_tab)
 
         if active_main_tab == "새 화":
             st.session_state.is_editing = False
@@ -1612,7 +1671,10 @@ if st.session_state.view == 'main':
                 st.markdown(f"<div class='library-count'>{count_text}</div>", unsafe_allow_html=True)
 
                 if not normal_cards:
-                    st.write("검색 결과가 없습니다.")
+                    if library_filter:
+                        st.write("검색 결과가 없습니다.")
+                    else:
+                        st.write("새 화가 있는 작품은 새 화 탭에서 확인하세요.")
                 else:
                     render_anime_card_grid(normal_cards, "list_card")
 
@@ -1627,17 +1689,11 @@ if st.session_state.view == 'main':
                 st.write("보류한 애니가 없습니다.")
             else:
                 dropped_items.sort(key=lambda item: item[0])
-                cols_per_row = 3
-                for start_idx in range(0, len(dropped_items), cols_per_row):
-                    cols = st.columns(cols_per_row, gap="small")
-                    for offset, (title, info) in enumerate(dropped_items[start_idx:start_idx + cols_per_row]):
-                        anime_uid = get_anime_uid(title, info)
-                        with cols[offset]:
-                            if st.button(title, key=f"dropped_card_{anime_uid}_{start_idx}_{offset}", use_container_width=True):
-                                st.session_state.selected_anime = title
-                                st.session_state.selected_season = None
-                                st.session_state.view = 'detail'
-                                st.rerun()
+                dropped_cards = [
+                    {"title": title, "info": info, "needs_n_badge": False}
+                    for title, info in dropped_items
+                ]
+                render_library_tile_grid(dropped_cards, "dropped")
 
         elif active_main_tab == "찜":
             st.subheader("찜 목록")
@@ -1648,32 +1704,19 @@ if st.session_state.view == 'main':
             if not wish_items:
                 st.write("찜한 애니가 없습니다.")
             else:
-                cols_per_row = 2
-                for start_idx in range(0, len(wish_items), cols_per_row):
-                    cols = st.columns(cols_per_row, gap="small")
-                    for offset, item in enumerate(wish_items[start_idx:start_idx + cols_per_row]):
-                        tv_id = item.get("id")
-                        title = item.get("title", "제목 없음")
-                        rep_img = item.get("img") or (f"https://image.tmdb.org/t/p/w500{item.get('poster_path')}" if item.get("poster_path") else "")
-                        with cols[offset]:
-                            with st.container(border=True):
-                                if rep_img:
-                                    st.image(rep_img, use_container_width=True)
-                                st.markdown(f"<div class='anime-title'>{html.escape(title)}</div>", unsafe_allow_html=True)
-                                spacer_col, add_col, remove_col = st.columns([5, 3, 2], gap="small")
-                                with spacer_col:
-                                    st.markdown("<span class='wish-actions-anchor'></span>", unsafe_allow_html=True)
-                                with add_col:
-                                    if title in st.session_state.my_anime_list:
-                                        st.button("완료", key=f"wish_added_{tv_id}", disabled=True)
-                                    elif st.button("추가", key=f"wish_add_{tv_id}"):
-                                        add_anime_to_list(tv_id, title)
-                                        st.rerun()
-                                with remove_col:
-                                    if st.button("삭제", key=f"wish_remove_{tv_id}"):
-                                        st.session_state.wish_list.pop(str(tv_id), None)
-                                        save_app_data()
-                                        st.rerun()
+                wish_action = st.query_params.get("wish_action")
+                wish_id = st.query_params.get("wish_id")
+                if wish_action and wish_id:
+                    wish_item = st.session_state.wish_list.get(str(wish_id))
+                    if wish_action == "add" and wish_item:
+                        add_anime_to_list(wish_id, wish_item.get("title", "제목 없음"))
+                    elif wish_action == "remove":
+                        st.session_state.wish_list.pop(str(wish_id), None)
+                        save_app_data()
+                    del st.query_params["wish_action"]
+                    del st.query_params["wish_id"]
+                    st.rerun()
+                render_wish_cards(wish_items)
 
         elif active_main_tab == "신작 애니":
             sorted_all_animes = ensure_new_animes_loaded()
@@ -1700,6 +1743,20 @@ if st.session_state.view == 'main':
 
         elif active_main_tab == "애니 소식":
             news_data = ensure_news_loaded()
+            open_news_idx = st.query_params.get("open_news")
+            if open_news_idx is not None:
+                try:
+                    selected_news_idx = int(open_news_idx)
+                except ValueError:
+                    selected_news_idx = -1
+                if 0 <= selected_news_idx < len(news_data):
+                    st.session_state.selected_news = news_data[selected_news_idx]
+                    st.session_state.news_return_view = "main"
+                    st.session_state.view = "news_detail"
+                    del st.query_params["open_news"]
+                    st.rerun()
+                else:
+                    del st.query_params["open_news"]
             news_loaded_label = st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
             st.subheader("최신 애니 소식")
             st.markdown(f"<div class='library-count section-timestamp'>{news_loaded_label}</div>", unsafe_allow_html=True)
@@ -1709,11 +1766,10 @@ if st.session_state.view == 'main':
             for idx, news in enumerate(news_data):
                 with st.container(border=True):
                     render_news_image(news)
-                    if st.button(news['title'], key=f"news_tab_{idx}"):
-                        st.session_state.selected_news = news
-                        st.session_state.news_return_view = 'main'
-                        st.session_state.view = 'news_detail'
-                        st.rerun()
+                    st.markdown(
+                        f"<a class='news-title-link' href='?open_news={idx}'>{html.escape(news['title'])}</a>",
+                        unsafe_allow_html=True,
+                    )
                     st.caption(news['content'])
                     if news.get('source'):
                         st.caption(f"출처: {news['source']}")

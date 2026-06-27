@@ -1216,6 +1216,156 @@ APP_CSS = """
     div[data-testid="stButtonGroup"] button[data-testid="stBaseButton-pillsActive"] p {
         color: #0f3f8c !important;
     }
+    div.block-container {
+        max-width: 560px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+    .library-tile-grid,
+    .wish-card-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.5rem !important;
+        align-items: stretch !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+    .library-tile-card {
+        display: flex !important;
+        min-width: 0 !important;
+        min-height: 48px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0.42rem 0.5rem !important;
+        border: 1px solid #d8e0eb !important;
+        border-radius: 8px !important;
+        background: #ffffff !important;
+        color: var(--ink) !important;
+        box-shadow: 0 3px 10px rgba(18, 24, 38, 0.04) !important;
+        text-align: center !important;
+        text-decoration: none !important;
+    }
+    .library-tile-card:last-child:nth-child(odd),
+    .wish-card:last-child:nth-child(odd),
+    .new-anime-card:last-child:nth-child(odd) {
+        grid-column: 1 / -1 !important;
+        justify-self: center !important;
+        width: calc((100% - 0.5rem) / 2) !important;
+    }
+    .library-tile-card.schedule {
+        min-height: 42px !important;
+    }
+    .library-tile-title {
+        display: -webkit-box !important;
+        overflow: hidden !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 2 !important;
+        font-size: 0.82rem !important;
+        font-weight: 900 !important;
+        line-height: 1.28 !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
+    }
+    .library-tile-badge {
+        color: #d23f57 !important;
+        font-weight: 900 !important;
+    }
+    .wish-card {
+        min-width: 0 !important;
+        padding: 0.5rem !important;
+        border: 1px solid rgba(18, 24, 38, 0.12) !important;
+        border-radius: 8px !important;
+        background: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(18, 24, 38, 0.05) !important;
+    }
+    .wish-card img {
+        display: block !important;
+        width: 100% !important;
+        height: 126px !important;
+        border-radius: 6px !important;
+        object-fit: cover !important;
+        object-position: center !important;
+    }
+    .wish-card-title {
+        display: -webkit-box !important;
+        min-height: 2.54em !important;
+        margin: 0.4rem 0 0.42rem !important;
+        overflow: hidden !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 2 !important;
+        color: var(--ink) !important;
+        font-size: 0.84rem !important;
+        font-weight: 900 !important;
+        line-height: 1.27 !important;
+        text-align: center !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
+    }
+    .wish-card-actions {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.34rem !important;
+    }
+    .wish-card-action,
+    .article-link-button,
+    .news-title-link {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 0 !important;
+        min-height: 30px !important;
+        padding: 0.22rem 0.42rem !important;
+        border: 1px solid #d8e0eb !important;
+        border-radius: 7px !important;
+        background: #ffffff !important;
+        color: #1f2937 !important;
+        font-size: 0.76rem !important;
+        font-weight: 900 !important;
+        line-height: 1.25 !important;
+        text-align: center !important;
+        text-decoration: none !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
+    }
+    .wish-card-action.primary,
+    .article-link-button {
+        border-color: #93b7f7 !important;
+        background: var(--blue-soft) !important;
+        color: #0f3f8c !important;
+    }
+    .wish-card-action.disabled {
+        color: #94a3b8 !important;
+        background: #f8fafc !important;
+    }
+    .news-title-link {
+        justify-content: flex-start !important;
+        width: 100% !important;
+        min-height: 38px !important;
+        margin-top: 0.42rem !important;
+        padding: 0.44rem 0.56rem !important;
+        font-size: 0.88rem !important;
+        text-align: left !important;
+    }
+    .article-link-button {
+        width: 100% !important;
+        margin: 0.25rem 0 0.55rem !important;
+    }
+    .new-anime-card-title,
+    .new-anime-card-meta {
+        text-align: center !important;
+    }
+    @media (max-width: 380px) {
+        .library-tile-grid,
+        .wish-card-grid,
+        .new-anime-grid {
+            gap: 0.42rem !important;
+        }
+        .library-tile-title,
+        .wish-card-title,
+        .new-anime-card-title {
+            font-size: 0.78rem !important;
+        }
+    }
     </style>
 """
 

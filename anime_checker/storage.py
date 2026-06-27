@@ -34,7 +34,7 @@ def load_app_data_file(data_file):
     if not data_file.exists():
         return empty_data
     try:
-        with data_file.open("r", encoding="utf-8") as f:
+        with data_file.open("r", encoding="utf-8-sig") as f:
             data = json.load(f)
         return normalize_app_data(data) or empty_data
     except (json.JSONDecodeError, OSError):
