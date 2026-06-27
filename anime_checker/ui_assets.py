@@ -1408,7 +1408,7 @@ APP_CSS = """
     }
     div[data-testid="stHorizontalBlock"]:has(.wish-native-row) .stImage img,
     div[data-testid="stHorizontalBlock"]:has(.new-anime-native-row) .stImage img {
-        height: clamp(104px, 27vw, 136px) !important;
+        height: clamp(96px, 25vw, 126px) !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.new-anime-native-row) .new-anime-card-title,
     div[data-testid="stHorizontalBlock"]:has(.wish-native-row) .wish-card-title {
@@ -1429,7 +1429,7 @@ APP_CSS = """
         display: -webkit-box !important;
         min-height: 1.35em !important;
         max-height: 1.35em !important;
-        margin: 0 0 0.34rem !important;
+        margin: 0 0 0.48rem !important;
         overflow: hidden !important;
         -webkit-box-orient: vertical !important;
         -webkit-line-clamp: 1 !important;
@@ -1446,6 +1446,7 @@ APP_CSS = """
         gap: 0.34rem !important;
         align-items: center !important;
         width: 100% !important;
+        margin-top: 0.16rem !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.native-action-row-anchor) > div {
         width: auto !important;
