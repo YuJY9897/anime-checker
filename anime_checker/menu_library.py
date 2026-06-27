@@ -1,17 +1,20 @@
 import streamlit as st
 
 
-def _card_columns(count):
-    if count == 1:
-        cols = st.columns([1, 2, 1], gap="small")
-        return [cols[1]]
-    return st.columns(2, gap="small")
+def _row_columns(count, row_class):
+    cols = st.columns(2, gap="small")
+    with cols[0]:
+        anchor_classes = f"native-two-col-anchor {row_class}"
+        if count == 1:
+            anchor_classes += " native-two-col-single"
+        st.markdown(f"<span class='{anchor_classes}'></span>", unsafe_allow_html=True)
+    return [cols[0]] if count == 1 else cols
 
 
 def render_anime_tile_grid(cards, key_prefix, on_open):
     for row_start in range(0, len(cards), 2):
         row = cards[row_start:row_start + 2]
-        cols = _card_columns(len(row))
+        cols = _row_columns(len(row), "library-native-row")
         for offset, card in enumerate(row):
             title = card["title"]
             label = f"{title} N" if card.get("needs_n_badge") else title

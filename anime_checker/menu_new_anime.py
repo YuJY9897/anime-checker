@@ -3,11 +3,21 @@ import html
 import streamlit as st
 
 
-def _card_columns(count):
-    if count == 1:
-        cols = st.columns([1, 2, 1], gap="small")
-        return [cols[1]]
-    return st.columns(2, gap="small")
+def _row_columns(count):
+    cols = st.columns(2, gap="small")
+    with cols[0]:
+        anchor_classes = "native-two-col-anchor new-anime-native-row"
+        if count == 1:
+            anchor_classes += " native-two-col-single"
+        st.markdown(f"<span class='{anchor_classes}'></span>", unsafe_allow_html=True)
+    return [cols[0]] if count == 1 else cols
+
+
+def _action_columns():
+    cols = st.columns(2, gap="small")
+    with cols[0]:
+        st.markdown("<span class='native-action-row-anchor'></span>", unsafe_allow_html=True)
+    return cols
 
 
 def render_new_anime_menu(
@@ -31,7 +41,7 @@ def render_new_anime_menu(
 
     for row_start in range(0, len(animes), 2):
         row = animes[row_start:row_start + 2]
-        cols = _card_columns(len(row))
+        cols = _row_columns(len(row))
         for offset, item in enumerate(row):
             title = item["name"]
             tv_id = item["id"]
@@ -55,7 +65,7 @@ def render_new_anime_menu(
                         f"<div class='new-anime-card-meta'>{html.escape(format_air_date(item.get('first_air_date', '')))}</div>",
                         unsafe_allow_html=True,
                     )
-                    wish_col, add_col = st.columns(2, gap="small")
+                    wish_col, add_col = _action_columns()
                     with wish_col:
                         wish_label = "찜해제" if is_wished(tv_id) else "찜"
                         if st.button(

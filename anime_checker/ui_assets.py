@@ -1366,6 +1366,72 @@ APP_CSS = """
             font-size: 0.78rem !important;
         }
     }
+    .native-two-col-anchor,
+    .native-action-row-anchor {
+        display: none !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.native-two-col-anchor) {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.5rem !important;
+        align-items: stretch !important;
+        width: 100% !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.native-two-col-anchor) > div {
+        width: auto !important;
+        min-width: 0 !important;
+        flex: initial !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.native-two-col-single) > div:first-child {
+        grid-column: 1 / -1 !important;
+        justify-self: center !important;
+        width: calc((100% - 0.5rem) / 2) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.native-two-col-single) > div:not(:first-child) {
+        display: none !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.library-native-row) [data-testid="stButton"] button {
+        width: 100% !important;
+        min-height: 42px !important;
+        padding: 0.36rem 0.38rem !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-size: clamp(0.68rem, 3vw, 0.82rem) !important;
+        line-height: 1.22 !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.wish-native-row) div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-native-row) div[data-testid="stVerticalBlockBorderWrapper"] {
+        height: 100% !important;
+        padding: 0.46rem !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.wish-native-row) .stImage img,
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-native-row) .stImage img {
+        height: clamp(112px, 30vw, 150px) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.native-action-row-anchor) {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.34rem !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.native-action-row-anchor) > div {
+        width: auto !important;
+        min-width: 0 !important;
+        flex: initial !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.native-action-row-anchor) [data-testid="stButton"] button {
+        width: 100% !important;
+        min-height: 30px !important;
+        height: auto !important;
+        padding: 0.2rem 0.3rem !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-size: clamp(0.66rem, 2.8vw, 0.76rem) !important;
+        line-height: 1.16 !important;
+    }
     </style>
 """
 

@@ -3,11 +3,21 @@ import html
 import streamlit as st
 
 
-def _card_columns(count):
-    if count == 1:
-        cols = st.columns([1, 2, 1], gap="small")
-        return [cols[1]]
-    return st.columns(2, gap="small")
+def _row_columns(count):
+    cols = st.columns(2, gap="small")
+    with cols[0]:
+        anchor_classes = "native-two-col-anchor wish-native-row"
+        if count == 1:
+            anchor_classes += " native-two-col-single"
+        st.markdown(f"<span class='{anchor_classes}'></span>", unsafe_allow_html=True)
+    return [cols[0]] if count == 1 else cols
+
+
+def _action_columns():
+    cols = st.columns(2, gap="small")
+    with cols[0]:
+        st.markdown("<span class='native-action-row-anchor'></span>", unsafe_allow_html=True)
+    return cols
 
 
 def render_wish_menu(wish_items, is_added, on_add, on_remove):
@@ -20,7 +30,7 @@ def render_wish_menu(wish_items, is_added, on_add, on_remove):
 
     for row_start in range(0, len(wish_items), 2):
         row = wish_items[row_start:row_start + 2]
-        cols = _card_columns(len(row))
+        cols = _row_columns(len(row))
         for offset, item in enumerate(row):
             tv_id = str(item.get("id", ""))
             title = item.get("title", "제목 없음")
@@ -36,7 +46,7 @@ def render_wish_menu(wish_items, is_added, on_add, on_remove):
                         f"<div class='wish-card-title'>{html.escape(title)}</div>",
                         unsafe_allow_html=True,
                     )
-                    add_col, remove_col = st.columns(2, gap="small")
+                    add_col, remove_col = _action_columns()
                     with add_col:
                         if is_added(title):
                             st.button(
