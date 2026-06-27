@@ -9,13 +9,10 @@ import streamlit.components.v1 as components
 import requests
 from datetime import datetime, timedelta
 from anime_checker.back_handler import PARENT_BACK_HANDLER_JS
-from anime_checker.card_components import (
-    article_link_html,
-    library_tile_grid_html,
-    new_anime_grid_html,
-    news_title_link_html,
-    wish_card_grid_html,
-)
+from anime_checker.menu_library import build_tile_cards, render_anime_tile_grid
+from anime_checker.menu_new_anime import render_new_anime_menu
+from anime_checker.menu_news import render_news_menu
+from anime_checker.menu_wish import render_wish_menu
 from anime_checker.news import get_anime_news
 from anime_checker.storage import (
     build_app_data,
@@ -910,7 +907,6 @@ if app_back_target:
 
 main_nav_target = st.query_params.get("main_nav")
 if main_nav_target:
-    has_action_query = any(key in st.query_params for key in ("new_action", "wish_action"))
     del st.query_params["main_nav"]
     st.session_state.main_section = main_nav_target
     st.session_state.show_library_search = False
@@ -919,8 +915,7 @@ if main_nav_target:
     st.session_state.selected_season = None
     st.session_state.selected_news = None
     st.session_state.view = "main"
-    if not has_action_query:
-        st.rerun()
+    st.rerun()
 
 # --- 과거 데이터 마이그레이션 (자가 치유 로직) ---
 current_date_str = datetime.now().strftime('%Y.%m.%d')
@@ -1199,7 +1194,7 @@ def add_direct_and_clear(tv_id, title):
 def render_article_link(url):
     if not url:
         return
-    st.markdown(article_link_html(url), unsafe_allow_html=True)
+    st.link_button("원문 기사 보기", url, use_container_width=True)
 
 
 if "news_loaded_at" not in st.session_state:
@@ -1277,28 +1272,17 @@ def format_new_anime_air_date(date_text):
 
 
 def render_new_anime_cards(sorted_all_animes, key_prefix):
-    if not sorted_all_animes:
-        st.write("한국 OTT 서비스 기준 신작 애니 정보를 불러오지 못했습니다.")
-        return
-
-    card_items = []
-    for item in sorted_all_animes:
-        title = item["name"]
-        tv_id = item["id"]
-        poster_path = item.get("poster_path")
-        rep_img = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else ""
-        genre_names = [TMDB_GENRE_MAP.get(gid, "") for gid in item.get("genre_ids", [])]
-        genre_str = ", ".join(g for g in genre_names if g) or "애니메이션"
-        card_items.append({
-            "id": tv_id,
-            "title": title,
-            "img": rep_img,
-            "genre": genre_str,
-            "air_date_label": format_new_anime_air_date(item.get("first_air_date", "")),
-            "wish_label": "찜해제" if is_wished(tv_id) else "찜",
-            "add_label": "완료" if title in st.session_state.my_anime_list else "추가",
-        })
-    st.markdown(new_anime_grid_html(card_items), unsafe_allow_html=True)
+    loaded_label = get_loaded_at_label(st.session_state.get("new_animes_loaded_at"))
+    render_new_anime_menu(
+        sorted_all_animes,
+        loaded_label,
+        lambda genre_id: TMDB_GENRE_MAP.get(genre_id, ""),
+        format_new_anime_air_date,
+        is_wished,
+        lambda title: title in st.session_state.my_anime_list,
+        lambda tv_id, title, item: (toggle_wish(tv_id, title, item), st.rerun()),
+        lambda tv_id, title: (add_anime_to_list(tv_id, title), st.rerun()),
+    )
 
 
 def find_anime_title_by_uid(uid):
@@ -1309,78 +1293,34 @@ def find_anime_title_by_uid(uid):
     return None
 
 
+def open_anime_detail(title):
+    st.session_state.selected_anime = title
+    st.session_state.selected_season = None
+    st.session_state.selected_news = None
+    st.session_state.view = "detail"
+    st.rerun()
+
+
+def open_news_detail(news):
+    st.session_state.selected_news = news
+    st.session_state.news_return_view = "main"
+    st.session_state.view = "news_detail"
+    st.rerun()
+
+
 def render_library_tile_grid(cards, extra_class=""):
     if not cards:
         return
-
-    card_items = []
-    for card in cards:
-        title = card["title"]
-        info = card["info"]
-        card_items.append({
-            "title": title,
-            "uid": get_anime_uid(title, info),
-            "needs_n_badge": card.get("needs_n_badge", False),
-            "meta": card.get("meta", ""),
-        })
-    st.markdown(library_tile_grid_html(card_items, extra_class), unsafe_allow_html=True)
+    render_anime_tile_grid(build_tile_cards(cards, get_anime_uid), extra_class, open_anime_detail)
 
 
 def render_wish_cards(wish_items):
-    card_items = []
-    for item in wish_items:
-        title = item.get("title", "제목 없음")
-        card_items.append({
-            "id": item.get("id", ""),
-            "title": title,
-            "img": item.get("img") or (f"https://image.tmdb.org/t/p/w500{item.get('poster_path')}" if item.get("poster_path") else ""),
-            "is_added": title in st.session_state.my_anime_list,
-        })
-    st.markdown(wish_card_grid_html(card_items), unsafe_allow_html=True)
-
-
-def handle_card_action_query():
-    handled = False
-
-    wish_action = st.query_params.get("wish_action")
-    wish_id = st.query_params.get("wish_id")
-    if wish_action and wish_id:
-        wish_item = st.session_state.wish_list.get(str(wish_id))
-        if wish_action == "add" and wish_item:
-            add_anime_to_list(wish_id, wish_item.get("title", "제목 없음"))
-        elif wish_action == "remove":
-            st.session_state.wish_list.pop(str(wish_id), None)
-            save_app_data()
-        for key in ("wish_action", "wish_id"):
-            if key in st.query_params:
-                del st.query_params[key]
-        st.session_state.main_section = "찜"
-        handled = True
-
-    new_action = st.query_params.get("new_action")
-    new_id = st.query_params.get("new_id")
-    if new_action and new_id:
-        selected_item = next(
-            (item for item in ensure_new_animes_loaded() if str(item.get("id")) == str(new_id)),
-            None,
-        )
-        if selected_item:
-            title = selected_item["name"]
-            if new_action == "wish":
-                toggle_wish(new_id, title, selected_item)
-            elif new_action == "add" and title not in st.session_state.my_anime_list:
-                add_anime_to_list(new_id, title)
-        for key in ("new_action", "new_id"):
-            if key in st.query_params:
-                del st.query_params[key]
-        st.session_state.main_section = "신작 애니"
-        handled = True
-
-    if handled:
-        st.rerun()
-
-
-handle_card_action_query()
+    render_wish_menu(
+        wish_items,
+        lambda title: title in st.session_state.my_anime_list,
+        lambda tv_id, title: (add_anime_to_list(tv_id, title), st.rerun()),
+        lambda tv_id: (st.session_state.wish_list.pop(str(tv_id), None), save_app_data(), st.rerun()),
+    )
 
 
 open_anime_uid = st.query_params.get("open_anime")
@@ -1722,24 +1662,12 @@ if st.session_state.view == 'main':
                 render_library_tile_grid(dropped_cards, "dropped")
 
         elif active_main_tab == "찜":
-            st.subheader("찜 목록")
             wish_items = list(st.session_state.wish_list.values())
             wish_items.sort(key=lambda item: item.get("title", ""))
-            st.markdown(f"<div class='library-count'>총 {len(wish_items)}개</div>", unsafe_allow_html=True)
-
-            if not wish_items:
-                st.write("찜한 애니가 없습니다.")
-            else:
-                render_wish_cards(wish_items)
+            render_wish_cards(wish_items)
 
         elif active_main_tab == "신작 애니":
             sorted_all_animes = ensure_new_animes_loaded()
-            loaded_label = get_loaded_at_label(st.session_state.get("new_animes_loaded_at"))
-            st.subheader("신작 애니")
-            st.markdown(f"<div class='library-count section-timestamp'>{loaded_label}</div>", unsafe_allow_html=True)
-            st.write("한국 OTT에서 서비스 중이거나 서비스 예정인 애니메이션을 최신순으로 확인하세요.")
-            st.divider()
-
             render_new_anime_cards(sorted_all_animes, "new_tab")
 
         elif active_main_tab == "애니 소식":
@@ -1759,19 +1687,7 @@ if st.session_state.view == 'main':
                 else:
                     del st.query_params["open_news"]
             news_loaded_label = st.session_state.news_loaded_at.strftime("%Y.%m.%d %H:%M 기준")
-            st.subheader("최신 애니 소식")
-            st.markdown(f"<div class='library-count section-timestamp'>{news_loaded_label}</div>", unsafe_allow_html=True)
-            st.write("방영 예정, 신작 공개일, 시즌 발표 중심의 소식을 확인하세요.")
-            st.divider()
-
-            for idx, news in enumerate(news_data):
-                with st.container(border=True):
-                    render_news_image(news)
-                    st.markdown(news_title_link_html(idx, news["title"]), unsafe_allow_html=True)
-                    st.caption(news['content'])
-                    if news.get('source'):
-                        st.caption(f"출처: {news['source']}")
-                    st.markdown(f"<div class='news-date'>{news['date']}</div>", unsafe_allow_html=True)
+            render_news_menu(news_data, news_loaded_label, render_news_image, open_news_detail)
 
 # --- 화면 2: 애니메이션 상세 화면 ---
 elif st.session_state.view == 'detail':
