@@ -47,6 +47,7 @@ streamlit run app.py
 
 - `app.py`: Streamlit 화면 흐름, 세션 상태 연결, 화면 렌더링 진입점
 - `anime_checker/ui_assets.py`: 전체 CSS, 모바일 레이아웃, 상단 이동 링크
+- `anime_checker/card_components.py`: 목록/찜/신작/뉴스 카드 HTML, compact 액션 링크
 - `anime_checker/back_handler.py`: 폰 자체 뒤로가기 처리 JS
 - `anime_checker/news.py`: 애니 소식 RSS 수집, 뉴스 필터링, 이미지 추출
 - `anime_checker/storage.py`: 백업 JSON 구조, 파일 저장/불러오기
@@ -414,6 +415,6 @@ streamlit-local-storage
 
 ## 2026-06-25 파일 분리 메모
 
-- 기능별 충돌을 줄이기 위해 CSS/레이아웃은 `anime_checker/ui_assets.py`, 폰 뒤로가기는 `anime_checker/back_handler.py`, 애니 소식은 `anime_checker/news.py`, 저장/백업 JSON 처리는 `anime_checker/storage.py`로 분리했다.
+- 기능별 충돌을 줄이기 위해 CSS/레이아웃은 `anime_checker/ui_assets.py`, 카드/버튼 HTML은 `anime_checker/card_components.py`, 폰 뒤로가기는 `anime_checker/back_handler.py`, 애니 소식은 `anime_checker/news.py`, 저장/백업 JSON 처리는 `anime_checker/storage.py`로 분리했다.
 - 현재 폰 뒤로가기 JS는 `handlerVersion = 17`이며, `streamlit.components.v1.html`로 `parent`, `top`, 현재 `window`에 주입한다. hash guard와 `hashchange` listener를 함께 사용한다. `st.html(..., unsafe_allow_javascript=True)`는 이 앱에서 JS 실행이 안정적으로 되지 않았으므로 현재 방식으로 되돌리지 않는다.
-- 앞으로 버튼 크기/화면 잘림은 `ui_assets.py`, 뒤로가기 동작은 `back_handler.py`, 뉴스 필터는 `news.py`, 백업/저장은 `storage.py`를 먼저 수정한다.
+- 앞으로 버튼 크기/화면 잘림은 `ui_assets.py`, 카드/버튼 HTML과 액션 링크는 `card_components.py`, 뒤로가기 동작은 `back_handler.py`, 뉴스 필터는 `news.py`, 백업/저장은 `storage.py`를 먼저 수정한다.
