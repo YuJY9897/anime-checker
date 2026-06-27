@@ -1413,14 +1413,14 @@ APP_CSS = """
     div[data-testid="stHorizontalBlock"]:has(.new-anime-native-row) .new-anime-card-title,
     div[data-testid="stHorizontalBlock"]:has(.wish-native-row) .wish-card-title {
         display: -webkit-box !important;
-        min-height: 2.34em !important;
-        max-height: 2.34em !important;
-        margin: 0.34rem 0 0.22rem !important;
+        min-height: 2.72em !important;
+        max-height: 2.72em !important;
+        margin: 0.34rem 0 0.36rem !important;
         overflow: hidden !important;
         -webkit-box-orient: vertical !important;
         -webkit-line-clamp: 2 !important;
-        font-size: clamp(0.74rem, 3vw, 0.84rem) !important;
-        line-height: 1.17 !important;
+        font-size: clamp(0.72rem, 2.9vw, 0.82rem) !important;
+        line-height: 1.36 !important;
         text-align: center !important;
         word-break: keep-all !important;
         overflow-wrap: anywhere !important;
