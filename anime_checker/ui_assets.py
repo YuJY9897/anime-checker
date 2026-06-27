@@ -1404,11 +1404,41 @@ APP_CSS = """
     div[data-testid="stHorizontalBlock"]:has(.wish-native-row) div[data-testid="stVerticalBlockBorderWrapper"],
     div[data-testid="stHorizontalBlock"]:has(.new-anime-native-row) div[data-testid="stVerticalBlockBorderWrapper"] {
         height: 100% !important;
-        padding: 0.46rem !important;
+        padding: 0.42rem !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.wish-native-row) .stImage img,
     div[data-testid="stHorizontalBlock"]:has(.new-anime-native-row) .stImage img {
-        height: clamp(112px, 30vw, 150px) !important;
+        height: clamp(104px, 27vw, 136px) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-native-row) .new-anime-card-title,
+    div[data-testid="stHorizontalBlock"]:has(.wish-native-row) .wish-card-title {
+        display: -webkit-box !important;
+        min-height: 2.34em !important;
+        max-height: 2.34em !important;
+        margin: 0.34rem 0 0.22rem !important;
+        overflow: hidden !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 2 !important;
+        font-size: clamp(0.74rem, 3vw, 0.84rem) !important;
+        line-height: 1.17 !important;
+        text-align: center !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.new-anime-native-row) .new-anime-card-meta {
+        display: -webkit-box !important;
+        min-height: 1.35em !important;
+        max-height: 1.35em !important;
+        margin: 0 0 0.34rem !important;
+        overflow: hidden !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 1 !important;
+        color: var(--muted) !important;
+        font-size: clamp(0.64rem, 2.55vw, 0.72rem) !important;
+        line-height: 1.35 !important;
+        text-align: center !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.native-action-row-anchor) {
         display: grid !important;

@@ -49,6 +49,7 @@ def render_new_anime_menu(
             rep_img = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else ""
             genre_names = [genre_name_for_id(gid) for gid in item.get("genre_ids", [])]
             genre_str = ", ".join(g for g in genre_names if g) or "애니메이션"
+            meta_text = f"{genre_str} · {format_air_date(item.get('first_air_date', ''))}"
             with cols[offset]:
                 with st.container(border=True):
                     if rep_img:
@@ -58,11 +59,7 @@ def render_new_anime_menu(
                         unsafe_allow_html=True,
                     )
                     st.markdown(
-                        f"<div class='new-anime-card-meta'>장르: {html.escape(genre_str)}</div>",
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown(
-                        f"<div class='new-anime-card-meta'>{html.escape(format_air_date(item.get('first_air_date', '')))}</div>",
+                        f"<div class='new-anime-card-meta'>{html.escape(meta_text)}</div>",
                         unsafe_allow_html=True,
                     )
                     wish_col, add_col = _action_columns()
