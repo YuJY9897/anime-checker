@@ -172,6 +172,14 @@ class AppController extends ChangeNotifier {
     return count;
   }
 
+  int watchedCountForSeason(Anime anime, AnimeSeason season) {
+    var count = 0;
+    for (final episode in season.episodes) {
+      if (isEpisodeWatched(anime.id, season.number, episode.number)) count++;
+    }
+    return count;
+  }
+
   int totalEpisodeCount(Anime anime) =>
       anime.seasons.fold(0, (sum, season) => sum + season.episodes.length);
 

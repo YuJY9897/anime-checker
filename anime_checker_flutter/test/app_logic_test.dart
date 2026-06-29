@@ -74,6 +74,19 @@ void main() {
     expect(controller.isEpisodeWatched(anime.id, season.number, 5), isFalse);
   });
 
+  test('season watched count is calculated per season', () async {
+    final repo = FakeRepository()..saved = sampleAppData();
+    final controller = AppController(repo, FakeApiClient());
+    await controller.load();
+    final anime = controller.allAnime.first;
+    final season = anime.seasons.first;
+
+    await controller.setEpisodeWatched(anime, season, season.episodes[2], true);
+
+    expect(controller.watchedCountForSeason(anime, season), 3);
+    expect(season.episodes.length, greaterThanOrEqualTo(3));
+  });
+
   test('adding a wished anime to library removes it from wish list', () async {
     final repo = FakeRepository();
     final controller = AppController(repo, FakeApiClient());

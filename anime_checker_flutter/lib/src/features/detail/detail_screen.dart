@@ -127,6 +127,11 @@ class DetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: Column(
                 children: anime.seasons.map((season) {
+                  final watched = controller.watchedCountForSeason(
+                    anime,
+                    season,
+                  );
+                  final total = season.episodes.length;
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
@@ -138,7 +143,7 @@ class DetailScreen extends ConsumerWidget {
                         season.name,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
-                      subtitle: Text('${season.episodes.length}화'),
+                      subtitle: Text('$watched화 / $total화'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
