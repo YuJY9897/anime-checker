@@ -1,0 +1,6 @@
+name = "anime-checker-proxy"
+main = "src/index.js"
+compatibility_date = "2026-06-29"
+
+# Set this with:
+# wrangler secret put TMDB_API_KEY
