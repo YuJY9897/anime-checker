@@ -50,12 +50,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
           SectionHeader(
             title: '검색 결과',
-            meta: '${controller.searchResults.length}개',
+            meta: controller.apiConfigured
+                ? '${controller.searchResults.length}개'
+                : '${controller.searchResults.length}개 · 보관함 검색',
           ),
           if (controller.searchResults.isEmpty)
-            const EmptyState(
+            EmptyState(
               title: '검색 결과가 없어요',
-              message: '제목을 입력하고 검색해 주세요.',
+              message: controller.apiConfigured
+                  ? '제목을 입력하고 검색해 주세요.'
+                  : 'API 주소가 연결되지 않아 지금은 보관함 안에서만 검색돼요.',
               icon: Icons.search,
             )
           else

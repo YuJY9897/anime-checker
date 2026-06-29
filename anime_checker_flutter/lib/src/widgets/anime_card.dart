@@ -89,71 +89,89 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                   },
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      height: 1.22,
-                    ),
-                  ),
-                  if (widget.genres.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        widget.genres.take(3).join(' · '),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(color: colors.tertiary, height: 1.24),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        height: 1.22,
                       ),
                     ),
-                  for (final line in widget.metaLines.where(
-                    (line) => line.trim().isNotEmpty,
-                  ))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: Text(
-                        line,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xA6000000),
-                          height: 1.24,
+                    if (widget.genres.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          widget.genres.take(3).join(' · '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(color: colors.tertiary, height: 1.24),
                         ),
                       ),
-                    ),
-                  if (widget.actions.isNotEmpty) ...[
-                    const SizedBox(height: 9),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: widget.actions.map((action) {
-                        final child = Text(
-                          action.label,
-                          maxLines: 1,
+                    for (final line in widget.metaLines.where(
+                      (line) => line.trim().isNotEmpty,
+                    ))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          line,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                        );
-                        if (action.filled) {
-                          return FilledButton(
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: const Color(0xA6000000),
+                                height: 1.24,
+                              ),
+                        ),
+                      ),
+                    const Spacer(),
+                    if (widget.actions.isNotEmpty) ...[
+                      const SizedBox(height: 9),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: widget.actions.map((action) {
+                          final child = Text(
+                            action.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                          if (action.filled) {
+                            return FilledButton(
+                              onPressed: action.onPressed,
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size(0, 30),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                              ),
+                              child: child,
+                            );
+                          }
+                          return OutlinedButton(
                             onPressed: action.onPressed,
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 30),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 6,
+                              ),
+                            ),
                             child: child,
                           );
-                        }
-                        return OutlinedButton(
-                          onPressed: action.onPressed,
-                          child: child,
-                        );
-                      }).toList(),
-                    ),
+                        }).toList(),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],
@@ -176,7 +194,7 @@ class TwoColumnAnimeGrid extends StatelessWidget {
         const spacing = 10.0;
         final cardWidth =
             (constraints.maxWidth - horizontalPadding - spacing) / 2;
-        final cardHeight = cardWidth * 2.62;
+        final cardHeight = cardWidth * 2.78;
         return GridView.count(
           crossAxisCount: 2,
           crossAxisSpacing: spacing,

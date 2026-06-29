@@ -36,12 +36,12 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                   metaLines: [
-                    '${target.season.name} ${target.episode.number}화',
+                    '다음 ${target.season.name} ${target.episode.number}화',
                     '방영일: ${formatStoredDate(target.episode.airDate)}',
                   ],
                   actions: [
                     AnimeCardAction(
-                      label: '시청 완료',
+                      label: '시청',
                       filled: true,
                       onPressed: () => controller.setEpisodeWatched(
                         target.anime,

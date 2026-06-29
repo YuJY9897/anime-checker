@@ -87,6 +87,45 @@ void main() {
     expect(controller.isWished(anime.id), isFalse);
   });
 
+  test('today targets show each anime only once', () async {
+    final repo = FakeRepository()..saved = sampleAppData();
+    final controller = AppController(repo, FakeApiClient());
+    await controller.load();
+
+    final targetIds = controller.todayTargets
+        .map((target) => target.anime.id)
+        .toList();
+
+    expect(targetIds.toSet().length, targetIds.length);
+  });
+
+  test(
+    'search falls back to local library when api is not configured',
+    () async {
+      final repo = FakeRepository()..saved = sampleAppData();
+      final controller = AppController(repo, FakeApiClient());
+      await controller.load();
+
+      await controller.search('던전');
+
+      expect(
+        controller.searchResults.map((anime) => anime.title),
+        contains('던전밥'),
+      );
+    },
+  );
+
+  test('local search also matches anime id', () async {
+    final repo = FakeRepository()..saved = sampleAppData();
+    final controller = AppController(repo, FakeApiClient());
+    await controller.load();
+    final anime = controller.allAnime.first;
+
+    await controller.search(anime.id);
+
+    expect(controller.searchResults.map((item) => item.id), contains(anime.id));
+  });
+
   test('future new anime date is displayed as planned release', () {
     final result = formatNewAnimeAirDate(
       '2026-07-10',

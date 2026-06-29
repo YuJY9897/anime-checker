@@ -65,6 +65,8 @@ class AppController extends ChangeNotifier {
   String newAnimeBasis = '';
   String newsBasis = '';
 
+  bool get apiConfigured => _apiClient.isConfigured;
+
   Future<void> load() async {
     busy = true;
     notifyListeners();
@@ -102,6 +104,7 @@ class AppController extends ChangeNotifier {
     final today = DateTime.now();
     final targets = <EpisodeTarget>[];
     for (final anime in libraryAnime) {
+      EpisodeTarget? nextTarget;
       for (final season in anime.seasons) {
         for (final episode in season.episodes) {
           final date = parseDate(episode.airDate);
@@ -113,12 +116,17 @@ class AppController extends ChangeNotifier {
           ).isAfter(DateTime(today.year, today.month, today.day));
           if (isAired &&
               !isEpisodeWatched(anime.id, season.number, episode.number)) {
-            targets.add(
-              EpisodeTarget(anime: anime, season: season, episode: episode),
+            nextTarget = EpisodeTarget(
+              anime: anime,
+              season: season,
+              episode: episode,
             );
+            break;
           }
         }
+        if (nextTarget != null) break;
       }
+      if (nextTarget != null) targets.add(nextTarget);
     }
     targets.sort((a, b) => a.episode.airDate.compareTo(b.episode.airDate));
     return targets;
@@ -192,14 +200,27 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> search(String query) async {
+    final keyword = query.trim();
+    if (keyword.isEmpty) {
+      searchResults = const [];
+      error = null;
+      notifyListeners();
+      return;
+    }
     busy = true;
     notifyListeners();
     try {
-      searchResults = await _apiClient.search(query);
+      final localResults = _searchLocal(keyword);
+      if (_apiClient.isConfigured) {
+        final remoteResults = await _apiClient.search(keyword);
+        searchResults = _mergeAnimeResults(localResults, remoteResults);
+      } else {
+        searchResults = localResults;
+      }
       error = null;
     } catch (e) {
       error = '$e';
-      searchResults = const [];
+      searchResults = _searchLocal(keyword);
     } finally {
       busy = false;
       notifyListeners();
@@ -234,6 +255,26 @@ class AppController extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
+  }
+
+  List<Anime> _searchLocal(String keyword) {
+    final lowered = keyword.toLowerCase();
+    return allAnime.where((anime) {
+      return anime.id.toLowerCase().contains(lowered) ||
+          anime.title.toLowerCase().contains(lowered) ||
+          anime.originalTitle.toLowerCase().contains(lowered);
+    }).toList();
+  }
+
+  List<Anime> _mergeAnimeResults(List<Anime> local, List<Anime> remote) {
+    final merged = <String, Anime>{};
+    for (final item in local) {
+      merged[item.id] = item;
+    }
+    for (final item in remote) {
+      merged.putIfAbsent(item.id, () => item);
+    }
+    return merged.values.toList();
   }
 
   Future<void> addAnime(Anime anime) async {
