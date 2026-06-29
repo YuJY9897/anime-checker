@@ -14,7 +14,7 @@ class AnimeCardAction {
   final bool filled;
 }
 
-class AnimePosterCard extends StatelessWidget {
+class AnimePosterCard extends StatefulWidget {
   const AnimePosterCard({
     super.key,
     required this.title,
@@ -55,14 +55,21 @@ class AnimePosterCard extends StatelessWidget {
   final VoidCallback? onLongPress;
 
   @override
+  State<AnimePosterCard> createState() => _AnimePosterCardState();
+}
+
+class _AnimePosterCardState extends State<AnimePosterCard> {
+  bool imageFailed = false;
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final hasImage = posterUrl.trim().isNotEmpty;
+    final hasImage = widget.posterUrl.trim().isNotEmpty && !imageFailed;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -70,10 +77,16 @@ class AnimePosterCard extends StatelessWidget {
               AspectRatio(
                 aspectRatio: 2 / 3,
                 child: Image.network(
-                  posterUrl,
+                  widget.posterUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const SizedBox.shrink(),
+                  errorBuilder: (context, error, stackTrace) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && !imageFailed) {
+                        setState(() => imageFailed = true);
+                      }
+                    });
+                    return const SizedBox.shrink();
+                  },
                 ),
               ),
             Padding(
@@ -82,7 +95,7 @@ class AnimePosterCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    widget.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -90,18 +103,18 @@ class AnimePosterCard extends StatelessWidget {
                       height: 1.22,
                     ),
                   ),
-                  if (genres.isNotEmpty)
+                  if (widget.genres.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                        genres.take(3).join(' · '),
+                        widget.genres.take(3).join(' · '),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(color: colors.tertiary, height: 1.24),
                       ),
                     ),
-                  for (final line in metaLines.where(
+                  for (final line in widget.metaLines.where(
                     (line) => line.trim().isNotEmpty,
                   ))
                     Padding(
@@ -116,12 +129,12 @@ class AnimePosterCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  if (actions.isNotEmpty) ...[
+                  if (widget.actions.isNotEmpty) ...[
                     const SizedBox(height: 9),
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
-                      children: actions.map((action) {
+                      children: widget.actions.map((action) {
                         final child = Text(
                           action.label,
                           maxLines: 1,
@@ -157,15 +170,24 @@ class TwoColumnAnimeGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      childAspectRatio: 0.48,
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      children: children,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const horizontalPadding = 32.0;
+        const spacing = 10.0;
+        final cardWidth =
+            (constraints.maxWidth - horizontalPadding - spacing) / 2;
+        final cardHeight = cardWidth * 2.62;
+        return GridView.count(
+          crossAxisCount: 2,
+          crossAxisSpacing: spacing,
+          mainAxisSpacing: 10,
+          childAspectRatio: cardWidth / cardHeight,
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          children: children,
+        );
+      },
     );
   }
 }
