@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:anime_checker_flutter/src/core/api_client.dart';
 import 'package:anime_checker_flutter/src/core/app_controller.dart';
 import 'package:anime_checker_flutter/src/core/date_text.dart';
+import 'package:anime_checker_flutter/src/core/genre_text.dart';
 import 'package:anime_checker_flutter/src/core/local_repository.dart';
 import 'package:anime_checker_flutter/src/core/models.dart';
 import 'package:anime_checker_flutter/src/core/sample_data.dart';
@@ -145,5 +146,15 @@ void main() {
       now: DateTime(2026, 6, 29),
     );
     expect(result, '방영일: 2026.07.10. 방영예정');
+  });
+
+  test('iso news dates are displayed as stored dates', () {
+    expect(formatStoredDate('2026-06-19T04:07:07.000Z'), '2026.06.19.');
+  });
+
+  test('animation genre and unknown labels are hidden from compact cards', () {
+    expect(visibleGenres(['애니메이션', '드라마', 'Animation', '코미디']), ['드라마', '코미디']);
+    expect(hasUsefulText('???'), isFalse);
+    expect(hasUsefulText('금요일'), isTrue);
   });
 }

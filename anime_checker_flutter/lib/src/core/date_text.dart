@@ -2,7 +2,14 @@ import 'package:intl/intl.dart';
 
 DateTime? parseDate(String value) {
   if (value.trim().isEmpty) return null;
-  final normalized = value.trim().replaceAll('.', '-');
+  final trimmed = value.trim();
+  final parsed = DateTime.tryParse(trimmed);
+  if (parsed != null) return parsed;
+  final normalized = trimmed.replaceFirstMapped(
+    RegExp(r'^(\d{4})\.(\d{1,2})\.(\d{1,2})\.?'),
+    (match) =>
+        '${match[1]}-${match[2]!.padLeft(2, '0')}-${match[3]!.padLeft(2, '0')}',
+  );
   return DateTime.tryParse(normalized);
 }
 

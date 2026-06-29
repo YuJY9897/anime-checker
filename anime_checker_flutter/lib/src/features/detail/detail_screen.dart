@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
+import '../../core/genre_text.dart';
 import '../../core/models.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/section_header.dart';
@@ -31,6 +32,7 @@ class DetailScreen extends ConsumerWidget {
       );
     }
     final inLibrary = controller.isInLibrary(anime.id);
+    final genres = visibleGenres(anime.genres);
     return Scaffold(
       appBar: AppBar(title: const Text('상세')),
       body: ListView(
@@ -66,13 +68,16 @@ class DetailScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        anime.genres.join(' · '),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.tertiary,
+                      if (genres.isNotEmpty) ...[
+                        Text(
+                          genres.join(' · '),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.tertiary,
+                              ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
+                        const SizedBox(height: 8),
+                      ],
                       Text(anime.status.isEmpty ? '상태 확인 중' : anime.status),
                       Text(
                         anime.weekday.isEmpty ? '편성 요일 확인 중' : anime.weekday,

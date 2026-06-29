@@ -1,5 +1,15 @@
 const TMDB = 'https://api.themoviedb.org/3';
 const IMAGE = 'https://image.tmdb.org/t/p/w500';
+const GENRES = {
+  16: '애니메이션',
+  35: '코미디',
+  18: '드라마',
+  10759: '액션/모험',
+  10765: 'SF/판타지',
+  9648: '미스터리',
+  10762: '키즈',
+  10751: '가족',
+};
 
 export default {
   async fetch(request, env) {
@@ -8,7 +18,7 @@ export default {
       if (url.pathname === '/search') return json(await searchAnime(env, url.searchParams.get('q') || ''));
       if (url.pathname.startsWith('/anime/')) return json(await animeDetail(env, url.pathname.split('/').pop()));
       if (url.pathname === '/new-anime') return json({items: await newAnime(env, url.searchParams.get('region') || 'KR')});
-      if (url.pathname === '/news') return json({items: await news()});
+      if (url.pathname === '/news') return json({items: await news(url.origin)});
       if (url.pathname === '/image') return proxyImage(url.searchParams.get('url') || '');
       return json({error: 'not found'}, 404);
     } catch (error) {
@@ -28,7 +38,7 @@ async function tmdb(env, path) {
 async function searchAnime(env, query) {
   if (!query.trim()) return {items: []};
   const data = await tmdb(env, `/search/tv?query=${encodeURIComponent(query)}&include_adult=false`);
-  const results = (data.results || []).filter((item) => item.original_language === 'ja' || hasKorean(item.name));
+  const results = (data.results || []).filter((item) => isAnimeTv(item) && (item.original_language === 'ja' || hasKorean(item.name)));
   return {items: results.slice(0, 20).map(toAnime)};
 }
 
@@ -65,38 +75,109 @@ async function newAnime(env, region) {
     first_air_date_lte: isoDate(future),
     sort_by: 'first_air_date.desc',
     with_original_language: 'ja',
+    with_genres: '16',
     watch_region: region,
     with_watch_monetization_types: 'flatrate|ads|free',
     page: '1',
   });
   const data = await tmdb(env, `/discover/tv?${params.toString()}`);
   return (data.results || [])
-    .filter((item) => item.name && item.first_air_date)
+    .filter((item) => item.name && item.first_air_date && isAnimeTv(item))
     .slice(0, 30)
     .map(toAnime);
 }
 
-async function news() {
-  const query = encodeURIComponent('애니 신작 OR 애니 시즌 OR 극장판 애니 OR 애니 흥행');
-  const response = await fetch(`https://news.google.com/rss/search?q=${query}&hl=ko&gl=KR&ceid=KR:ko`);
-  if (!response.ok) throw new Error(`NEWS ${response.status}`);
-  const text = await response.text();
-  return [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 20).map((match, index) => {
+async function news(origin) {
+  const text = await fetchNewsRss();
+  if (!text) return fallbackNews();
+  const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)]
+    .slice(0, 20)
+    .filter((match) => isRelevantNews(decode(xml(match[1], 'title')).replace(/ - .*$/, '')));
+  const parsed = await Promise.all(items.map(async (match, index) => {
     const item = match[1];
     const title = decode(xml(item, 'title')).replace(/ - .*$/, '');
-    const source = decode(xml(item, 'source'));
-    const url = decode(xml(item, 'link'));
+    const source = decode(xml(item, 'source') || xml(item, 'News:Source'));
+    const url = normalizeNewsUrl(decode(xml(item, 'link')));
     const date = new Date(decode(xml(item, 'pubDate')) || Date.now()).toISOString();
+    const article = index < 6 ? await articleMeta(url) : {imageUrl: '', url};
     return {
       id: `news-${index}-${hash(url)}`,
       title,
       summary: title,
       source,
       date,
-      imageUrl: '',
-      url,
+      imageUrl: article.imageUrl ? `${origin}/image?url=${encodeURIComponent(article.imageUrl)}` : '',
+      url: article.url || url,
     };
-  }).filter((item) => isRelevantNews(item.title));
+  }));
+  return parsed;
+}
+
+async function fetchNewsRss() {
+  const googleQuery = encodeURIComponent('애니 신작 OR 애니 시즌 OR 극장판 애니 OR 애니 흥행');
+  const bingQuery = encodeURIComponent('애니 신작 극장판 시즌 흥행');
+  const feeds = [
+    `https://news.google.com/rss/search?q=${googleQuery}&hl=ko&gl=KR&ceid=KR:ko`,
+    `https://www.bing.com/news/search?q=${bingQuery}&format=rss&cc=KR`,
+  ];
+  for (const feed of feeds) {
+    const text = await fetchRssText(feed);
+    if (text) return text;
+  }
+  return '';
+}
+
+async function fetchRssText(url) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'accept': 'application/rss+xml, application/xml, text/xml',
+        'accept-language': 'ko-KR,ko;q=0.9,en;q=0.7',
+        'user-agent': 'Mozilla/5.0 anime-checker-news',
+      },
+      signal: AbortSignal.timeout(4500),
+    });
+    if (!response.ok) return '';
+    return await response.text();
+  } catch (_) {
+    return '';
+  }
+}
+
+function fallbackNews() {
+  return [
+    {
+      id: 'news-fallback',
+      title: '애니 소식을 가져오지 못했어요',
+      summary: '잠시 후 새로고침하면 다시 시도합니다.',
+      source: '애니 체크',
+      date: new Date().toISOString(),
+      imageUrl: '',
+      url: '',
+    },
+  ];
+}
+
+async function articleMeta(url) {
+  const empty = {imageUrl: '', url};
+  if (!url.startsWith('https://')) return empty;
+  try {
+    const response = await fetch(url, {
+      redirect: 'follow',
+      headers: {'user-agent': 'Mozilla/5.0 anime-checker-news-image'},
+      signal: AbortSignal.timeout(1200),
+    });
+    if (!response.ok) return empty;
+    const type = response.headers.get('content-type') || '';
+    if (!type.includes('text/html')) return {...empty, url: response.url || url};
+    const html = await response.text();
+    return {
+      imageUrl: imageMeta(html),
+      url: response.url || url,
+    };
+  } catch (_) {
+    return empty;
+  }
 }
 
 async function proxyImage(rawUrl) {
@@ -113,7 +194,7 @@ function toAnime(item) {
     title: item.name || item.title || '',
     originalTitle: item.original_name || item.original_title || '',
     posterUrl: poster(item.poster_path),
-    genres: [],
+    genres: genreNames(item.genre_ids, item.genres),
     status: item.status || '',
     weekday: '',
     firstAirDate: item.first_air_date || '',
@@ -131,6 +212,17 @@ function hasKorean(value = '') {
   return /[가-힣]/.test(value);
 }
 
+function isAnimeTv(item) {
+  return Array.isArray(item.genre_ids) && item.genre_ids.includes(16);
+}
+
+function genreNames(ids = [], genres = []) {
+  if (Array.isArray(genres) && genres.length > 0) {
+    return genres.map((genre) => genre.name).filter(Boolean);
+  }
+  return ids.map((id) => GENRES[id]).filter(Boolean);
+}
+
 function isoDate(date) {
   return date.toISOString().slice(0, 10);
 }
@@ -139,8 +231,41 @@ function xml(item, tag) {
   return item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`))?.[1] || '';
 }
 
+function normalizeNewsUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const original = parsed.searchParams.get('url');
+    return original ? decode(original) : url;
+  } catch (_) {
+    return url;
+  }
+}
+
+function imageMeta(html) {
+  const patterns = [
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
+  ];
+  for (const pattern of patterns) {
+    const value = decode(pattern.exec(html)?.[1] || '');
+    if (value.startsWith('https://')) return value;
+  }
+  return '';
+}
+
 function decode(value) {
-  return value.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+  return value
+    .replace(/<!\[CDATA\[|\]\]>/g, '')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
 }
 
 function isRelevantNews(title) {

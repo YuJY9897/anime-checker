@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_controller.dart';
+import '../../core/genre_text.dart';
 import '../../core/models.dart';
 import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
@@ -35,6 +36,12 @@ class LibraryScreen extends ConsumerWidget {
         else
           TwoColumnAnimeGrid(
             children: items.map((anime) {
+              final metaLines = [
+                if (mode == LibraryMode.library && hasUsefulText(anime.weekday))
+                  anime.weekday,
+                controller.progressLabel(anime),
+                controller.latestWatchLabel(anime),
+              ];
               return AnimePosterCard.fromAnime(
                 anime: anime,
                 onTap: () => Navigator.of(context).push(
@@ -42,11 +49,7 @@ class LibraryScreen extends ConsumerWidget {
                     builder: (_) => DetailScreen(animeId: anime.id),
                   ),
                 ),
-                metaLines: [
-                  anime.weekday,
-                  controller.progressLabel(anime),
-                  controller.latestWatchLabel(anime),
-                ],
+                metaLines: metaLines,
                 actions: [
                   AnimeCardAction(
                     label: mode == LibraryMode.library ? '보류' : '복귀',

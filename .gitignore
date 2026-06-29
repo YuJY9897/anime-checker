@@ -6,3 +6,5 @@ anime_check_data.tmp
 __pycache__/
 *.pyc
 app.py.bak
+anime_checker_proxy/node_modules/
+anime_checker_proxy/.wrangler/

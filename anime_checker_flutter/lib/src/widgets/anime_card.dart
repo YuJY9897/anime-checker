@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/genre_text.dart';
 import '../core/models.dart';
 
 class AnimeCardAction {
@@ -65,6 +66,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final hasImage = widget.posterUrl.trim().isNotEmpty && !imageFailed;
+    final genres = visibleGenres(widget.genres);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -104,11 +106,11 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                         height: 1.22,
                       ),
                     ),
-                    if (widget.genres.isNotEmpty)
+                    if (genres.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          widget.genres.take(3).join(' · '),
+                          genres.take(3).join(' · '),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelMedium
