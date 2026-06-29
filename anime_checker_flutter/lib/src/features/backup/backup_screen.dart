@@ -38,6 +38,11 @@ class BackupScreen extends ConsumerWidget {
                         ? '아직 백업하지 않았어요'
                         : formatDotDate(last, withTime: true),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _backupAgeText(last),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                   if (needsBackup) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -70,9 +75,18 @@ class BackupScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 18),
           _Summary(controller: controller),
+          const SizedBox(height: 12),
+          _Diagnostics(controller: controller),
         ],
       ),
     );
+  }
+
+  String _backupAgeText(DateTime? last) {
+    if (last == null) return '백업 파일을 한 번 만들어두면 폰을 바꿀 때도 복원할 수 있어요.';
+    final days = DateTime.now().difference(last).inDays;
+    if (days <= 0) return '오늘 백업했어요.';
+    return '$days일 전에 백업했어요.';
   }
 
   void _confirmRestore(
@@ -101,6 +115,39 @@ class BackupScreen extends ConsumerWidget {
             child: const Text('복원'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Diagnostics extends StatelessWidget {
+  const _Diagnostics({required this.controller});
+
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final diagnostics = controller.diagnostics();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '데이터 진단',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text('포스터 없음 ${diagnostics.noPoster}개'),
+            Text('시즌 정보 없음 ${diagnostics.noSeason}개'),
+            Text('장르 정보 없음 ${diagnostics.noGenre}개'),
+            Text('보류 ${diagnostics.dropped}개'),
+            Text('메모 ${diagnostics.notes}개'),
+          ],
+        ),
       ),
     );
   }

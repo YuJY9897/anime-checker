@@ -8,13 +8,55 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/section_header.dart';
 import 'news_detail_screen.dart';
 
-class NewsScreen extends ConsumerWidget {
+enum NewsFilter { all, newRelease, season, movie, boxOffice }
+
+extension _NewsFilterText on NewsFilter {
+  String get label {
+    switch (this) {
+      case NewsFilter.all:
+        return '전체';
+      case NewsFilter.newRelease:
+        return '신작';
+      case NewsFilter.season:
+        return '시즌';
+      case NewsFilter.movie:
+        return '극장판';
+      case NewsFilter.boxOffice:
+        return '흥행';
+    }
+  }
+
+  bool matches(NewsArticle article) {
+    final text = '${article.title} ${article.summary}';
+    switch (this) {
+      case NewsFilter.all:
+        return true;
+      case NewsFilter.newRelease:
+        return RegExp('신작|공개|방영|개봉').hasMatch(text);
+      case NewsFilter.season:
+        return RegExp('시즌|[23456789]기|속편|후속').hasMatch(text);
+      case NewsFilter.movie:
+        return RegExp('극장판|영화|개봉|상영').hasMatch(text);
+      case NewsFilter.boxOffice:
+        return RegExp('흥행|관객|박스오피스|예매|순위|돌파').hasMatch(text);
+    }
+  }
+}
+
+class NewsScreen extends ConsumerStatefulWidget {
   const NewsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NewsScreen> createState() => _NewsScreenState();
+}
+
+class _NewsScreenState extends ConsumerState<NewsScreen> {
+  NewsFilter filter = NewsFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final controller = ref.watch(appControllerProvider);
-    final items = controller.news;
+    final items = controller.news.where(filter.matches).toList();
     return RefreshIndicator(
       onRefresh: () => controller.refreshNews(),
       child: ListView(
@@ -27,11 +69,31 @@ class NewsScreen extends ConsumerWidget {
               icon: const Icon(Icons.refresh),
             ),
           ),
-          if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: NewsFilter.values.map((value) {
+                return ChoiceChip(
+                  label: Text(value.label),
+                  selected: filter == value,
+                  onSelected: (_) => setState(() => filter = value),
+                );
+              }).toList(),
+            ),
+          ),
+          if (controller.news.isEmpty)
             const EmptyState(
               title: '뉴스를 가져오지 못했어요',
               message: '프록시 설정이나 네트워크 상태를 확인해 주세요.',
               icon: Icons.article_outlined,
+            )
+          else if (items.isEmpty)
+            const EmptyState(
+              title: '해당 소식이 없어요',
+              message: '다른 필터를 선택하거나 새로고침해 주세요.',
+              icon: Icons.filter_alt_outlined,
             )
           else
             Padding(

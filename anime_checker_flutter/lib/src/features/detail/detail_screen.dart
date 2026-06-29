@@ -33,6 +33,7 @@ class DetailScreen extends ConsumerWidget {
     }
     final inLibrary = controller.isInLibrary(anime.id);
     final genres = visibleGenres(anime.genres);
+    final note = controller.animeNote(anime.id);
     return Scaffold(
       appBar: AppBar(title: const Text('상세')),
       body: ListView(
@@ -114,6 +115,16 @@ class DetailScreen extends ConsumerWidget {
                     child: Text(controller.isDropped(anime.id) ? '복귀' : '보류'),
                   ),
                   OutlinedButton(
+                    onPressed: () => _editNote(context, controller, anime),
+                    child: const Text('메모'),
+                  ),
+                  if (controller.isDropped(anime.id))
+                    OutlinedButton(
+                      onPressed: () =>
+                          _editDroppedReason(context, controller, anime),
+                      child: const Text('사유'),
+                    ),
+                  OutlinedButton(
                     onPressed: () => _confirmDelete(context, controller, anime),
                     child: const Text('삭제'),
                   ),
@@ -121,6 +132,28 @@ class DetailScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (inLibrary && note.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '메모',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(note),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           SectionHeader(title: '시즌'),
           if (anime.seasons.isEmpty)
             const EmptyState(
@@ -232,6 +265,72 @@ class DetailScreen extends ConsumerWidget {
               controller.deleteAnime(anime.id);
             },
             child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editNote(BuildContext context, AppController controller, Anime anime) {
+    final textController = TextEditingController(
+      text: controller.animeNote(anime.id),
+    );
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('메모'),
+        content: TextField(
+          controller: textController,
+          autofocus: true,
+          maxLines: 4,
+          decoration: const InputDecoration(hintText: '작품에 대한 메모를 남겨요'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.setAnimeNote(anime.id, textController.text);
+            },
+            child: const Text('저장'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editDroppedReason(
+    BuildContext context,
+    AppController controller,
+    Anime anime,
+  ) {
+    final textController = TextEditingController(
+      text: controller.droppedReason(anime.id),
+    );
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('보류 사유'),
+        content: TextField(
+          controller: textController,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '예: 나중에, 자막 대기'),
+          maxLength: 30,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.setDroppedReason(anime.id, textController.text);
+            },
+            child: const Text('저장'),
           ),
         ],
       ),

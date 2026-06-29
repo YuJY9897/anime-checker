@@ -101,6 +101,37 @@ void main() {
     expect(controller.isWished(anime.id), isFalse);
   });
 
+  test('anime notes and dropped reasons are saved in app data', () async {
+    final repo = FakeRepository()..saved = sampleAppData();
+    final controller = AppController(repo, FakeApiClient());
+    await controller.load();
+    final anime = controller.allAnime.first;
+
+    await controller.setAnimeNote(anime.id, '2기부터 다시 보기');
+    await controller.toggleDropped(anime.id);
+    await controller.setDroppedReason(anime.id, '자막 대기');
+
+    expect(controller.animeNote(anime.id), '2기부터 다시 보기');
+    expect(controller.droppedReason(anime.id), '자막 대기');
+    expect(repo.saved.animeNotes[anime.id], '2기부터 다시 보기');
+    expect(repo.saved.droppedReasons[anime.id], '자막 대기');
+  });
+
+  test('older backups without notes still load', () {
+    final data = AppData.fromJson({
+      'animeList': {},
+      'watchedEpisodes': {},
+      'watchedMovies': {},
+      'wishList': {},
+      'dropped': {},
+      'updatedAt': DateTime.now().toIso8601String(),
+      'backupVersion': 1,
+    });
+
+    expect(data.animeNotes, isEmpty);
+    expect(data.droppedReasons, isEmpty);
+  });
+
   test('today targets show each anime only once', () async {
     final repo = FakeRepository()..saved = sampleAppData();
     final controller = AppController(repo, FakeApiClient());

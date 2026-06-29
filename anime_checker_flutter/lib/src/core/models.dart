@@ -248,6 +248,8 @@ class AppData {
     required this.watchedMovies,
     required this.wishList,
     required this.dropped,
+    required this.animeNotes,
+    required this.droppedReasons,
     required this.updatedAt,
     required this.backupVersion,
     required this.lastBackupAt,
@@ -259,6 +261,8 @@ class AppData {
     watchedMovies: const {},
     wishList: const {},
     dropped: const {},
+    animeNotes: const {},
+    droppedReasons: const {},
     updatedAt: DateTime.now(),
     backupVersion: 1,
     lastBackupAt: null,
@@ -269,6 +273,8 @@ class AppData {
   final Map<String, bool> watchedMovies;
   final Map<String, WishItem> wishList;
   final Map<String, bool> dropped;
+  final Map<String, String> animeNotes;
+  final Map<String, String> droppedReasons;
   final DateTime updatedAt;
   final int backupVersion;
   final DateTime? lastBackupAt;
@@ -279,6 +285,8 @@ class AppData {
     Map<String, bool>? watchedMovies,
     Map<String, WishItem>? wishList,
     Map<String, bool>? dropped,
+    Map<String, String>? animeNotes,
+    Map<String, String>? droppedReasons,
     DateTime? updatedAt,
     int? backupVersion,
     DateTime? lastBackupAt,
@@ -288,6 +296,8 @@ class AppData {
     watchedMovies: watchedMovies ?? this.watchedMovies,
     wishList: wishList ?? this.wishList,
     dropped: dropped ?? this.dropped,
+    animeNotes: animeNotes ?? this.animeNotes,
+    droppedReasons: droppedReasons ?? this.droppedReasons,
     updatedAt: updatedAt ?? this.updatedAt,
     backupVersion: backupVersion ?? this.backupVersion,
     lastBackupAt: lastBackupAt ?? this.lastBackupAt,
@@ -303,6 +313,10 @@ class AppData {
         );
     Map<String, bool> boolMapFrom(dynamic value) => (value as Map? ?? const {})
         .map((key, item) => MapEntry('$key', item == true));
+    Map<String, String> stringMapFrom(dynamic value) =>
+        (value as Map? ?? const {}).map(
+          (key, item) => MapEntry('$key', '$item'),
+        );
     Map<String, WishItem> wishMapFrom(dynamic value) =>
         (value as Map? ?? const {}).map(
           (key, item) => MapEntry(
@@ -316,6 +330,8 @@ class AppData {
       watchedMovies: boolMapFrom(json['watchedMovies']),
       wishList: wishMapFrom(json['wishList']),
       dropped: boolMapFrom(json['dropped']),
+      animeNotes: stringMapFrom(json['animeNotes']),
+      droppedReasons: stringMapFrom(json['droppedReasons']),
       updatedAt:
           DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.now(),
@@ -330,6 +346,8 @@ class AppData {
     'watchedMovies': watchedMovies,
     'wishList': wishList.map((key, value) => MapEntry(key, value.toJson())),
     'dropped': dropped,
+    'animeNotes': animeNotes,
+    'droppedReasons': droppedReasons,
     'updatedAt': updatedAt.toIso8601String(),
     'backupVersion': backupVersion,
     'lastBackupAt': lastBackupAt?.toIso8601String(),

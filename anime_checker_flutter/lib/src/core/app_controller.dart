@@ -37,6 +37,24 @@ class BackupSummary {
   final int watched;
 }
 
+class DataDiagnostics {
+  const DataDiagnostics({
+    required this.total,
+    required this.noPoster,
+    required this.noSeason,
+    required this.noGenre,
+    required this.dropped,
+    required this.notes,
+  });
+
+  final int total;
+  final int noPoster;
+  final int noSeason;
+  final int noGenre;
+  final int dropped;
+  final int notes;
+}
+
 class EpisodeTarget {
   const EpisodeTarget({
     required this.anime,
@@ -207,6 +225,17 @@ class AppController extends ChangeNotifier {
     return '최근 $latestSeason기 $latestEpisode화';
   }
 
+  String animeNote(String animeId) => data.animeNotes[animeId]?.trim() ?? '';
+
+  String droppedReason(String animeId) =>
+      data.droppedReasons[animeId]?.trim() ?? '';
+
+  double progressRatio(Anime anime) {
+    final total = totalEpisodeCount(anime);
+    if (total == 0) return 0;
+    return watchedCount(anime) / total;
+  }
+
   Future<void> search(String query) async {
     final keyword = query.trim();
     if (keyword.isEmpty) {
@@ -344,21 +373,54 @@ class AppController extends ChangeNotifier {
     } else {
       dropped.remove(animeId);
     }
-    await _commit(data.copyWith(animeList: list, dropped: dropped));
+    final reasons = Map<String, String>.from(data.droppedReasons);
+    if (!next) reasons.remove(animeId);
+    await _commit(
+      data.copyWith(animeList: list, dropped: dropped, droppedReasons: reasons),
+    );
   }
 
   Future<void> deleteAnime(String animeId) async {
     final list = Map<String, Anime>.from(data.animeList)..remove(animeId);
     final dropped = Map<String, bool>.from(data.dropped)..remove(animeId);
+    final notes = Map<String, String>.from(data.animeNotes)..remove(animeId);
+    final reasons = Map<String, String>.from(data.droppedReasons)
+      ..remove(animeId);
     final watched = Map<String, bool>.from(data.watchedEpisodes)
       ..removeWhere((key, value) => key.startsWith('$animeId:'));
     await _commit(
       data.copyWith(
         animeList: list,
         dropped: dropped,
+        animeNotes: notes,
+        droppedReasons: reasons,
         watchedEpisodes: watched,
       ),
     );
+  }
+
+  Future<void> setAnimeNote(String animeId, String note) async {
+    if (!data.animeList.containsKey(animeId)) return;
+    final notes = Map<String, String>.from(data.animeNotes);
+    final value = note.trim();
+    if (value.isEmpty) {
+      notes.remove(animeId);
+    } else {
+      notes[animeId] = value;
+    }
+    await _commit(data.copyWith(animeNotes: notes));
+  }
+
+  Future<void> setDroppedReason(String animeId, String reason) async {
+    if (!data.animeList.containsKey(animeId)) return;
+    final reasons = Map<String, String>.from(data.droppedReasons);
+    final value = reason.trim();
+    if (value.isEmpty) {
+      reasons.remove(animeId);
+    } else {
+      reasons[animeId] = value;
+    }
+    await _commit(data.copyWith(droppedReasons: reasons));
   }
 
   Future<void> setEpisodeWatched(
@@ -397,6 +459,18 @@ class AppController extends ChangeNotifier {
       watched:
           target.watchedEpisodes.values.where((value) => value).length +
           target.watchedMovies.values.where((value) => value).length,
+    );
+  }
+
+  DataDiagnostics diagnostics() {
+    final items = data.animeList.values;
+    return DataDiagnostics(
+      total: items.length,
+      noPoster: items.where((anime) => anime.posterUrl.trim().isEmpty).length,
+      noSeason: items.where((anime) => anime.seasons.isEmpty).length,
+      noGenre: items.where((anime) => anime.genres.isEmpty).length,
+      dropped: droppedAnime.length,
+      notes: data.animeNotes.length,
     );
   }
 

@@ -11,34 +11,79 @@ import '../detail/detail_screen.dart';
 
 enum LibraryMode { library, dropped }
 
-class LibraryScreen extends ConsumerWidget {
+enum LibrarySort { title, lowProgress, highProgress, completedFirst }
+
+extension _LibrarySortText on LibrarySort {
+  String get label {
+    switch (this) {
+      case LibrarySort.title:
+        return '제목순';
+      case LibrarySort.lowProgress:
+        return '진행 낮은순';
+      case LibrarySort.highProgress:
+        return '진행 높은순';
+      case LibrarySort.completedFirst:
+        return '완료 먼저';
+    }
+  }
+}
+
+class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key, required this.mode});
 
   final LibraryMode mode;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends ConsumerState<LibraryScreen> {
+  LibrarySort sort = LibrarySort.title;
+
+  @override
+  Widget build(BuildContext context) {
     final controller = ref.watch(appControllerProvider);
-    final items = mode == LibraryMode.library
+    final items = widget.mode == LibraryMode.library
         ? controller.libraryAnime
         : controller.droppedAnime;
-    final title = mode == LibraryMode.library ? '보관함' : '보류';
+    final sorted = _sorted(items, controller);
+    final title = widget.mode == LibraryMode.library ? '보관함' : '보류';
     return ListView(
       children: [
         SectionHeader(title: title, meta: '${items.length}개'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: LibrarySort.values.map((value) {
+              return ChoiceChip(
+                label: Text(value.label),
+                selected: sort == value,
+                onSelected: (_) => setState(() => sort = value),
+              );
+            }).toList(),
+          ),
+        ),
         if (items.isEmpty)
           EmptyState(
-            title: mode == LibraryMode.library ? '보관함이 비어 있어요' : '보류한 작품이 없어요',
-            message: mode == LibraryMode.library
+            title: widget.mode == LibraryMode.library
+                ? '보관함이 비어 있어요'
+                : '보류한 작품이 없어요',
+            message: widget.mode == LibraryMode.library
                 ? '검색이나 신작 애니에서 작품을 추가해 보세요.'
                 : '잠깐 멈춘 작품은 여기에서 따로 관리돼요.',
           )
         else
           TwoColumnAnimeGrid(
-            children: items.map((anime) {
+            children: sorted.map((anime) {
+              final reason = controller.droppedReason(anime.id);
               final metaLines = [
-                if (mode == LibraryMode.library && hasUsefulText(anime.weekday))
+                if (widget.mode == LibraryMode.library &&
+                    hasUsefulText(anime.weekday))
                   anime.weekday,
+                if (widget.mode == LibraryMode.dropped && reason.isNotEmpty)
+                  reason,
                 controller.progressLabel(anime),
                 controller.latestWatchLabel(anime),
               ];
@@ -52,7 +97,7 @@ class LibraryScreen extends ConsumerWidget {
                 metaLines: metaLines,
                 actions: [
                   AnimeCardAction(
-                    label: mode == LibraryMode.library ? '보류' : '복귀',
+                    label: widget.mode == LibraryMode.library ? '보류' : '복귀',
                     onPressed: () => controller.toggleDropped(anime.id),
                   ),
                   AnimeCardAction(
@@ -66,6 +111,34 @@ class LibraryScreen extends ConsumerWidget {
           ),
       ],
     );
+  }
+
+  List<Anime> _sorted(List<Anime> items, AppController controller) {
+    final sorted = [...items];
+    switch (sort) {
+      case LibrarySort.title:
+        sorted.sort((a, b) => a.title.compareTo(b.title));
+      case LibrarySort.lowProgress:
+        sorted.sort(
+          (a, b) => controller
+              .progressRatio(a)
+              .compareTo(controller.progressRatio(b)),
+        );
+      case LibrarySort.highProgress:
+        sorted.sort(
+          (a, b) => controller
+              .progressRatio(b)
+              .compareTo(controller.progressRatio(a)),
+        );
+      case LibrarySort.completedFirst:
+        sorted.sort((a, b) {
+          final aDone = controller.progressRatio(a) >= 1;
+          final bDone = controller.progressRatio(b) >= 1;
+          if (aDone != bDone) return aDone ? -1 : 1;
+          return a.title.compareTo(b.title);
+        });
+    }
+    return sorted;
   }
 
   void _showMenu(BuildContext context, AppController controller, Anime anime) {
@@ -87,6 +160,20 @@ class LibraryScreen extends ConsumerWidget {
                 controller.toggleDropped(anime.id);
               },
             ),
+            if (controller.isDropped(anime.id))
+              ListTile(
+                leading: const Icon(Icons.label_outline),
+                title: const Text('보류 사유'),
+                subtitle: Text(
+                  controller.droppedReason(anime.id).isEmpty
+                      ? '사유 없음'
+                      : controller.droppedReason(anime.id),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editDroppedReason(context, controller, anime);
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.delete_outline),
               title: const Text('삭제'),
@@ -122,6 +209,41 @@ class LibraryScreen extends ConsumerWidget {
               controller.deleteAnime(anime.id);
             },
             child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editDroppedReason(
+    BuildContext context,
+    AppController controller,
+    Anime anime,
+  ) {
+    final textController = TextEditingController(
+      text: controller.droppedReason(anime.id),
+    );
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('보류 사유'),
+        content: TextField(
+          controller: textController,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '예: 나중에, 자막 대기'),
+          maxLength: 30,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.setDroppedReason(anime.id, textController.text);
+            },
+            child: const Text('저장'),
           ),
         ],
       ),
