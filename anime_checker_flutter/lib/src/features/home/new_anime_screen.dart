@@ -19,13 +19,21 @@ class NewAnimeScreen extends ConsumerStatefulWidget {
 class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
   int? selectedYear;
   int? selectedMonth;
+  bool initializedFromSettings = false;
 
   @override
   Widget build(BuildContext context) {
     final controller = ref.watch(appControllerProvider);
+    final settings = controller.settings;
     final items = controller.newAnime;
     final years = _years(items);
-    selectedYear ??= years.firstOrNull ?? DateTime.now().year;
+    if (!initializedFromSettings) {
+      selectedYear = settings.newAnimeDefaultYear;
+      selectedMonth = settings.newAnimeDefaultMonth == 0
+          ? null
+          : settings.newAnimeDefaultMonth;
+      initializedFromSettings = true;
+    }
     if (!years.contains(selectedYear)) selectedYear = years.firstOrNull;
     final months = _monthsForYear(items, selectedYear);
     if (selectedMonth != null && !months.contains(selectedMonth)) {
@@ -123,6 +131,7 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                 final wished = controller.isWished(anime.id);
                 return AnimePosterCard.fromAnime(
                   anime: anime,
+                  showImage: settings.showPosterImages,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => DetailScreen.preview(anime: anime),

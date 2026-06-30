@@ -69,6 +69,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 final wished = controller.isWished(anime.id);
                 return AnimePosterCard.fromAnime(
                   anime: anime,
+                  showImage: controller.settings.showPosterImages,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => DetailScreen.preview(anime: anime),

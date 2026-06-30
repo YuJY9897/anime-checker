@@ -3,11 +3,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_controller.dart';
-import '../backup/backup_screen.dart';
 import '../home/main_sections.dart';
 import '../search/search_screen.dart';
 
-enum MainSection { updates, library, dropped, wish, newAnime, schedule, news }
+enum MainSection {
+  updates,
+  library,
+  dropped,
+  wish,
+  newAnime,
+  schedule,
+  news,
+  settings,
+}
 
 extension MainSectionText on MainSection {
   String get label {
@@ -26,6 +34,8 @@ extension MainSectionText on MainSection {
         return '요일 편성표';
       case MainSection.news:
         return '애니 소식';
+      case MainSection.settings:
+        return '환경설정';
     }
   }
 }
@@ -66,13 +76,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
               onPressed: () => Navigator.of(
                 context,
               ).push(MaterialPageRoute(builder: (_) => const SearchScreen())),
-            ),
-            IconButton(
-              tooltip: '백업',
-              icon: const Icon(Icons.save_alt),
-              onPressed: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const BackupScreen())),
             ),
             PopupMenuButton<MainSection>(
               tooltip: '메뉴',

@@ -26,6 +26,21 @@ extension _NewsFilterText on NewsFilter {
     }
   }
 
+  String? get key {
+    switch (this) {
+      case NewsFilter.all:
+        return null;
+      case NewsFilter.newRelease:
+        return 'newRelease';
+      case NewsFilter.season:
+        return 'season';
+      case NewsFilter.movie:
+        return 'movie';
+      case NewsFilter.boxOffice:
+        return 'boxOffice';
+    }
+  }
+
   bool matches(NewsArticle article) {
     final text = '${article.title} ${article.summary}';
     switch (this) {
@@ -56,7 +71,14 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = ref.watch(appControllerProvider);
-    final items = controller.news.where(filter.matches).toList();
+    final enabledNews = controller.news.where((article) {
+      final enabledFilters = NewsFilter.values.where((value) {
+        final key = value.key;
+        return key != null && (controller.settings.newsFilters[key] ?? true);
+      });
+      return enabledFilters.any((value) => value.matches(article));
+    }).toList();
+    final items = enabledNews.where(filter.matches).toList();
     return RefreshIndicator(
       onRefresh: () => controller.refreshNews(),
       child: ListView(
@@ -75,10 +97,16 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
               spacing: 8,
               runSpacing: 8,
               children: NewsFilter.values.map((value) {
+                final key = value.key;
+                final enabled =
+                    key == null ||
+                    (controller.settings.newsFilters[key] ?? true);
                 return ChoiceChip(
                   label: Text(value.label),
                   selected: filter == value,
-                  onSelected: (_) => setState(() => filter = value),
+                  onSelected: enabled
+                      ? (_) => setState(() => filter = value)
+                      : null,
                 );
               }).toList(),
             ),
@@ -100,7 +128,12 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
               child: Column(
                 children: items
-                    .map((article) => _NewsCard(article: article))
+                    .map(
+                      (article) => _NewsCard(
+                        article: article,
+                        showImage: controller.settings.showNewsImages,
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -111,9 +144,10 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
 }
 
 class _NewsCard extends StatelessWidget {
-  const _NewsCard({required this.article});
+  const _NewsCard({required this.article, required this.showImage});
 
   final NewsArticle article;
+  final bool showImage;
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +163,7 @@ class _NewsCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (article.imageUrl.trim().isNotEmpty)
+              if (showImage && article.imageUrl.trim().isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(7),
                   child: Image.network(
@@ -141,7 +175,8 @@ class _NewsCard extends StatelessWidget {
                         const SizedBox.shrink(),
                   ),
                 ),
-              if (article.imageUrl.trim().isNotEmpty) const SizedBox(width: 12),
+              if (showImage && article.imageUrl.trim().isNotEmpty)
+                const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

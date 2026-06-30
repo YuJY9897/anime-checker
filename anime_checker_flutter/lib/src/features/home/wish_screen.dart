@@ -30,6 +30,7 @@ class WishScreen extends ConsumerWidget {
                 posterUrl: item.posterUrl,
                 genres: item.genres,
                 metaLines: [formatNewAnimeAirDate(item.firstAirDate)],
+                showImage: controller.settings.showPosterImages,
                 onTap: () => controller.addWishToLibrary(item),
                 actions: [
                   AnimeCardAction(

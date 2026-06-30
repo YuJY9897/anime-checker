@@ -85,6 +85,8 @@ class AppController extends ChangeNotifier {
 
   bool get apiConfigured => _apiClient.isConfigured;
 
+  AppSettings get settings => data.settings;
+
   Future<void> load() async {
     busy = true;
     notifyListeners();
@@ -120,6 +122,11 @@ class AppController extends ChangeNotifier {
 
   List<EpisodeTarget> get todayTargets {
     final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final windowDays = settings.newEpisodeWindowDays;
+    final startDate = windowDays <= 0
+        ? todayOnly
+        : todayOnly.subtract(Duration(days: windowDays - 1));
     final targets = <EpisodeTarget>[];
     for (final anime in libraryAnime) {
       EpisodeTarget? nextTarget;
@@ -127,12 +134,10 @@ class AppController extends ChangeNotifier {
         for (final episode in season.episodes) {
           final date = parseDate(episode.airDate);
           if (date == null) continue;
-          final isAired = !DateTime(
-            date.year,
-            date.month,
-            date.day,
-          ).isAfter(DateTime(today.year, today.month, today.day));
-          if (isAired &&
+          final day = DateTime(date.year, date.month, date.day);
+          final isInWindow =
+              !day.isBefore(startDate) && !day.isAfter(todayOnly);
+          if (isInWindow &&
               !isEpisodeWatched(anime.id, season.number, episode.number)) {
             nextTarget = EpisodeTarget(
               anime: anime,
@@ -153,10 +158,13 @@ class AppController extends ChangeNotifier {
   Map<String, List<Anime>> get scheduleByWeekday {
     final map = <String, List<Anime>>{};
     for (final anime in allAnime) {
+      if (isDropped(anime.id) && !settings.includeDroppedInSchedule) continue;
       final storedWeekday = normalizedWeekday(anime.weekday);
       final weekday = storedWeekday.isNotEmpty
           ? storedWeekday
-          : inferredCurrentWeekday(anime);
+          : settings.inferScheduleWeekday
+          ? inferredCurrentWeekday(anime)
+          : '';
       if (weekday.isEmpty) continue;
       if (!isCurrentlyAiring(anime)) continue;
       map.putIfAbsent(weekday, () => []).add(anime);
@@ -179,7 +187,8 @@ class AppController extends ChangeNotifier {
         status.contains('취소');
     if (ended) return false;
     if (status.isNotEmpty) return true;
-    return inferredCurrentWeekday(anime).isNotEmpty;
+    return settings.inferScheduleWeekday &&
+        inferredCurrentWeekday(anime).isNotEmpty;
   }
 
   String normalizedWeekday(String value) {
@@ -470,6 +479,14 @@ class AppController extends ChangeNotifier {
       reasons[animeId] = value;
     }
     await _commit(data.copyWith(droppedReasons: reasons));
+  }
+
+  Future<void> updateSettings(AppSettings settings) async {
+    await _commit(data.copyWith(settings: settings));
+  }
+
+  Future<void> resetAllData() async {
+    await _commit(AppData.empty().copyWith(settings: settings));
   }
 
   Future<void> setEpisodeWatched(

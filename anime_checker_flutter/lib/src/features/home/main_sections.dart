@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../news/news_screen.dart';
+import '../settings/settings_screen.dart';
 import '../shell/shell_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
@@ -30,6 +31,8 @@ class MainSectionBody extends StatelessWidget {
         return const ScheduleScreen();
       case MainSection.news:
         return const NewsScreen();
+      case MainSection.settings:
+        return const SettingsScreen();
     }
   }
 }

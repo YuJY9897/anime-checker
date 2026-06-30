@@ -130,6 +130,8 @@ void main() {
 
     expect(data.animeNotes, isEmpty);
     expect(data.droppedReasons, isEmpty);
+    expect(data.settings.showPosterImages, isTrue);
+    expect(data.settings.newEpisodeWindowDays, 14);
   });
 
   test('today targets show each anime only once', () async {
@@ -142,6 +144,56 @@ void main() {
         .toList();
 
     expect(targetIds.toSet().length, targetIds.length);
+  });
+
+  test('today target window hides old unwatched episodes', () async {
+    final today = DateTime.now();
+    final old = today.subtract(const Duration(days: 30));
+    final current = today.subtract(const Duration(days: 3));
+    String iso(DateTime date) =>
+        '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+    final anime = Anime(
+      id: 'window',
+      title: '기간 테스트',
+      originalTitle: '',
+      posterUrl: '',
+      genres: const ['드라마'],
+      status: 'Returning Series',
+      weekday: '',
+      firstAirDate: iso(old),
+      seasons: [
+        AnimeSeason(
+          number: 1,
+          name: '1기',
+          subtitle: '',
+          posterUrl: '',
+          episodes: [
+            Episode(number: 1, title: '오래된 화', airDate: iso(old)),
+            Episode(number: 2, title: '최근 화', airDate: iso(current)),
+          ],
+        ),
+      ],
+      movies: const [],
+      dropped: false,
+    );
+    final repo = FakeRepository()
+      ..saved = AppData.empty().copyWith(
+        animeList: {'window': anime},
+        settings: AppSettings.defaults().copyWith(newEpisodeWindowDays: 14),
+        watchedEpisodes: {'window:s1:e1': true},
+      );
+    final controller = AppController(repo, FakeApiClient());
+    await controller.load();
+
+    expect(controller.todayTargets.single.episode.number, 2);
+
+    await controller.updateSettings(
+      controller.settings.copyWith(newEpisodeWindowDays: 0),
+    );
+
+    expect(controller.todayTargets, isEmpty);
   });
 
   test(
@@ -185,6 +237,12 @@ void main() {
 
       expect(tuesday.map((anime) => anime.id), contains('airing'));
       expect(tuesday.map((anime) => anime.id), isNot(contains('ended')));
+
+      await controller.updateSettings(
+        controller.settings.copyWith(includeDroppedInSchedule: false),
+      );
+
+      expect(controller.scheduleByWeekday['화요일'] ?? const [], isEmpty);
     },
   );
 

@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
+import '../../core/external_links.dart';
 import '../../core/models.dart';
 import 'news_webview_screen.dart';
 
-class NewsDetailScreen extends StatelessWidget {
+class NewsDetailScreen extends ConsumerWidget {
   const NewsDetailScreen({super.key, required this.article});
 
   final NewsArticle article;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(appControllerProvider).settings;
     return Scaffold(
       appBar: AppBar(title: const Text('뉴스 상세')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          if (article.imageUrl.trim().isNotEmpty)
+          if (settings.showNewsImages && article.imageUrl.trim().isNotEmpty)
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
@@ -26,7 +30,8 @@ class NewsDetailScreen extends StatelessWidget {
                     const SizedBox.shrink(),
               ),
             ),
-          if (article.imageUrl.trim().isNotEmpty) const SizedBox(height: 14),
+          if (settings.showNewsImages && article.imageUrl.trim().isNotEmpty)
+            const SizedBox(height: 14),
           Text(
             article.title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -53,14 +58,20 @@ class NewsDetailScreen extends StatelessWidget {
             icon: const Icon(Icons.open_in_browser),
             onPressed: article.url.trim().isEmpty
                 ? null
-                : () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => NewsWebViewScreen(
-                        url: article.url,
-                        title: article.source,
-                      ),
-                    ),
-                  ),
+                : () {
+                    if (settings.openNewsInsideApp) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => NewsWebViewScreen(
+                            url: article.url,
+                            title: article.source,
+                          ),
+                        ),
+                      );
+                    } else {
+                      ExternalLinks.open(article.url);
+                    }
+                  },
             label: const Text('원문 보기'),
           ),
         ],

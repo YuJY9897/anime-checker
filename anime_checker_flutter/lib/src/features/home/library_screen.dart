@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_controller.dart';
+import '../../core/date_text.dart';
 import '../../core/genre_text.dart';
 import '../../core/models.dart';
 import '../../widgets/anime_card.dart';
@@ -11,13 +12,21 @@ import '../detail/detail_screen.dart';
 
 enum LibraryMode { library, dropped }
 
-enum LibrarySort { title, lowProgress, highProgress, completedFirst }
+enum LibrarySort {
+  title,
+  recentAirDate,
+  lowProgress,
+  highProgress,
+  completedFirst,
+}
 
-extension _LibrarySortText on LibrarySort {
+extension LibrarySortText on LibrarySort {
   String get label {
     switch (this) {
       case LibrarySort.title:
         return '제목순';
+      case LibrarySort.recentAirDate:
+        return '최근 방영일순';
       case LibrarySort.lowProgress:
         return '진행 낮은순';
       case LibrarySort.highProgress:
@@ -26,28 +35,44 @@ extension _LibrarySortText on LibrarySort {
         return '완료 먼저';
     }
   }
+
+  String get key {
+    switch (this) {
+      case LibrarySort.title:
+        return 'title';
+      case LibrarySort.recentAirDate:
+        return 'recentAirDate';
+      case LibrarySort.lowProgress:
+        return 'lowProgress';
+      case LibrarySort.highProgress:
+        return 'highProgress';
+      case LibrarySort.completedFirst:
+        return 'completedFirst';
+    }
+  }
+
+  static LibrarySort fromKey(String key) {
+    for (final value in LibrarySort.values) {
+      if (value.key == key) return value;
+    }
+    return LibrarySort.title;
+  }
 }
 
-class LibraryScreen extends ConsumerStatefulWidget {
+class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key, required this.mode});
 
   final LibraryMode mode;
 
   @override
-  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
-}
-
-class _LibraryScreenState extends ConsumerState<LibraryScreen> {
-  LibrarySort sort = LibrarySort.title;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(appControllerProvider);
-    final items = widget.mode == LibraryMode.library
+    final sort = LibrarySortText.fromKey(controller.settings.librarySort);
+    final items = mode == LibraryMode.library
         ? controller.libraryAnime
         : controller.droppedAnime;
     final sorted = _sorted(items, controller);
-    final title = widget.mode == LibraryMode.library ? '보관함' : '보류';
+    final title = mode == LibraryMode.library ? '보관함' : '보류';
     return ListView(
       children: [
         SectionHeader(title: title, meta: '${items.length}개'),
@@ -60,17 +85,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               return ChoiceChip(
                 label: Text(value.label),
                 selected: sort == value,
-                onSelected: (_) => setState(() => sort = value),
+                onSelected: (_) => controller.updateSettings(
+                  controller.settings.copyWith(librarySort: value.key),
+                ),
               );
             }).toList(),
           ),
         ),
         if (items.isEmpty)
           EmptyState(
-            title: widget.mode == LibraryMode.library
-                ? '보관함이 비어 있어요'
-                : '보류한 작품이 없어요',
-            message: widget.mode == LibraryMode.library
+            title: mode == LibraryMode.library ? '보관함이 비어 있어요' : '보류한 작품이 없어요',
+            message: mode == LibraryMode.library
                 ? '검색이나 신작 애니에서 작품을 추가해 보세요.'
                 : '잠깐 멈춘 작품은 여기에서 따로 관리돼요.',
           )
@@ -79,16 +104,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             children: sorted.map((anime) {
               final reason = controller.droppedReason(anime.id);
               final metaLines = [
-                if (widget.mode == LibraryMode.library &&
-                    hasUsefulText(anime.weekday))
+                if (mode == LibraryMode.library && hasUsefulText(anime.weekday))
                   anime.weekday,
-                if (widget.mode == LibraryMode.dropped && reason.isNotEmpty)
-                  reason,
+                if (mode == LibraryMode.dropped && reason.isNotEmpty) reason,
                 controller.progressLabel(anime),
                 controller.latestWatchLabel(anime),
               ];
               return AnimePosterCard.fromAnime(
                 anime: anime,
+                showImage: controller.settings.showPosterImages,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => DetailScreen(animeId: anime.id),
@@ -97,7 +121,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 metaLines: metaLines,
                 actions: [
                   AnimeCardAction(
-                    label: widget.mode == LibraryMode.library ? '보류' : '복귀',
+                    label: mode == LibraryMode.library ? '보류' : '복귀',
                     onPressed: () => controller.toggleDropped(anime.id),
                   ),
                   AnimeCardAction(
@@ -115,9 +139,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   List<Anime> _sorted(List<Anime> items, AppController controller) {
     final sorted = [...items];
+    final sort = LibrarySortText.fromKey(controller.settings.librarySort);
     switch (sort) {
       case LibrarySort.title:
         sorted.sort((a, b) => a.title.compareTo(b.title));
+      case LibrarySort.recentAirDate:
+        sorted.sort((a, b) => _latestAirDate(b).compareTo(_latestAirDate(a)));
       case LibrarySort.lowProgress:
         sorted.sort(
           (a, b) => controller
@@ -139,6 +166,21 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         });
     }
     return sorted;
+  }
+
+  DateTime _latestAirDate(Anime anime) {
+    DateTime latest = DateTime(0);
+    for (final season in anime.seasons) {
+      for (final episode in season.episodes) {
+        final date = parseDate(episode.airDate);
+        if (date != null && date.isAfter(latest)) latest = date;
+      }
+    }
+    final firstAirDate = parseDate(anime.firstAirDate);
+    if (firstAirDate != null && firstAirDate.isAfter(latest)) {
+      latest = firstAirDate;
+    }
+    return latest;
   }
 
   void _showMenu(BuildContext context, AppController controller, Anime anime) {

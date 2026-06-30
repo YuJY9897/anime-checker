@@ -24,6 +24,7 @@ class AnimePosterCard extends StatefulWidget {
     this.genres = const [],
     this.metaLines = const [],
     this.actions = const [],
+    this.showImage = true,
     this.onLongPress,
   });
 
@@ -33,6 +34,7 @@ class AnimePosterCard extends StatefulWidget {
     required VoidCallback onTap,
     List<String> metaLines = const [],
     List<AnimeCardAction> actions = const [],
+    bool showImage = true,
     VoidCallback? onLongPress,
   }) {
     return AnimePosterCard(
@@ -42,6 +44,7 @@ class AnimePosterCard extends StatefulWidget {
       genres: anime.genres,
       metaLines: metaLines,
       actions: actions,
+      showImage: showImage,
       onTap: onTap,
       onLongPress: onLongPress,
     );
@@ -52,6 +55,7 @@ class AnimePosterCard extends StatefulWidget {
   final List<String> genres;
   final List<String> metaLines;
   final List<AnimeCardAction> actions;
+  final bool showImage;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -65,7 +69,8 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final hasImage = widget.posterUrl.trim().isNotEmpty && !imageFailed;
+    final hasImage =
+        widget.showImage && widget.posterUrl.trim().isNotEmpty && !imageFailed;
     final genres = visibleGenres(widget.genres);
     return Card(
       clipBehavior: Clip.antiAlias,

@@ -30,6 +30,7 @@ class HomeScreen extends ConsumerWidget {
               children: targets.map((target) {
                 return AnimePosterCard.fromAnime(
                   anime: target.anime,
+                  showImage: controller.settings.showPosterImages,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => DetailScreen(animeId: target.anime.id),
