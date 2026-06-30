@@ -17,21 +17,27 @@ class NewAnimeScreen extends ConsumerStatefulWidget {
 }
 
 class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
-  String selectedMonth = '전체';
+  int? selectedYear;
+  int? selectedMonth;
 
   @override
   Widget build(BuildContext context) {
     final controller = ref.watch(appControllerProvider);
     final items = controller.newAnime;
-    final months = _months(items);
-    if (selectedMonth != '전체' && !months.contains(selectedMonth)) {
-      selectedMonth = '전체';
+    final years = _years(items);
+    selectedYear ??= years.firstOrNull ?? DateTime.now().year;
+    if (!years.contains(selectedYear)) selectedYear = years.firstOrNull;
+    final months = _monthsForYear(items, selectedYear);
+    if (selectedMonth != null && !months.contains(selectedMonth)) {
+      selectedMonth = null;
     }
-    final filtered = selectedMonth == '전체'
-        ? items
-        : items
-              .where((anime) => _monthKey(anime.firstAirDate) == selectedMonth)
-              .toList();
+    final filtered = items.where((anime) {
+      final date = parseDate(anime.firstAirDate);
+      if (date == null) return false;
+      if (selectedYear != null && date.year != selectedYear) return false;
+      if (selectedMonth != null && date.month != selectedMonth) return false;
+      return true;
+    }).toList();
     return RefreshIndicator(
       onRefresh: () => controller.refreshNewAnime(),
       child: ListView(
@@ -44,19 +50,60 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
               icon: const Icon(Icons.refresh),
             ),
           ),
-          if (months.isNotEmpty)
+          if (years.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: ['전체', ...months].map((month) {
-                  return ChoiceChip(
-                    label: Text(month),
-                    selected: selectedMonth == month,
-                    onSelected: (_) => setState(() => selectedMonth = month),
-                  );
-                }).toList(),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: selectedYear,
+                      decoration: const InputDecoration(
+                        labelText: '년도',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: years
+                          .map(
+                            (year) => DropdownMenuItem(
+                              value: year,
+                              child: Text('$year년'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) => setState(() {
+                        selectedYear = value;
+                        selectedMonth = null;
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: DropdownButtonFormField<int?>(
+                      initialValue: selectedMonth,
+                      decoration: const InputDecoration(
+                        labelText: '월',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('전체'),
+                        ),
+                        ...months.map(
+                          (month) => DropdownMenuItem<int?>(
+                            value: month,
+                            child: Text('$month월'),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) => setState(() {
+                        selectedMonth = value;
+                      }),
+                    ),
+                  ),
+                ],
               ),
             ),
           if (items.isEmpty)
@@ -107,28 +154,27 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
     );
   }
 
-  List<String> _months(List<Anime> items) {
+  List<int> _years(List<Anime> items) {
+    final now = DateTime.now();
+    final years = {
+      now.year,
+      ...items.map((anime) => parseDate(anime.firstAirDate)?.year).nonNulls,
+    }.toList()..sort((a, b) => b.compareTo(a));
+    return years;
+  }
+
+  List<int> _monthsForYear(List<Anime> items, int? year) {
+    if (year == null) return const [];
+    final now = DateTime.now();
+    final monthLimit = year == now.year ? now.month : 12;
     final months = {
-      ..._monthsFromYearStart(),
+      for (var month = 1; month <= monthLimit; month += 1) month,
       ...items
-          .map((anime) => _monthKey(anime.firstAirDate))
-          .where((month) => month.isNotEmpty),
+          .map((anime) => parseDate(anime.firstAirDate))
+          .where((date) => date?.year == year)
+          .map((date) => date!.month),
     }.toList()..sort((a, b) => b.compareTo(a));
     return months;
-  }
-
-  List<String> _monthsFromYearStart() {
-    final now = DateTime.now();
-    return [
-      for (var month = 1; month <= now.month; month += 1)
-        '${now.year}.${month.toString().padLeft(2, '0')}',
-    ];
-  }
-
-  String _monthKey(String value) {
-    final date = parseDate(value);
-    if (date == null) return '';
-    return '${date.year}.${date.month.toString().padLeft(2, '0')}';
   }
 
   void _showMenu(BuildContext context, AppController controller, Anime anime) {

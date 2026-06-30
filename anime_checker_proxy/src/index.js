@@ -71,8 +71,10 @@ async function newAnime(env, region, until) {
   const months = monthsFromYearStart(today);
   const seen = new Set();
   const items = [];
-  for (const month of months) {
-    const monthItems = await newAnimeForMonth(env, region, month.start, month.end);
+  const monthGroups = await Promise.all(
+    months.map((month) => newAnimeForMonth(env, region, month.start, month.end)),
+  );
+  for (const monthItems of monthGroups) {
     for (const item of monthItems) {
       const id = animeItemId(item);
       if (seen.has(id)) continue;
@@ -81,19 +83,21 @@ async function newAnime(env, region, until) {
     }
   }
   return items
-    .filter((item) => (item.name || item.title) && animeItemDate(item) && isAnimeTv(item))
+    .filter((item) => hasKorean(animeItemTitle(item)) && animeItemDate(item) && isAnimeTv(item))
     .sort((a, b) => animeItemDate(b).localeCompare(animeItemDate(a)))
     .slice(0, 160)
     .map(toAnime);
 }
 
 async function newAnimeForMonth(env, region, start, end) {
-  const providerItems = await discoverNewAnime(env, start, end, {
-    watch_region: region,
-    with_watch_monetization_types: 'flatrate|ads|free',
-  });
-  const broadItems = await discoverNewAnime(env, start, end, {});
-  const movies = await discoverNewAnimeMovies(env, start, end);
+  const [providerItems, broadItems, movies] = await Promise.all([
+    discoverNewAnime(env, start, end, {
+      watch_region: region,
+      with_watch_monetization_types: 'flatrate|ads|free',
+    }),
+    discoverNewAnime(env, start, end, {}),
+    discoverNewAnimeMovies(env, start, end),
+  ]);
   return [...providerItems, ...broadItems, ...movies];
 }
 
@@ -239,7 +243,7 @@ async function proxyImage(rawUrl) {
 function toAnime(item) {
   return {
     id: animeItemId(item),
-    title: item.name || item.title || '',
+    title: animeItemTitle(item),
     originalTitle: item.original_name || item.original_title || '',
     posterUrl: poster(item.poster_path),
     genres: genreNames(item.genre_ids, item.genres),
@@ -250,6 +254,10 @@ function toAnime(item) {
     movies: [],
     dropped: false,
   };
+}
+
+function animeItemTitle(item) {
+  return item.name || item.title || '';
 }
 
 function animeItemId(item) {
