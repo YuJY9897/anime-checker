@@ -101,6 +101,7 @@ class LibraryScreen extends ConsumerWidget {
           )
         else
           TwoColumnAnimeGrid(
+            compact: !controller.settings.showPosterImages,
             children: sorted.map((anime) {
               final reason = controller.droppedReason(anime.id);
               final metaLines = [

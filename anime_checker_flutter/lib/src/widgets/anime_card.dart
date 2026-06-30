@@ -189,9 +189,14 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
 }
 
 class TwoColumnAnimeGrid extends StatelessWidget {
-  const TwoColumnAnimeGrid({super.key, required this.children});
+  const TwoColumnAnimeGrid({
+    super.key,
+    required this.children,
+    this.compact = false,
+  });
 
   final List<Widget> children;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +206,7 @@ class TwoColumnAnimeGrid extends StatelessWidget {
         const spacing = 10.0;
         final cardWidth =
             (constraints.maxWidth - horizontalPadding - spacing) / 2;
-        final cardHeight = cardWidth * 2.78;
+        final cardHeight = cardWidth * (compact ? 1.86 : 2.78);
         return GridView.count(
           crossAxisCount: 2,
           crossAxisSpacing: spacing,

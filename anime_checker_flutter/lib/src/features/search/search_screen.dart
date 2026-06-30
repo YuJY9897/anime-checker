@@ -64,6 +64,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             )
           else
             TwoColumnAnimeGrid(
+              compact: !controller.settings.showPosterImages,
               children: controller.searchResults.map((anime) {
                 final inLibrary = controller.isInLibrary(anime.id);
                 final wished = controller.isWished(anime.id);

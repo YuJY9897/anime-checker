@@ -27,6 +27,7 @@ class HomeScreen extends ConsumerWidget {
             )
           else
             TwoColumnAnimeGrid(
+              compact: !controller.settings.showPosterImages,
               children: targets.map((target) {
                 return AnimePosterCard.fromAnime(
                   anime: target.anime,

@@ -123,10 +123,7 @@ class AppController extends ChangeNotifier {
   List<EpisodeTarget> get todayTargets {
     final today = DateTime.now();
     final todayOnly = DateTime(today.year, today.month, today.day);
-    final windowDays = settings.newEpisodeWindowDays;
-    final startDate = windowDays <= 0
-        ? todayOnly
-        : todayOnly.subtract(Duration(days: windowDays - 1));
+    final startDate = todayOnly.subtract(const Duration(days: 13));
     final targets = <EpisodeTarget>[];
     for (final anime in libraryAnime) {
       EpisodeTarget? nextTarget;

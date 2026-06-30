@@ -72,65 +72,6 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ),
         _SettingsGroup(
-          title: '새 화 설정',
-          children: [
-            _SegmentRow<int>(
-              label: '새 화 기준',
-              value: settings.newEpisodeWindowDays,
-              items: const {0: '오늘만', 7: '7일', 14: '14일'},
-              onChanged: (value) => controller.updateSettings(
-                settings.copyWith(newEpisodeWindowDays: value),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const _StaticRow(label: '보류 작품 숨김', value: '항상 켜짐'),
-          ],
-        ),
-        _SettingsGroup(
-          title: '신작 애니 설정',
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _DropdownRow<int>(
-                    label: '기본 년도',
-                    value: settings.newAnimeDefaultYear,
-                    items: _yearItems(),
-                    onChanged: (value) => controller.updateSettings(
-                      settings.copyWith(newAnimeDefaultYear: value),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _DropdownRow<int>(
-                    label: '기본 월',
-                    value: settings.newAnimeDefaultMonth,
-                    items: const {
-                      0: '전체',
-                      1: '1월',
-                      2: '2월',
-                      3: '3월',
-                      4: '4월',
-                      5: '5월',
-                      6: '6월',
-                      7: '7월',
-                      8: '8월',
-                      9: '9월',
-                      10: '10월',
-                      11: '11월',
-                      12: '12월',
-                    },
-                    onChanged: (value) => controller.updateSettings(
-                      settings.copyWith(newAnimeDefaultMonth: value),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        _SettingsGroup(
           title: '요일 편성표 설정',
           children: [
             _SwitchRow(
@@ -147,7 +88,6 @@ class SettingsScreen extends ConsumerWidget {
                 settings.copyWith(inferScheduleWeekday: value),
               ),
             ),
-            const _StaticRow(label: '방영 종료 숨김', value: '항상 켜짐'),
           ],
         ),
         _SettingsGroup(
@@ -167,39 +107,6 @@ class SettingsScreen extends ConsumerWidget {
                 settings.copyWith(openNewsInsideApp: value),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '뉴스 주제',
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children:
-                  const {
-                    'newRelease': '신작',
-                    'season': '시즌',
-                    'movie': '극장판',
-                    'boxOffice': '흥행/순위',
-                  }.entries.map((entry) {
-                    final selected = settings.newsFilters[entry.key] ?? true;
-                    return FilterChip(
-                      label: Text(entry.value),
-                      selected: selected,
-                      onSelected: (value) {
-                        final filters = Map<String, bool>.from(
-                          settings.newsFilters,
-                        )..[entry.key] = value;
-                        controller.updateSettings(
-                          settings.copyWith(newsFilters: filters),
-                        );
-                      },
-                    );
-                  }).toList(),
-            ),
           ],
         ),
         _SettingsGroup(
@@ -217,13 +124,6 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  Map<int, String> _yearItems() {
-    final now = DateTime.now().year;
-    return {
-      for (var year = now + 1; year >= now - 3; year -= 1) year: '$year년',
-    };
   }
 
   void _confirmReset(BuildContext context, AppController controller) {
@@ -299,43 +199,6 @@ class _SwitchRow extends StatelessWidget {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
       value: value,
       onChanged: onChanged,
-    );
-  }
-}
-
-class _SegmentRow<T> extends StatelessWidget {
-  const _SegmentRow({
-    required this.label,
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  final String label;
-  final T value;
-  final Map<T, String> items;
-  final ValueChanged<T> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
-        SegmentedButton<T>(
-          segments: items.entries
-              .map(
-                (entry) => ButtonSegment<T>(
-                  value: entry.key,
-                  label: Text(entry.value),
-                ),
-              )
-              .toList(),
-          selected: {value},
-          onSelectionChanged: (values) => onChanged(values.first),
-        ),
-      ],
     );
   }
 }

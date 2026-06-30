@@ -243,65 +243,40 @@ class NewsArticle {
 
 class AppSettings {
   const AppSettings({
-    required this.newEpisodeWindowDays,
-    required this.newAnimeDefaultYear,
-    required this.newAnimeDefaultMonth,
     required this.librarySort,
     required this.showPosterImages,
     required this.includeDroppedInSchedule,
     required this.inferScheduleWeekday,
     required this.showNewsImages,
     required this.openNewsInsideApp,
-    required this.newsFilters,
   });
 
   factory AppSettings.defaults() {
-    final now = DateTime.now();
     return AppSettings(
-      newEpisodeWindowDays: 14,
-      newAnimeDefaultYear: now.year,
-      newAnimeDefaultMonth: now.month,
       librarySort: 'title',
       showPosterImages: true,
       includeDroppedInSchedule: true,
       inferScheduleWeekday: true,
       showNewsImages: true,
       openNewsInsideApp: true,
-      newsFilters: const {
-        'newRelease': true,
-        'season': true,
-        'movie': true,
-        'boxOffice': true,
-      },
     );
   }
 
-  final int newEpisodeWindowDays;
-  final int newAnimeDefaultYear;
-  final int newAnimeDefaultMonth;
   final String librarySort;
   final bool showPosterImages;
   final bool includeDroppedInSchedule;
   final bool inferScheduleWeekday;
   final bool showNewsImages;
   final bool openNewsInsideApp;
-  final Map<String, bool> newsFilters;
 
   AppSettings copyWith({
-    int? newEpisodeWindowDays,
-    int? newAnimeDefaultYear,
-    int? newAnimeDefaultMonth,
     String? librarySort,
     bool? showPosterImages,
     bool? includeDroppedInSchedule,
     bool? inferScheduleWeekday,
     bool? showNewsImages,
     bool? openNewsInsideApp,
-    Map<String, bool>? newsFilters,
   }) => AppSettings(
-    newEpisodeWindowDays: newEpisodeWindowDays ?? this.newEpisodeWindowDays,
-    newAnimeDefaultYear: newAnimeDefaultYear ?? this.newAnimeDefaultYear,
-    newAnimeDefaultMonth: newAnimeDefaultMonth ?? this.newAnimeDefaultMonth,
     librarySort: librarySort ?? this.librarySort,
     showPosterImages: showPosterImages ?? this.showPosterImages,
     includeDroppedInSchedule:
@@ -309,29 +284,12 @@ class AppSettings {
     inferScheduleWeekday: inferScheduleWeekday ?? this.inferScheduleWeekday,
     showNewsImages: showNewsImages ?? this.showNewsImages,
     openNewsInsideApp: openNewsInsideApp ?? this.openNewsInsideApp,
-    newsFilters: newsFilters ?? this.newsFilters,
   );
 
   factory AppSettings.fromJson(Map<String, dynamic>? json) {
     final defaults = AppSettings.defaults();
     if (json == null) return defaults;
-    Map<String, bool> filtersFrom(dynamic value) {
-      final raw = (value as Map? ?? const {}).map(
-        (key, item) => MapEntry('$key', item == true),
-      );
-      return {...defaults.newsFilters, ...raw};
-    }
-
     return defaults.copyWith(
-      newEpisodeWindowDays:
-          (json['newEpisodeWindowDays'] as num?)?.toInt() ??
-          defaults.newEpisodeWindowDays,
-      newAnimeDefaultYear:
-          (json['newAnimeDefaultYear'] as num?)?.toInt() ??
-          defaults.newAnimeDefaultYear,
-      newAnimeDefaultMonth:
-          (json['newAnimeDefaultMonth'] as num?)?.toInt() ??
-          defaults.newAnimeDefaultMonth,
       librarySort: json['librarySort'] as String? ?? defaults.librarySort,
       showPosterImages:
           json['showPosterImages'] as bool? ?? defaults.showPosterImages,
@@ -345,21 +303,16 @@ class AppSettings {
           json['showNewsImages'] as bool? ?? defaults.showNewsImages,
       openNewsInsideApp:
           json['openNewsInsideApp'] as bool? ?? defaults.openNewsInsideApp,
-      newsFilters: filtersFrom(json['newsFilters']),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'newEpisodeWindowDays': newEpisodeWindowDays,
-    'newAnimeDefaultYear': newAnimeDefaultYear,
-    'newAnimeDefaultMonth': newAnimeDefaultMonth,
     'librarySort': librarySort,
     'showPosterImages': showPosterImages,
     'includeDroppedInSchedule': includeDroppedInSchedule,
     'inferScheduleWeekday': inferScheduleWeekday,
     'showNewsImages': showNewsImages,
     'openNewsInsideApp': openNewsInsideApp,
-    'newsFilters': newsFilters,
   };
 }
 

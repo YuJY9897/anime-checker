@@ -131,7 +131,6 @@ void main() {
     expect(data.animeNotes, isEmpty);
     expect(data.droppedReasons, isEmpty);
     expect(data.settings.showPosterImages, isTrue);
-    expect(data.settings.newEpisodeWindowDays, 14);
   });
 
   test('today targets show each anime only once', () async {
@@ -181,19 +180,12 @@ void main() {
     final repo = FakeRepository()
       ..saved = AppData.empty().copyWith(
         animeList: {'window': anime},
-        settings: AppSettings.defaults().copyWith(newEpisodeWindowDays: 14),
         watchedEpisodes: {'window:s1:e1': true},
       );
     final controller = AppController(repo, FakeApiClient());
     await controller.load();
 
     expect(controller.todayTargets.single.episode.number, 2);
-
-    await controller.updateSettings(
-      controller.settings.copyWith(newEpisodeWindowDays: 0),
-    );
-
-    expect(controller.todayTargets, isEmpty);
   });
 
   test(

@@ -24,6 +24,7 @@ class WishScreen extends ConsumerWidget {
           )
         else
           TwoColumnAnimeGrid(
+            compact: !controller.settings.showPosterImages,
             children: items.map((item) {
               return AnimePosterCard(
                 title: item.title,

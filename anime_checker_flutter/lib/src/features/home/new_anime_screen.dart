@@ -28,10 +28,9 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
     final items = controller.newAnime;
     final years = _years(items);
     if (!initializedFromSettings) {
-      selectedYear = settings.newAnimeDefaultYear;
-      selectedMonth = settings.newAnimeDefaultMonth == 0
-          ? null
-          : settings.newAnimeDefaultMonth;
+      final now = DateTime.now();
+      selectedYear = now.year;
+      selectedMonth = now.month;
       initializedFromSettings = true;
     }
     if (!years.contains(selectedYear)) selectedYear = years.firstOrNull;
@@ -126,6 +125,7 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
             )
           else
             TwoColumnAnimeGrid(
+              compact: !settings.showPosterImages,
               children: filtered.map((anime) {
                 final inLibrary = controller.isInLibrary(anime.id);
                 final wished = controller.isWished(anime.id);

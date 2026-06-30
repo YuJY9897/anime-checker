@@ -26,21 +26,6 @@ extension _NewsFilterText on NewsFilter {
     }
   }
 
-  String? get key {
-    switch (this) {
-      case NewsFilter.all:
-        return null;
-      case NewsFilter.newRelease:
-        return 'newRelease';
-      case NewsFilter.season:
-        return 'season';
-      case NewsFilter.movie:
-        return 'movie';
-      case NewsFilter.boxOffice:
-        return 'boxOffice';
-    }
-  }
-
   bool matches(NewsArticle article) {
     final text = '${article.title} ${article.summary}';
     switch (this) {
@@ -71,14 +56,7 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = ref.watch(appControllerProvider);
-    final enabledNews = controller.news.where((article) {
-      final enabledFilters = NewsFilter.values.where((value) {
-        final key = value.key;
-        return key != null && (controller.settings.newsFilters[key] ?? true);
-      });
-      return enabledFilters.any((value) => value.matches(article));
-    }).toList();
-    final items = enabledNews.where(filter.matches).toList();
+    final items = controller.news.where(filter.matches).toList();
     return RefreshIndicator(
       onRefresh: () => controller.refreshNews(),
       child: ListView(
@@ -97,16 +75,10 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
               spacing: 8,
               runSpacing: 8,
               children: NewsFilter.values.map((value) {
-                final key = value.key;
-                final enabled =
-                    key == null ||
-                    (controller.settings.newsFilters[key] ?? true);
                 return ChoiceChip(
                   label: Text(value.label),
                   selected: filter == value,
-                  onSelected: enabled
-                      ? (_) => setState(() => filter = value)
-                      : null,
+                  onSelected: (_) => setState(() => filter = value),
                 );
               }).toList(),
             ),
