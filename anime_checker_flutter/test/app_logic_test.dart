@@ -145,6 +145,50 @@ void main() {
   });
 
   test(
+    'schedule includes airing dropped anime and excludes ended anime',
+    () async {
+      final airing = Anime(
+        id: 'airing',
+        title: '방영중 보류작',
+        originalTitle: '',
+        posterUrl: '',
+        genres: const ['드라마'],
+        status: 'Returning Series',
+        weekday: '매주 화요일',
+        firstAirDate: '2026-04-01',
+        seasons: const [],
+        movies: const [],
+        dropped: false,
+      );
+      final ended = Anime(
+        id: 'ended',
+        title: '완결 작품',
+        originalTitle: '',
+        posterUrl: '',
+        genres: const ['드라마'],
+        status: '방영 종료',
+        weekday: '화요일',
+        firstAirDate: '2025-01-01',
+        seasons: const [],
+        movies: const [],
+        dropped: false,
+      );
+      final repo = FakeRepository()
+        ..saved = AppData.empty().copyWith(
+          animeList: {'airing': airing, 'ended': ended},
+          dropped: {'airing': true},
+        );
+      final controller = AppController(repo, FakeApiClient());
+      await controller.load();
+
+      final tuesday = controller.scheduleByWeekday['화요일'] ?? const [];
+
+      expect(tuesday.map((anime) => anime.id), contains('airing'));
+      expect(tuesday.map((anime) => anime.id), isNot(contains('ended')));
+    },
+  );
+
+  test(
     'search falls back to local library when api is not configured',
     () async {
       final repo = FakeRepository()..saved = sampleAppData();

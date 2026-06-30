@@ -5,6 +5,7 @@ import '../shell/shell_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
 import 'new_anime_screen.dart';
+import 'schedule_screen.dart';
 import 'wish_screen.dart';
 
 class MainSectionBody extends StatelessWidget {
@@ -25,6 +26,8 @@ class MainSectionBody extends StatelessWidget {
         return const WishScreen();
       case MainSection.newAnime:
         return const NewAnimeScreen();
+      case MainSection.schedule:
+        return const ScheduleScreen();
       case MainSection.news:
         return const NewsScreen();
     }

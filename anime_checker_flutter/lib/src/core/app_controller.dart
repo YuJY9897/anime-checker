@@ -152,11 +152,60 @@ class AppController extends ChangeNotifier {
 
   Map<String, List<Anime>> get scheduleByWeekday {
     final map = <String, List<Anime>>{};
-    for (final anime in libraryAnime) {
-      if (anime.weekday.trim().isEmpty) continue;
-      map.putIfAbsent(anime.weekday, () => []).add(anime);
+    for (final anime in allAnime) {
+      final storedWeekday = normalizedWeekday(anime.weekday);
+      final weekday = storedWeekday.isNotEmpty
+          ? storedWeekday
+          : inferredCurrentWeekday(anime);
+      if (weekday.isEmpty) continue;
+      if (!isCurrentlyAiring(anime)) continue;
+      map.putIfAbsent(weekday, () => []).add(anime);
+    }
+    for (final items in map.values) {
+      items.sort((a, b) => a.title.compareTo(b.title));
     }
     return map;
+  }
+
+  bool isCurrentlyAiring(Anime anime) {
+    final status = anime.status.trim().toLowerCase();
+    final ended =
+        status.contains('ended') ||
+        status.contains('canceled') ||
+        status.contains('cancelled') ||
+        status.contains('방영 종료') ||
+        status.contains('완결') ||
+        status.contains('종영') ||
+        status.contains('취소');
+    if (ended) return false;
+    if (status.isNotEmpty) return true;
+    return inferredCurrentWeekday(anime).isNotEmpty;
+  }
+
+  String normalizedWeekday(String value) {
+    const weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
+    final text = value.trim();
+    for (final weekday in weekdays) {
+      if (text.contains(weekday)) return weekday;
+    }
+    return '';
+  }
+
+  String inferredCurrentWeekday(Anime anime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    DateTime? bestDate;
+    for (final season in anime.seasons) {
+      for (final episode in season.episodes) {
+        final date = parseDate(episode.airDate);
+        if (date == null || date.year != today.year) continue;
+        final day = DateTime(date.year, date.month, date.day);
+        if (day.isBefore(today.subtract(const Duration(days: 14)))) continue;
+        if (bestDate == null || day.isBefore(bestDate)) bestDate = day;
+      }
+    }
+    if (bestDate == null) return '';
+    return weekdayLabel(bestDate);
   }
 
   bool isDropped(String animeId) =>

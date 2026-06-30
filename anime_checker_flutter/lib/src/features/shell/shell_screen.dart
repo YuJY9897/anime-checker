@@ -7,7 +7,7 @@ import '../backup/backup_screen.dart';
 import '../home/main_sections.dart';
 import '../search/search_screen.dart';
 
-enum MainSection { updates, library, dropped, wish, newAnime, news }
+enum MainSection { updates, library, dropped, wish, newAnime, schedule, news }
 
 extension MainSectionText on MainSection {
   String get label {
@@ -22,6 +22,8 @@ extension MainSectionText on MainSection {
         return '찜';
       case MainSection.newAnime:
         return '신작 애니';
+      case MainSection.schedule:
+        return '요일 편성표';
       case MainSection.news:
         return '애니 소식';
     }

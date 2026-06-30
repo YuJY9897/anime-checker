@@ -56,8 +56,6 @@ class HomeScreen extends ConsumerWidget {
                 );
               }).toList(),
             ),
-          SectionHeader(title: '요일별 편성표'),
-          _ScheduleList(controller: controller),
           const SizedBox(height: 20),
         ],
       ),
@@ -93,61 +91,6 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ScheduleList extends StatelessWidget {
-  const _ScheduleList({required this.controller});
-
-  final AppController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final schedule = controller.scheduleByWeekday;
-    if (schedule.isEmpty) {
-      return const EmptyState(
-        title: '편성표가 비어 있어요',
-        message: '요일 정보가 있는 작품이 보관함에 추가되면 표시돼요.',
-        icon: Icons.calendar_month_outlined,
-      );
-    }
-    const order = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Column(
-        children: order.where(schedule.containsKey).map((day) {
-          final titles = schedule[day]!.map((anime) => anime.title).join(', ');
-          return Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 54,
-                  child: Text(
-                    day,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    titles,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
       ),
     );
   }
