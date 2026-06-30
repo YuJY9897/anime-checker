@@ -1,10 +1,12 @@
-.streamlit/secrets.toml
 .venv/
 venv/
 anime_check_data.json
 anime_check_data.tmp
 __pycache__/
 *.pyc
-app.py.bak
 anime_checker_proxy/node_modules/
 anime_checker_proxy/.wrangler/
+anime_checker_flutter/build/
+anime_checker_flutter/.dart_tool/
+anime_checker_flutter/.flutter-plugins
+anime_checker_flutter/.flutter-plugins-dependencies
