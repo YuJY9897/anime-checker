@@ -71,6 +71,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
     final colors = Theme.of(context).colorScheme;
     final hasImage =
         widget.showImage && widget.posterUrl.trim().isNotEmpty && !imageFailed;
+    final compact = !hasImage;
     final genres = visibleGenres(widget.genres);
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -113,23 +114,24 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                     ),
                     if (genres.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 6),
+                        padding: EdgeInsets.only(top: compact ? 4 : 6),
                         child: Text(
-                          genres.take(3).join(' · '),
-                          maxLines: 2,
+                          genres.take(compact ? 2 : 3).join(' · '),
+                          maxLines: compact ? 1 : 2,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(color: colors.tertiary, height: 1.24),
                         ),
                       ),
-                    for (final line in widget.metaLines.where(
-                      (line) => line.trim().isNotEmpty,
-                    ))
+                    for (final line
+                        in widget.metaLines
+                            .where((line) => line.trim().isNotEmpty)
+                            .take(compact ? 2 : widget.metaLines.length))
                       Padding(
-                        padding: const EdgeInsets.only(top: 5),
+                        padding: EdgeInsets.only(top: compact ? 4 : 5),
                         child: Text(
                           line,
-                          maxLines: 2,
+                          maxLines: compact ? 1 : 2,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
@@ -140,10 +142,10 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                       ),
                     const Spacer(),
                     if (widget.actions.isNotEmpty) ...[
-                      const SizedBox(height: 9),
+                      SizedBox(height: compact ? 7 : 9),
                       Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
+                        spacing: compact ? 5 : 6,
+                        runSpacing: compact ? 5 : 6,
                         children: widget.actions.map((action) {
                           final child = Text(
                             action.label,
@@ -154,10 +156,16 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                             return FilledButton(
                               onPressed: action.onPressed,
                               style: FilledButton.styleFrom(
-                                minimumSize: const Size(0, 30),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
+                                minimumSize: Size(0, compact ? 28 : 30),
+                                visualDensity: compact
+                                    ? VisualDensity.compact
+                                    : VisualDensity.standard,
+                                tapTargetSize: compact
+                                    ? MaterialTapTargetSize.shrinkWrap
+                                    : null,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: compact ? 8 : 10,
+                                  vertical: compact ? 4 : 6,
                                 ),
                               ),
                               child: child,
@@ -166,10 +174,16 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                           return OutlinedButton(
                             onPressed: action.onPressed,
                             style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 30),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 6,
+                              minimumSize: Size(0, compact ? 28 : 30),
+                              visualDensity: compact
+                                  ? VisualDensity.compact
+                                  : VisualDensity.standard,
+                              tapTargetSize: compact
+                                  ? MaterialTapTargetSize.shrinkWrap
+                                  : null,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: compact ? 8 : 9,
+                                vertical: compact ? 4 : 6,
                               ),
                             ),
                             child: child,
@@ -206,7 +220,7 @@ class TwoColumnAnimeGrid extends StatelessWidget {
         const spacing = 10.0;
         final cardWidth =
             (constraints.maxWidth - horizontalPadding - spacing) / 2;
-        final cardHeight = cardWidth * (compact ? 1.12 : 2.78);
+        final cardHeight = cardWidth * (compact ? 1.18 : 2.78);
         return GridView.count(
           crossAxisCount: 2,
           crossAxisSpacing: spacing,

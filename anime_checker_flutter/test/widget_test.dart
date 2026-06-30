@@ -74,4 +74,39 @@ void main() {
 
     expect(compactGap, lessThan(normalGap));
   });
+
+  testWidgets('compact anime card fits text and actions without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TwoColumnAnimeGrid(
+            compact: true,
+            children: List.generate(
+              4,
+              (index) => AnimePosterCard(
+                title: '자동판매기로 다시 태어난 나는 미궁을 방랑한다 $index',
+                posterUrl: '',
+                genres: const ['Action & Adventure', 'Sci-Fi & Fantasy', '코미디'],
+                metaLines: const ['다음 3기 12화', '방영일: 2026.06.17.'],
+                actions: [
+                  AnimeCardAction(label: '보관함 추가', onPressed: () {}),
+                  AnimeCardAction(label: '찜', onPressed: () {}),
+                ],
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
 }
