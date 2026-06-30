@@ -142,54 +142,8 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                       ),
                     const Spacer(),
                     if (widget.actions.isNotEmpty) ...[
-                      SizedBox(height: compact ? 7 : 9),
-                      Wrap(
-                        spacing: compact ? 5 : 6,
-                        runSpacing: compact ? 5 : 6,
-                        children: widget.actions.map((action) {
-                          final child = Text(
-                            action.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          );
-                          if (action.filled) {
-                            return FilledButton(
-                              onPressed: action.onPressed,
-                              style: FilledButton.styleFrom(
-                                minimumSize: Size(0, compact ? 28 : 30),
-                                visualDensity: compact
-                                    ? VisualDensity.compact
-                                    : VisualDensity.standard,
-                                tapTargetSize: compact
-                                    ? MaterialTapTargetSize.shrinkWrap
-                                    : null,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: compact ? 8 : 10,
-                                  vertical: compact ? 4 : 6,
-                                ),
-                              ),
-                              child: child,
-                            );
-                          }
-                          return OutlinedButton(
-                            onPressed: action.onPressed,
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: Size(0, compact ? 28 : 30),
-                              visualDensity: compact
-                                  ? VisualDensity.compact
-                                  : VisualDensity.standard,
-                              tapTargetSize: compact
-                                  ? MaterialTapTargetSize.shrinkWrap
-                                  : null,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: compact ? 8 : 9,
-                                vertical: compact ? 4 : 6,
-                              ),
-                            ),
-                            child: child,
-                          );
-                        }).toList(),
-                      ),
+                      const SizedBox(height: 9),
+                      _ActionButtons(actions: widget.actions),
                     ],
                   ],
                 ),
@@ -220,7 +174,7 @@ class TwoColumnAnimeGrid extends StatelessWidget {
         const spacing = 10.0;
         final cardWidth =
             (constraints.maxWidth - horizontalPadding - spacing) / 2;
-        final cardHeight = cardWidth * (compact ? 1.18 : 2.78);
+        final cardHeight = cardWidth * (compact ? 1.22 : 2.78);
         return GridView.count(
           crossAxisCount: 2,
           crossAxisSpacing: spacing,
@@ -232,6 +186,64 @@ class TwoColumnAnimeGrid extends StatelessWidget {
           children: children,
         );
       },
+    );
+  }
+}
+
+class _ActionButtons extends StatelessWidget {
+  const _ActionButtons({required this.actions});
+
+  final List<AnimeCardAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    if (actions.length <= 2) {
+      return Row(
+        children: [
+          for (var index = 0; index < actions.length; index += 1) ...[
+            if (index > 0) const SizedBox(width: 6),
+            Flexible(child: _ActionButton(action: actions[index])),
+          ],
+        ],
+      );
+    }
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: actions.map((action) => _ActionButton(action: action)).toList(),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({required this.action});
+
+  final AnimeCardAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Text(
+      action.label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+    if (action.filled) {
+      return FilledButton(
+        onPressed: action.onPressed,
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 30),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        ),
+        child: child,
+      );
+    }
+    return OutlinedButton(
+      onPressed: action.onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 30),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      ),
+      child: child,
     );
   }
 }
