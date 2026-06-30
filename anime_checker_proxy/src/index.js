@@ -17,7 +17,9 @@ export default {
     try {
       if (url.pathname === '/search') return json(await searchAnime(env, url.searchParams.get('q') || ''));
       if (url.pathname.startsWith('/anime/')) return json(await animeDetail(env, url.pathname.split('/').pop()));
-      if (url.pathname === '/new-anime') return json({items: await newAnime(env, url.searchParams.get('region') || 'KR')});
+      if (url.pathname === '/new-anime') {
+        return json({items: await newAnime(env, url.searchParams.get('region') || 'KR', url.searchParams.get('until') || '')});
+      }
       if (url.pathname === '/news') return json({items: await news(url.origin)});
       if (url.pathname === '/image') return proxyImage(url.searchParams.get('url') || '');
       return json({error: 'not found'}, 404);
@@ -64,27 +66,73 @@ async function animeDetail(env, id) {
   };
 }
 
-async function newAnime(env, region) {
-  const today = new Date();
-  const past = new Date(today);
-  past.setMonth(past.getMonth() - 4);
-  const future = new Date(today);
-  future.setMonth(future.getMonth() + 2);
-  const params = new URLSearchParams({
-    first_air_date_gte: isoDate(past),
-    first_air_date_lte: isoDate(future),
-    sort_by: 'first_air_date.desc',
-    with_original_language: 'ja',
-    with_genres: '16',
+async function newAnime(env, region, until) {
+  const today = parseDateOnly(until) || koreaToday();
+  const months = monthsFromYearStart(today);
+  const seen = new Set();
+  const items = [];
+  for (const month of months) {
+    const monthItems = await newAnimeForMonth(env, region, month.start, month.end);
+    for (const item of monthItems) {
+      const id = animeItemId(item);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      items.push(item);
+    }
+  }
+  return items
+    .filter((item) => (item.name || item.title) && animeItemDate(item) && isAnimeTv(item))
+    .sort((a, b) => animeItemDate(b).localeCompare(animeItemDate(a)))
+    .slice(0, 160)
+    .map(toAnime);
+}
+
+async function newAnimeForMonth(env, region, start, end) {
+  const providerItems = await discoverNewAnime(env, start, end, {
     watch_region: region,
     with_watch_monetization_types: 'flatrate|ads|free',
-    page: '1',
   });
-  const data = await tmdb(env, `/discover/tv?${params.toString()}`);
-  return (data.results || [])
-    .filter((item) => item.name && item.first_air_date && isAnimeTv(item))
-    .slice(0, 30)
-    .map(toAnime);
+  const broadItems = await discoverNewAnime(env, start, end, {});
+  const movies = await discoverNewAnimeMovies(env, start, end);
+  return [...providerItems, ...broadItems, ...movies];
+}
+
+async function discoverNewAnime(env, start, end, extraParams) {
+  const items = [];
+  for (let page = 1; page <= 2; page += 1) {
+    const params = new URLSearchParams({
+      'first_air_date.gte': isoDate(start),
+      'first_air_date.lte': isoDate(end),
+      sort_by: 'first_air_date.desc',
+      with_original_language: 'ja',
+      with_genres: '16',
+      page: String(page),
+      ...extraParams,
+    });
+    const data = await tmdb(env, `/discover/tv?${params.toString()}`);
+    items.push(...(data.results || []));
+    if (page >= (data.total_pages || 1)) break;
+  }
+  return items;
+}
+
+async function discoverNewAnimeMovies(env, start, end) {
+  const items = [];
+  for (let page = 1; page <= 2; page += 1) {
+    const params = new URLSearchParams({
+      'primary_release_date.gte': isoDate(start),
+      'primary_release_date.lte': isoDate(end),
+      sort_by: 'primary_release_date.desc',
+      with_original_language: 'ja',
+      with_genres: '16',
+      'with_runtime.gte': '40',
+      page: String(page),
+    });
+    const data = await tmdb(env, `/discover/movie?${params.toString()}`);
+    items.push(...(data.results || []).map((item) => ({...item, anime_checker_type: 'movie', status: '영화'})));
+    if (page >= (data.total_pages || 1)) break;
+  }
+  return items;
 }
 
 async function news(origin) {
@@ -190,18 +238,26 @@ async function proxyImage(rawUrl) {
 
 function toAnime(item) {
   return {
-    id: String(item.id),
+    id: animeItemId(item),
     title: item.name || item.title || '',
     originalTitle: item.original_name || item.original_title || '',
     posterUrl: poster(item.poster_path),
     genres: genreNames(item.genre_ids, item.genres),
     status: item.status || '',
     weekday: '',
-    firstAirDate: item.first_air_date || '',
+    firstAirDate: animeItemDate(item),
     seasons: [],
     movies: [],
     dropped: false,
   };
+}
+
+function animeItemId(item) {
+  return `${item.anime_checker_type === 'movie' ? 'movie-' : ''}${item.id}`;
+}
+
+function animeItemDate(item) {
+  return item.first_air_date || item.release_date || '';
 }
 
 function poster(path) {
@@ -225,6 +281,29 @@ function genreNames(ids = [], genres = []) {
 
 function isoDate(date) {
   return date.toISOString().slice(0, 10);
+}
+
+function parseDateOnly(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function koreaToday() {
+  const now = new Date();
+  return new Date(now.toLocaleString('en-US', {timeZone: 'Asia/Seoul'}));
+}
+
+function monthsFromYearStart(today) {
+  const months = [];
+  const year = today.getFullYear();
+  for (let month = 0; month <= today.getMonth(); month += 1) {
+    const start = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const end = month === today.getMonth() ? today : lastDay;
+    months.push({start, end});
+  }
+  return months;
 }
 
 function xml(item, tag) {

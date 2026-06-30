@@ -108,14 +108,21 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
   }
 
   List<String> _months(List<Anime> items) {
-    final months =
-        items
-            .map((anime) => _monthKey(anime.firstAirDate))
-            .where((month) => month.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort((a, b) => b.compareTo(a));
+    final months = {
+      ..._monthsFromYearStart(),
+      ...items
+          .map((anime) => _monthKey(anime.firstAirDate))
+          .where((month) => month.isNotEmpty),
+    }.toList()..sort((a, b) => b.compareTo(a));
     return months;
+  }
+
+  List<String> _monthsFromYearStart() {
+    final now = DateTime.now();
+    return [
+      for (var month = 1; month <= now.month; month += 1)
+        '${now.year}.${month.toString().padLeft(2, '0')}',
+    ];
   }
 
   String _monthKey(String value) {

@@ -38,7 +38,12 @@ class AnimeApiClient {
 
   Future<List<Anime>> fetchNewAnime() async {
     if (!isConfigured) return sampleNewAnime();
-    final json = await _get('/new-anime?region=KR');
+    final today = DateTime.now();
+    final until =
+        '${today.year.toString().padLeft(4, '0')}-'
+        '${today.month.toString().padLeft(2, '0')}-'
+        '${today.day.toString().padLeft(2, '0')}';
+    final json = await _get('/new-anime?region=KR&until=$until');
     return _animeListFrom(json);
   }
 
