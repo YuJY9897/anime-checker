@@ -206,7 +206,7 @@ class TwoColumnAnimeGrid extends StatelessWidget {
         const spacing = 10.0;
         final cardWidth =
             (constraints.maxWidth - horizontalPadding - spacing) / 2;
-        final cardHeight = cardWidth * (compact ? 1.86 : 2.78);
+        final cardHeight = cardWidth * (compact ? 1.12 : 2.78);
         return GridView.count(
           crossAxisCount: 2,
           crossAxisSpacing: spacing,

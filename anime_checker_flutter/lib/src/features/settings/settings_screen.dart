@@ -29,18 +29,26 @@ class SettingsScreen extends ConsumerWidget {
                     ),
             ),
             const SizedBox(height: 8),
-            FilledButton.icon(
-              icon: const Icon(Icons.save_alt),
-              onPressed: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const BackupScreen())),
-              label: const Text('백업 / 복원 열기'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.delete_sweep_outlined),
-              onPressed: () => _confirmReset(context, controller),
-              label: const Text('전체 초기화'),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.save_alt),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const BackupScreen()),
+                    ),
+                    label: const Text('백업 / 복원'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.delete_sweep_outlined),
+                    onPressed: () => _confirmReset(context, controller),
+                    label: const Text('전체 초기화'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
