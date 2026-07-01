@@ -155,15 +155,12 @@ class AppController extends ChangeNotifier {
   Map<String, List<Anime>> get scheduleByWeekday {
     final map = <String, List<Anime>>{};
     for (final anime in allAnime) {
-      if (isDropped(anime.id) && !settings.includeDroppedInSchedule) continue;
+      if (!isCurrentlyAiring(anime)) continue;
       final storedWeekday = normalizedWeekday(anime.weekday);
       final weekday = storedWeekday.isNotEmpty
           ? storedWeekday
-          : settings.inferScheduleWeekday
-          ? inferredCurrentWeekday(anime)
-          : '';
+          : inferredCurrentWeekday(anime);
       if (weekday.isEmpty) continue;
-      if (!isCurrentlyAiring(anime)) continue;
       map.putIfAbsent(weekday, () => []).add(anime);
     }
     for (final items in map.values) {
@@ -184,8 +181,7 @@ class AppController extends ChangeNotifier {
         status.contains('취소');
     if (ended) return false;
     if (status.isNotEmpty) return true;
-    return settings.inferScheduleWeekday &&
-        inferredCurrentWeekday(anime).isNotEmpty;
+    return inferredCurrentWeekday(anime).isNotEmpty;
   }
 
   String normalizedWeekday(String value) {

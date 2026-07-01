@@ -81,25 +81,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ],
         ),
-        _SettingsGroup(
-          title: '요일 편성표 설정',
-          children: [
-            _SwitchRow(
-              title: '보류 작품 포함',
-              value: settings.includeDroppedInSchedule,
-              onChanged: (value) => controller.updateSettings(
-                settings.copyWith(includeDroppedInSchedule: value),
-              ),
-            ),
-            _SwitchRow(
-              title: '요일 자동 추론',
-              value: settings.inferScheduleWeekday,
-              onChanged: (value) => controller.updateSettings(
-                settings.copyWith(inferScheduleWeekday: value),
-              ),
-            ),
-          ],
-        ),
+
         _SettingsGroup(
           title: '애니 소식 설정',
           children: [

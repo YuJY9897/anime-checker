@@ -189,7 +189,7 @@ void main() {
   });
 
   test(
-    'schedule includes airing dropped anime and excludes ended anime',
+    'schedule shows only currently airing anime regardless of settings',
     () async {
       final airing = Anime(
         id: 'airing',
@@ -221,6 +221,10 @@ void main() {
         ..saved = AppData.empty().copyWith(
           animeList: {'airing': airing, 'ended': ended},
           dropped: {'airing': true},
+          settings: AppSettings.defaults().copyWith(
+            includeDroppedInSchedule: false,
+            inferScheduleWeekday: false,
+          ),
         );
       final controller = AppController(repo, FakeApiClient());
       await controller.load();
@@ -229,12 +233,6 @@ void main() {
 
       expect(tuesday.map((anime) => anime.id), contains('airing'));
       expect(tuesday.map((anime) => anime.id), isNot(contains('ended')));
-
-      await controller.updateSettings(
-        controller.settings.copyWith(includeDroppedInSchedule: false),
-      );
-
-      expect(controller.scheduleByWeekday['화요일'] ?? const [], isEmpty);
     },
   );
 
