@@ -93,6 +93,7 @@ const privacyPolicyDocument = LegalDocument(
       body: [
         '애니 체크는 계정, 이름, 연락처, 위치, 사진, 마이크 정보를 수집하지 않습니다.',
         '앱 안에는 사용자가 저장한 보관함, 보류, 찜, 시청 기록, 메모, 백업 시간이 저장될 수 있습니다.',
+        '사용자가 피드백 보내기를 이용하면 메일 앱을 통해 이메일 주소와 작성한 내용이 개발자에게 전달될 수 있습니다.',
         '이 정보는 기본적으로 기기 내부 저장소와 사용자가 직접 내보낸 JSON 백업 파일에 저장됩니다.',
       ],
     ),
@@ -101,6 +102,7 @@ const privacyPolicyDocument = LegalDocument(
       body: [
         '검색, 신작 애니, 애니 소식, 포스터와 기사 이미지를 가져오기 위해 Cloudflare Worker 프록시와 외부 데이터 제공자에 요청을 보낼 수 있습니다.',
         'TMDB API 키는 앱에 저장하지 않고 서버 프록시에서만 사용합니다.',
+        '피드백 메일은 사용자가 직접 전송 버튼을 눌렀을 때만 메일 앱으로 작성됩니다.',
       ],
     ),
     LegalSection(
@@ -119,7 +121,7 @@ const privacyPolicyDocument = LegalDocument(
     ),
     LegalSection(
       title: '문의',
-      body: ['정식 배포 전 Play Console에 표시할 개발자 연락처와 개인정보 문의 이메일을 등록해야 합니다.'],
+      body: ['개인정보와 피드백 문의는 yujy9897@gmail.com 으로 보낼 수 있습니다.'],
     ),
   ],
 );

@@ -98,29 +98,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                 context,
               ).push(MaterialPageRoute(builder: (_) => const SearchScreen())),
             ),
-            PopupMenuButton<MainSection>(
+            IconButton(
               tooltip: '메뉴',
               icon: const Icon(Icons.menu),
-              onSelected: (value) => setState(() => section = value),
-              itemBuilder: (context) => MainSection.values.map((value) {
-                final selected = value == section;
-                return PopupMenuItem(
-                  value: value,
-                  child: Row(
-                    children: [
-                      Icon(
-                        selected ? Icons.check_circle : value.icon,
-                        size: 20,
-                        color: selected
-                            ? Theme.of(context).colorScheme.primary
-                            : const Color(0xFF68736E),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(value.label),
-                    ],
-                  ),
-                );
-              }).toList(),
+              onPressed: _openSectionMenu,
             ),
             const SizedBox(width: 8),
           ],
@@ -128,6 +109,46 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
         body: controller.ready
             ? MainSectionBody(section: section)
             : const Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+
+  void _openSectionMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView.separated(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                child: Text(
+                  '메뉴',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              );
+            }
+            final value = MainSection.values[index - 1];
+            final selected = value == section;
+            return ListTile(
+              leading: Icon(selected ? Icons.check_circle : value.icon),
+              title: Text(value.label),
+              selected: selected,
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => section = value);
+              },
+            );
+          },
+          separatorBuilder: (_, index) =>
+              index == 0 ? const SizedBox.shrink() : const Divider(height: 1),
+          itemCount: MainSection.values.length + 1,
+        ),
       ),
     );
   }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api_client.dart';
 import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
 import '../backup/backup_screen.dart';
 import '../legal/legal_screen.dart';
+import 'feedback_screen.dart';
+import 'help_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -122,14 +123,21 @@ class SettingsScreen extends ConsumerWidget {
           title: '앱 정보',
           children: [
             const _StaticRow(label: '앱 버전', value: '1.0.0+1'),
-            _StaticRow(
-              label: 'API 서버',
-              value: AnimeApiClient.baseUrl.trim().isEmpty
-                  ? '샘플 데이터 모드'
-                  : AnimeApiClient.baseUrl,
-            ),
-            const _StaticRow(label: 'API 키', value: '앱에 저장하지 않음'),
             const SizedBox(height: 8),
+            _OpenRow(
+              icon: Icons.menu_book_outlined,
+              title: '설명서',
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const HelpScreen())),
+            ),
+            _OpenRow(
+              icon: Icons.feedback_outlined,
+              title: '피드백 보내기',
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const FeedbackScreen())),
+            ),
             _OpenRow(
               icon: Icons.privacy_tip_outlined,
               title: '개인정보처리방침',
@@ -139,11 +147,6 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.source_outlined,
               title: '데이터 출처 및 저작권',
               onTap: () => _openLegal(context, dataSourceDocument),
-            ),
-            _OpenRow(
-              icon: Icons.fact_check_outlined,
-              title: 'Play 출시 전 점검',
-              onTap: () => _openLegal(context, playStoreChecklistDocument),
             ),
           ],
         ),
