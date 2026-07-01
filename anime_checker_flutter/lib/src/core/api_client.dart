@@ -57,6 +57,23 @@ class AnimeApiClient {
         .toList();
   }
 
+  Future<void> submitFeedback({
+    required String category,
+    required String title,
+    required String body,
+    String email = '',
+  }) async {
+    if (!isConfigured) throw Exception('피드백 서버가 설정되지 않았습니다.');
+    await _post('/feedback', {
+      'category': category,
+      'title': title,
+      'body': body,
+      'email': email,
+      'createdAt': DateTime.now().toIso8601String(),
+      'appVersion': '1.0.0+1',
+    });
+  }
+
   Future<dynamic> _get(String path) async {
     final uri = Uri.parse('$baseUrl$path');
     final response = await _client
@@ -65,6 +82,22 @@ class AnimeApiClient {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('API ${response.statusCode}');
     }
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
+
+  Future<dynamic> _post(String path, Map<String, dynamic> body) async {
+    final uri = Uri.parse('$baseUrl$path');
+    final response = await _client
+        .post(
+          uri,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 30));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('API ${response.statusCode}');
+    }
+    if (response.bodyBytes.isEmpty) return null;
     return jsonDecode(utf8.decode(response.bodyBytes));
   }
 

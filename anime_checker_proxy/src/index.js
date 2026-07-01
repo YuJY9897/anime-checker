@@ -1,4 +1,4 @@
-const TMDB = 'https://api.themoviedb.org/3';
+﻿const TMDB = 'https://api.themoviedb.org/3';
 const IMAGE = 'https://image.tmdb.org/t/p/w500';
 const GENRES = {
   16: '애니메이션',
@@ -15,10 +15,15 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
+      if (request.method === 'OPTIONS') return cors();
       if (url.pathname === '/search') return json(await searchAnime(env, url.searchParams.get('q') || ''));
       if (url.pathname.startsWith('/anime/')) return json(await animeDetail(env, url.pathname.split('/').pop()));
       if (url.pathname === '/new-anime') {
         return json({items: await newAnime(env, url.searchParams.get('region') || 'KR', url.searchParams.get('until') || '')});
+      }
+      if (url.pathname === '/feedback' && request.method === 'POST') {
+        const result = await saveFeedback(request, env);
+        return json(result, result.ok ? 200 : 400);
       }
       if (url.pathname === '/news') return json({items: await news(url.origin)});
       if (url.pathname === '/image') return proxyImage(url.searchParams.get('url') || '');
@@ -29,6 +34,45 @@ export default {
   },
 };
 
+async function saveFeedback(request, env) {
+  if (!env.FEEDBACK_KV) throw new Error('FEEDBACK_KV is not configured');
+  const contentType = request.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) return {ok: false, error: 'invalid content type'};
+
+  const input = await request.json();
+  const category = cleanText(input.category, 40) || '기타';
+  const title = cleanText(input.title, 120);
+  const body = cleanText(input.body, 3000);
+  const email = cleanText(input.email, 160);
+  const appVersion = cleanText(input.appVersion, 40);
+  const clientCreatedAt = cleanText(input.createdAt, 40);
+  if (body.length < 5) return {ok: false, error: 'body too short'};
+
+  const now = new Date().toISOString();
+  const id = `feedback:${now.slice(0, 10)}:${crypto.randomUUID()}`;
+  const payload = {
+    id,
+    category,
+    title,
+    body,
+    email,
+    appVersion,
+    clientCreatedAt,
+    createdAt: now,
+  };
+  await env.FEEDBACK_KV.put(id, JSON.stringify(payload), {
+    metadata: {category, createdAt: now, hasEmail: Boolean(email)},
+  });
+  return {ok: true, id};
+}
+
+function cleanText(value, maxLength) {
+  return String(value || '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
 async function tmdb(env, path) {
   if (!env.TMDB_API_KEY) throw new Error('TMDB_API_KEY is not configured');
   const join = path.includes('?') ? '&' : '?';
@@ -181,6 +225,7 @@ async function fetchNewsRss() {
 
 async function fetchRssText(url) {
   try {
+      if (request.method === 'OPTIONS') return cors();
     const response = await fetch(url, {
       headers: {
         'accept': 'application/rss+xml, application/xml, text/xml',
@@ -214,6 +259,7 @@ async function articleMeta(url) {
   const empty = {imageUrl: '', url};
   if (!url.startsWith('https://')) return empty;
   try {
+      if (request.method === 'OPTIONS') return cors();
     const response = await fetch(url, {
       redirect: 'follow',
       headers: {'user-agent': 'Mozilla/5.0 anime-checker-news-image'},
@@ -320,6 +366,7 @@ function xml(item, tag) {
 
 function normalizeNewsUrl(url) {
   try {
+      if (request.method === 'OPTIONS') return cors();
     const parsed = new URL(url);
     const original = parsed.searchParams.get('url');
     return original ? decode(original) : url;
@@ -365,9 +412,21 @@ function hash(value) {
   return Math.abs(result).toString(36);
 }
 
+function corsHeaders(extra = {}) {
+  return {
+    ...extra,
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET,POST,OPTIONS',
+    'access-control-allow-headers': 'content-type',
+  };
+}
+
+function cors() {
+  return new Response(null, {status: 204, headers: corsHeaders()});
+}
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*'},
+    headers: corsHeaders({'content-type': 'application/json; charset=utf-8'}),
   });
 }

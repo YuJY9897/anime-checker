@@ -6,3 +6,6 @@ preview_urls = false
 
 # Set this with:
 # wrangler secret put TMDB_API_KEY
+[[kv_namespaces]]
+binding = "FEEDBACK_KV"
+id = "7cd4a7b40bf643db9dac197ce2784500"
