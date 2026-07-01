@@ -10,3 +10,6 @@ anime_checker_flutter/build/
 anime_checker_flutter/.dart_tool/
 anime_checker_flutter/.flutter-plugins
 anime_checker_flutter/.flutter-plugins-dependencies
+anime_checker_flutter/android/key.properties
+anime_checker_flutter/android/app/*.jks
+anime_checker_flutter/android/app/*.keystore

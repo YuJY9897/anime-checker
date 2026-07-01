@@ -5,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
 import '../backup/backup_screen.dart';
+import '../legal/legal_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -128,9 +129,33 @@ class SettingsScreen extends ConsumerWidget {
                   : AnimeApiClient.baseUrl,
             ),
             const _StaticRow(label: 'API 키', value: '앱에 저장하지 않음'),
+            const SizedBox(height: 8),
+            _OpenRow(
+              icon: Icons.privacy_tip_outlined,
+              title: '개인정보처리방침',
+              onTap: () => _openLegal(context, privacyPolicyDocument),
+            ),
+            _OpenRow(
+              icon: Icons.source_outlined,
+              title: '데이터 출처 및 저작권',
+              onTap: () => _openLegal(context, dataSourceDocument),
+            ),
+            _OpenRow(
+              icon: Icons.fact_check_outlined,
+              title: 'Play 출시 전 점검',
+              onTap: () => _openLegal(context, playStoreChecklistDocument),
+            ),
           ],
         ),
       ],
+    );
+  }
+
+  void _openLegal(BuildContext context, LegalDocument document) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LegalDocumentScreen(document: document),
+      ),
     );
   }
 
@@ -286,6 +311,29 @@ class _StaticRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: _InfoRow(label: label, value: value),
+    );
+  }
+}
+
+class _OpenRow extends StatelessWidget {
+  const _OpenRow({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
     );
   }
 }
