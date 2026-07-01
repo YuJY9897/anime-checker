@@ -123,15 +123,17 @@ class _NewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
+        splashColor: colors.primary.withValues(alpha: 0.08),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => NewsDetailScreen(article: article)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(13),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -157,8 +159,8 @@ class _NewsCard extends StatelessWidget {
                       article.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
                         height: 1.25,
                       ),
                     ),
@@ -172,11 +174,24 @@ class _NewsCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 7),
-                    Text(
-                      '${article.source} · ${formatStoredDate(article.date)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall,
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          '${article.source} · ${formatStoredDate(article.date)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: const Color(0xB3000000)),
+                        ),
+                      ),
                     ),
                   ],
                 ),

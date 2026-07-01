@@ -38,6 +38,27 @@ extension MainSectionText on MainSection {
         return '환경설정';
     }
   }
+
+  IconData get icon {
+    switch (this) {
+      case MainSection.updates:
+        return Icons.playlist_play_outlined;
+      case MainSection.library:
+        return Icons.inventory_2_outlined;
+      case MainSection.dropped:
+        return Icons.pause_circle_outline;
+      case MainSection.wish:
+        return Icons.star_border_rounded;
+      case MainSection.newAnime:
+        return Icons.auto_awesome_outlined;
+      case MainSection.schedule:
+        return Icons.calendar_month_outlined;
+      case MainSection.news:
+        return Icons.article_outlined;
+      case MainSection.settings:
+        return Icons.tune_outlined;
+    }
+  }
 }
 
 class ShellScreen extends ConsumerStatefulWidget {
@@ -81,13 +102,27 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
               tooltip: '메뉴',
               icon: const Icon(Icons.menu),
               onSelected: (value) => setState(() => section = value),
-              itemBuilder: (context) => MainSection.values
-                  .map(
-                    (value) =>
-                        PopupMenuItem(value: value, child: Text(value.label)),
-                  )
-                  .toList(),
+              itemBuilder: (context) => MainSection.values.map((value) {
+                final selected = value == section;
+                return PopupMenuItem(
+                  value: value,
+                  child: Row(
+                    children: [
+                      Icon(
+                        selected ? Icons.check_circle : value.icon,
+                        size: 20,
+                        color: selected
+                            ? Theme.of(context).colorScheme.primary
+                            : const Color(0xFF68736E),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(value.label),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
+            const SizedBox(width: 8),
           ],
         ),
         body: controller.ready

@@ -76,6 +76,8 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
+        splashColor: colors.primary.withValues(alpha: 0.08),
+        highlightColor: colors.primary.withValues(alpha: 0.04),
         onTap: widget.onTap,
         onLongPress: widget.onLongPress,
         child: Column(
@@ -99,7 +101,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
               ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+                padding: const EdgeInsets.fromLTRB(11, 10, 11, 11),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -108,8 +110,8 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        height: 1.22,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
                       ),
                     ),
                     if (genres.isNotEmpty)
@@ -120,7 +122,11 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                           maxLines: compact ? 1 : 2,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: colors.tertiary, height: 1.24),
+                              ?.copyWith(
+                                color: colors.tertiary,
+                                fontWeight: FontWeight.w800,
+                                height: 1.22,
+                              ),
                         ),
                       ),
                     for (final line
@@ -135,8 +141,8 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: const Color(0xA6000000),
-                                height: 1.24,
+                                color: const Color(0xB3000000),
+                                height: 1.22,
                               ),
                         ),
                       ),
@@ -171,16 +177,16 @@ class TwoColumnAnimeGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const horizontalPadding = 32.0;
-        const spacing = 10.0;
+        const spacing = 12.0;
         final cardWidth =
             (constraints.maxWidth - horizontalPadding - spacing) / 2;
         final cardHeight = cardWidth * (compact ? 1.22 : 2.78);
         return GridView.count(
           crossAxisCount: 2,
           crossAxisSpacing: spacing,
-          mainAxisSpacing: 10,
+          mainAxisSpacing: 12,
           childAspectRatio: cardWidth / cardHeight,
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 22),
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
           children: children,
