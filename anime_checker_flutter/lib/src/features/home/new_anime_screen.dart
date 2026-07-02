@@ -146,10 +146,7 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                       builder: (_) => DetailScreen.preview(anime: anime),
                     ),
                   ),
-                  metaLines: [
-                    formatNewAnimeAirDate(anime.firstAirDate),
-                    anime.status,
-                  ],
+                  metaLines: [formatNewAnimeAirDate(anime.firstAirDate)],
                   actions: [
                     AnimeCardAction(
                       label: inLibrary ? '추가됨' : '보관함 추가',
