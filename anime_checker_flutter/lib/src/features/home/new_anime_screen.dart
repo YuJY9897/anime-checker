@@ -183,10 +183,8 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
 
   List<int> _monthsForYear(List<Anime> items, int? year) {
     if (year == null) return const [];
-    final now = DateTime.now();
-    final monthLimit = year == now.year ? now.month : 12;
     final months = {
-      for (var month = 1; month <= monthLimit; month += 1) month,
+      for (var month = 1; month <= 12; month += 1) month,
       ...items
           .map((anime) => parseDate(anime.firstAirDate))
           .where((date) => date?.year == year)
