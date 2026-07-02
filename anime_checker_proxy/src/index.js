@@ -6,7 +6,7 @@ const GENRES = {
   35: '코미디',
   18: '드라마',
   10759: '액션/모험',
-  10765: 'SF/판타지',
+  10765: '공상과학/판타지',
   9648: '미스터리',
   10762: '키즈',
   10751: '가족',
@@ -190,11 +190,15 @@ function seasonName(name, number) {
 async function newAnime(env, region, until) {
   const today = parseDateOnly(until) || koreaToday();
   const [jikanItems, tmdbItems] = await Promise.all([
-    jikanNewAnime(today).catch(() => []),
+    jikanNewAnime(env, today).catch(() => []),
     tmdbNewAnime(env, region, today).catch(() => []),
   ]);
-  return mergeAnimeItems([...jikanItems, ...tmdbItems])
-    .sort((a, b) => animeItemDate(b).localeCompare(animeItemDate(a)))
+  const sortedItems = mergeAnimeItems([...jikanItems, ...tmdbItems])
+    .sort((a, b) => releaseSort(a, b, today))
+    .slice(0, 300);
+  const enrichedItems = await enrichRecentJikanTitles(env, sortedItems);
+  return dedupeAnimeItemsByTitle(enrichedItems)
+    .sort((a, b) => releaseSort(a, b, today))
     .slice(0, 300);
 }
 
@@ -219,7 +223,7 @@ async function tmdbNewAnime(env, region, today) {
     .map(toAnime);
 }
 
-async function jikanNewAnime(today) {
+async function jikanNewAnime(env, today) {
   const releases = [];
   for (const season of jikanSeasonsFromYearStart(today)) {
     try {
@@ -229,10 +233,123 @@ async function jikanNewAnime(today) {
     }
     await sleep(700);
   }
-  return releases
+  const items = releases
     .filter(isJikanAnimeRelease)
     .map(toAnimeFromJikan)
-    .filter((item) => item.firstAirDate);
+    .filter((item) => item.firstAirDate)
+    .sort((a, b) => animeItemDate(b).localeCompare(animeItemDate(a)));
+  return items;
+}
+
+async function enrichRecentJikanTitles(env, items) {
+  const results = [...items];
+  const limit = Math.min(48, results.length);
+  const batchSize = 6;
+  for (let start = 0; start < limit; start += batchSize) {
+    const batch = results.slice(start, start + batchSize);
+    const enriched = await Promise.all(batch.map((item) => enrichJikanTitle(env, item)));
+    for (let index = 0; index < enriched.length; index += 1) {
+      results[start + index] = enriched[index];
+    }
+  }
+  return results;
+}
+
+async function enrichJikanTitle(env, anime) {
+  if (hasKorean(anime.title)) return anime;
+  const mediaTypes = anime.movies.length > 0 || /movie/i.test(anime.status) ? ['movie', 'tv'] : ['tv', 'movie'];
+  const queries = [...new Set([anime.originalTitle, anime.title].filter((value) => value && value.trim().length >= 2))].slice(0, 2);
+  for (const mediaType of mediaTypes) {
+    for (const query of queries) {
+      const match = await tmdbKoreanAnimeMatch(env, mediaType, query, anime.firstAirDate);
+      if (match) {
+        return {
+          ...anime,
+          title: animeItemTitle(match),
+          posterUrl: poster(match.poster_path) || anime.posterUrl,
+          genres: genreNames(match.genre_ids, match.genres).filter((name) => name !== '애니메이션').slice(0, 5),
+        };
+      }
+    }
+  }
+  const fallbackTitle = knownKoreanTitle(anime.title);
+  return fallbackTitle ? {...anime, title: fallbackTitle} : anime;
+}
+
+async function tmdbKoreanAnimeMatch(env, mediaType, query, date) {
+  try {
+    const data = await tmdb(env, `/search/${mediaType}?query=${encodeURIComponent(query)}&include_adult=false`);
+    const results = (data.results || []).filter((item) => hasKorean(animeItemTitle(item)) && isAnimeResult(item));
+    if (results.length === 0) return null;
+    return results
+      .map((item) => ({item, score: tmdbMatchScore(item, date)}))
+      .sort((a, b) => b.score - a.score)[0].item;
+  } catch (_) {
+    return null;
+  }
+}
+
+function knownKoreanTitle(title = '') {
+  const patterns = [
+    [/Bungo Stray Dogs Wan/i, '문호 스트레이독스 멍! 2'],
+    [/Hana-Kimi/i, '아름다운 그대에게 2기'],
+    [/Dara-san of Reiwa/i, '레이와의 다라 씨'],
+    [/BanG Dream/i, '뱅드림! 유메미타'],
+    [/Oblivious Saint/i, '무자각한 성녀는 오늘도 무의식적으로 힘을 흘린다'],
+    [/World Is Dancing/i, '월드 이즈 댄싱'],
+    [/Cat and the Dragon/i, '고양이와 용'],
+    [/Overshadowed to Overpowered|Talentless Sage/i, '낙제 현자의 학원 무쌍'],
+    [/All-Works Maid/i, '히로인? 성녀? 아니요, 올 워크스 메이드입니다!'],
+    [/Bleach/i, '블리치: 천년혈전편'],
+    [/Elusive Samurai/i, '도망을 잘 치는 도련님 2기'],
+    [/Keroro Gunsou/i, '개구리 중사 케로로'],
+    [/Baki/i, '바키도'],
+    [/Mr\. Osomatsu|Osomatsu/i, '오소마츠상'],
+    [/Detective Conan/i, '명탐정 코난'],
+    [/Smoking Behind the Supermarket/i, '슈퍼 뒤에서 담배 피우는 두 사람'],
+    [/Mononoke/i, '모노노케'],
+    [/Patlabor/i, '기동경찰 패트레이버'],
+    [/Irregular at Magic High School/i, '마법과고교의 열등생'],
+    [/Love Live/i, '러브 라이브!'],
+    [/My Hero Academia/i, '나의 히어로 아카데미아'],
+    [/Puella Magi Madoka Magica/i, '마법소녀 마도카 마기카'],
+    [/Saga of Tanya the Evil/i, '유녀전기 2기'],
+    [/Mushoku Tensei/i, '무직전생 3기'],
+    [/Sword Art Online/i, '소드 아트 온라인'],
+    [/Ghost in the Shell/i, '공각기동대'],
+    [/Grand Blue/i, '그랑블루'],
+    [/Crayon Shin-chan/i, '짱구는 못말려'],
+    [/Sound! Euphonium/i, '울려라! 유포니엄'],
+    [/Isekai Office Worker/i, '이세계의 사태는 사축 나름 OVA'],
+    [/Does It Count If You Lose Your Innocence to an Android/i, '안드로이드는 경험 인원에 들어가나요?? 스페셜'],
+    [/Dreaming of a Whale/i, '고래를 꿈꾸다'],
+    [/I Want You To Show Me Your Panties/i, '싫은 얼굴을 하면서 팬티를 보여줬으면 좋겠어 Returns'],
+    [/Dandelion/i, '댄더라이언'],
+    [/Candy Caries/i, '캔디 카리에스'],
+    [/I Want to End This Love Game/i, '사랑해 게임을 끝내고 싶어'],
+    [/Wistoria/i, '지팡이와 검의 위스토리아 2기'],
+    [/Mission: Yozakura Family/i, '요자쿠라 일가의 대작전 2기'],
+    [/The Classroom of a Black Cat and a Witch/i, '검은 고양이와 마녀의 교실'],
+    [/Ichijyoma Mankitsu Gurashi/i, '한 칸 만끽 생활!'],
+    [/Kill Blue/i, '킬 블루'],
+    [/Botan Kamiina/i, '카미이나 보탄, 취하면 백합꽃'],
+    [/Rent-a-Girlfriend/i, '여친, 빌리겠습니다 5기'],
+    [/Yowayowa Sensei/i, '요와요와 선생'],
+    [/Hokuto no Ken|Fist of the North Star/i, '북두의 권'],
+  ];
+  return patterns.find(([pattern]) => pattern.test(title))?.[1] || '';
+}
+function tmdbMatchScore(item, date) {
+  const itemDate = animeItemDate(item);
+  const sameYear = itemDate && date && itemDate.slice(0, 4) === date.slice(0, 4);
+  return (sameYear ? 8 : 0) +
+    (item.original_language === 'ja' ? 4 : 0) +
+    (Array.isArray(item.genre_ids) && item.genre_ids.includes(16) ? 2 : 0) +
+    (item.poster_path ? 1 : 0);
+}
+
+function isAnimeResult(item) {
+  return Array.isArray(item.genre_ids) && item.genre_ids.includes(16) && (!item.original_language || item.original_language === 'ja');
 }
 
 async function jikanSeason(year, season) {
@@ -415,6 +532,19 @@ async function proxyImage(rawUrl) {
   return new Response(response.body, {headers: {'content-type': type, 'cache-control': 'public, max-age=86400'}});
 }
 
+function releaseSort(a, b, today) {
+  const aFuture = isFutureRelease(a, today);
+  const bFuture = isFutureRelease(b, today);
+  if (aFuture !== bFuture) return aFuture ? 1 : -1;
+  return animeItemDate(b).localeCompare(animeItemDate(a));
+}
+
+function isFutureRelease(item, today) {
+  const date = parseDateOnly(animeItemDate(item));
+  if (!date) return false;
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return date > todayOnly;
+}
 function mergeAnimeItems(items) {
   const merged = new Map();
   for (const item of items) {
@@ -425,6 +555,27 @@ function mergeAnimeItems(items) {
   return [...merged.values()];
 }
 
+function dedupeAnimeItemsByTitle(items) {
+  const merged = [];
+  for (const item of items) {
+    const titleKey = normalizeTitle(animeItemTitle(item));
+    const index = merged.findIndex((current) => isSameTitle(titleKey, normalizeTitle(animeItemTitle(current))));
+    if (index < 0) {
+      merged.push(item);
+    } else if (animeCompleteness(item) > animeCompleteness(merged[index])) {
+      merged[index] = item;
+    }
+  }
+  return merged;
+}
+
+function isSameTitle(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.length < 8 || b.length < 8) return false;
+  return a.startsWith(b) || b.startsWith(a);
+}
+
 function animeCompleteness(item) {
   return (hasKorean(animeItemTitle(item)) ? 8 : 0) +
     (item.posterUrl ? 4 : 0) +
@@ -433,7 +584,7 @@ function animeCompleteness(item) {
 }
 
 function normalizeTitle(value) {
-  return String(value || '').toLowerCase().replace(/[\s\W_]+/g, '');
+  return String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 }
 
 function toAnimeFromJikan(item) {
@@ -472,19 +623,22 @@ function jikanGenres(item) {
 }
 
 function jikanGenreName(name = '') {
-  return {
+  const mapped = {
     Action: '액션',
     Adventure: '모험',
     'Avant Garde': '실험',
     'Award Winning': '수상작',
+    'Boys Love': '보이즈 러브',
     Comedy: '코미디',
     Drama: '드라마',
+    Ecchi: '에치',
     Fantasy: '판타지',
+    'Girls Love': '걸즈 러브',
     Gourmet: '요리',
     Horror: '공포',
     Mystery: '미스터리',
     Romance: '로맨스',
-    'Sci-Fi': 'SF',
+    'Sci-Fi': '공상과학',
     'Slice of Life': '일상',
     Sports: '스포츠',
     Supernatural: '초자연',
@@ -495,7 +649,55 @@ function jikanGenreName(name = '') {
     Shounen: '소년',
     Josei: '여성향',
     Kids: '키즈',
-  }[name] || name;
+    'Adult Cast': '성인 주인공',
+    Anthropomorphic: '의인화',
+    CGDCT: '일상 소녀',
+    Childcare: '육아',
+    'Combat Sports': '격투 스포츠',
+    Crossdressing: '여장',
+    Delinquents: '불량배',
+    Detective: '탐정',
+    Educational: '교육',
+    Gag: '개그',
+    Gore: '고어',
+    Harem: '하렘',
+    'High Stakes Game': '두뇌 게임',
+    Historical: '시대극',
+    Idols: '아이돌',
+    Isekai: '이세계',
+    Iyashikei: '힐링',
+    'Love Polygon': '삼각관계',
+    'Magical Sex Shift': '성별전환',
+    'Mahou Shoujo': '마법소녀',
+    'Martial Arts': '무술',
+    Mecha: '메카',
+    Medical: '의학',
+    Military: '밀리터리',
+    Music: '음악',
+    Mythology: '신화',
+    Otaku: '오타쿠',
+    Parody: '패러디',
+    'Performing Arts': '공연예술',
+    Pets: '반려동물',
+    Psychological: '심리',
+    Racing: '레이싱',
+    Reincarnation: '환생',
+    'Reverse Harem': '역하렘',
+    Samurai: '사무라이',
+    'Showbiz': '연예계',
+    Space: '우주',
+    'Strategy Game': '전략 게임',
+    'Super Power': '초능력',
+    Survival: '생존',
+    'Team Sports': '단체 스포츠',
+    'Time Travel': '시간여행',
+    Vampire: '뱀파이어',
+    'Video Game': '비디오 게임',
+    'Visual Arts': '미술',
+    Workplace: '직장',
+  }[name];
+  if (mapped) return mapped;
+  return /[A-Za-z]/.test(name) ? '' : name;
 }
 
 function jikanStatus(status = '') {
@@ -580,9 +782,9 @@ function isAnimeTv(item) {
 
 function genreNames(ids = [], genres = []) {
   if (Array.isArray(genres) && genres.length > 0) {
-    return genres.map((genre) => genre.name).filter(Boolean);
+    return genres.map((genre) => genre.name).filter(Boolean).filter((name) => name !== '애니메이션');
   }
-  return ids.map((id) => GENRES[id]).filter(Boolean);
+  return ids.map((id) => GENRES[id]).filter(Boolean).filter((name) => name !== '애니메이션');
 }
 
 function isoDate(date) {
@@ -698,8 +900,4 @@ function json(body, status = 200) {
     headers: corsHeaders({'content-type': 'application/json; charset=utf-8'}),
   });
 }
-
-
-
-
 

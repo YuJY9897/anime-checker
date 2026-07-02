@@ -78,7 +78,7 @@ class AnimeApiClient {
     final uri = Uri.parse('$baseUrl$path');
     final response = await _client
         .get(uri)
-        .timeout(const Duration(seconds: 30));
+        .timeout(const Duration(seconds: 60));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('API ${response.statusCode}');
     }
@@ -93,7 +93,7 @@ class AnimeApiClient {
           headers: const {'content-type': 'application/json; charset=utf-8'},
           body: jsonEncode(body),
         )
-        .timeout(const Duration(seconds: 30));
+        .timeout(const Duration(seconds: 60));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('API ${response.statusCode}');
     }
