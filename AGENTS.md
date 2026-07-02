@@ -5,7 +5,7 @@
 이 저장소는 `애니 체크` Flutter 앱과 Cloudflare Worker 프록시로 구성된다.
 
 - `anime_checker_flutter/`: Android 우선 네이티브 Flutter 앱
-- `anime_checker_proxy/`: TMDB API 키를 앱에 넣지 않기 위한 Cloudflare Worker
+- `anime_checker_proxy/`: TMDB API 키 보호와 Jikan 신작 데이터 정리를 위한 Cloudflare Worker
 
 ## 현재 제품 방향
 
@@ -84,11 +84,14 @@
 - 저장 시 임시 파일에 먼저 쓰고 성공하면 원본으로 교체한다.
 - 앱에 TMDB API 키를 절대 넣지 않는다.
 - TMDB 호출은 Cloudflare Worker를 통해 처리한다.
+- 신작 애니 목록은 Jikan 시즌 API를 1차 소스로 쓰고, TMDB 결과는 한국어 제목/보강용으로 병합한다.
+- Jikan은 API 키가 필요 없으며, Jikan 상세 ID는 `mal-숫자` 형태로 처리한다.
 
 Worker 엔드포인트:
 
 - `GET /search?q=...`
 - `GET /anime/{tmdbId}`
+- `GET /anime/mal-{malId}`
 - `GET /new-anime?region=KR`
 - `GET /news`
 - `GET /image?url=...`
@@ -156,3 +159,5 @@ adb -s <device-id> install -r build\app\outputs\flutter-apk\app-debug.apk
 - 다른 메뉴를 고치다가 기존 메뉴가 깨지지 않게 변경 범위를 좁힌다.
 - 수정 후에는 실제 화면에서 버튼, overflow, 뒤로가기 흐름을 확인한다.
 - 사용자가 배포, 공개, 앱스토어 출시를 언급하면 AI 규제/개인정보/저작권/보안 체크리스트도 같이 점검한다.
+
+

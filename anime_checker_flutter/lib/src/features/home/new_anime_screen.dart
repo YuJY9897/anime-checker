@@ -6,7 +6,6 @@ import '../../core/date_text.dart';
 import '../../core/models.dart';
 import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/section_header.dart';
 import '../detail/detail_screen.dart';
 
 class NewAnimeScreen extends ConsumerStatefulWidget {
@@ -49,12 +48,22 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
       onRefresh: () => controller.refreshNewAnime(),
       child: ListView(
         children: [
-          SectionHeader(
-            title: '신작 애니',
-            meta: controller.newAnimeBasis,
-            action: IconButton(
-              onPressed: controller.refreshNewAnime,
-              icon: const Icon(Icons.refresh),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    controller.newAnimeBasis,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                IconButton(
+                  tooltip: '새로고침',
+                  onPressed: controller.refreshNewAnime,
+                  icon: const Icon(Icons.refresh),
+                ),
+              ],
             ),
           ),
           if (years.isNotEmpty)

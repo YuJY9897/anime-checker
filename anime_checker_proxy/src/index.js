@@ -1,5 +1,6 @@
 ﻿const TMDB = 'https://api.themoviedb.org/3';
 const IMAGE = 'https://image.tmdb.org/t/p/w500';
+const JIKAN = 'https://api.jikan.moe/v4';
 const GENRES = {
   16: '애니메이션',
   35: '코미디',
@@ -89,29 +90,115 @@ async function searchAnime(env, query) {
 }
 
 async function animeDetail(env, id) {
-  const tv = await tmdb(env, `/tv/${id}?append_to_response=season/1`);
-  const seasons = (tv.seasons || [])
+  if (id.startsWith('mal-')) return jikanAnimeDetail(id);
+  const tv = await tmdb(env, `/tv/${id}`);
+  const seasonSummaries = (tv.seasons || [])
     .filter((season) => season.season_number > 0 && season.episode_count > 0)
-    .map((season) => ({
-      number: season.season_number,
-      name: season.name || `${season.season_number}기`,
-      subtitle: '',
-      posterUrl: poster(season.poster_path || tv.poster_path),
-      episodes: Array.from({length: season.episode_count}, (_, index) => ({
-        number: index + 1,
-        title: `${index + 1}화`,
-        airDate: '',
-      })),
-    }));
+    .slice(0, 24);
+  const seasons = await Promise.all(
+    seasonSummaries.map((season) => seasonDetail(env, id, tv, season)),
+  );
   return {
     ...toAnime(tv),
-    seasons,
+    seasons: seasons.filter((season) => season.episodes.length > 0),
     movies: [],
   };
 }
 
+async function jikanAnimeDetail(id) {
+  const malId = id.replace(/^mal-/, '');
+  const data = await jikan(`/anime/${encodeURIComponent(malId)}/full`);
+  const item = data.data || {};
+  const anime = toAnimeFromJikan(item);
+  if (isJikanMovie(item)) {
+    return {
+      ...anime,
+      seasons: [],
+      movies: [
+        {
+          id: anime.id,
+          title: anime.title,
+          posterUrl: anime.posterUrl,
+          releaseDate: dateOnly(item.aired?.from),
+          runtime: Number(item.duration?.match(/\d+/)?.[0] || 0),
+        },
+      ],
+    };
+  }
+  const episodeCount = Number.isFinite(item.episodes) ? item.episodes : 0;
+  const episodes = Array.from({length: episodeCount}, (_, index) => ({
+    number: index + 1,
+    title: `${index + 1}화`,
+    airDate: '',
+  }));
+  return {
+    ...anime,
+    seasons: episodes.length > 0
+      ? [
+          {
+            number: 1,
+            name: '1기',
+            subtitle: dateOnly(item.aired?.from),
+            posterUrl: anime.posterUrl,
+            episodes,
+          },
+        ]
+      : [],
+    movies: [],
+  };
+}
+async function seasonDetail(env, tvId, tv, summary) {
+  try {
+    const detail = await tmdb(env, `/tv/${tvId}/season/${summary.season_number}`);
+    const episodes = (detail.episodes || [])
+      .filter((episode) => Number.isFinite(episode.episode_number) && episode.episode_number > 0)
+      .map((episode) => ({
+        number: episode.episode_number,
+        title: episode.name || `${episode.episode_number}화`,
+        airDate: episode.air_date || '',
+      }));
+    return {
+      number: summary.season_number,
+      name: seasonName(detail.name || summary.name, summary.season_number),
+      subtitle: detail.air_date || summary.air_date || '',
+      posterUrl: poster(detail.poster_path || summary.poster_path || tv.poster_path),
+      episodes,
+    };
+  } catch (_) {
+    return seasonFromSummary(tv, summary);
+  }
+}
+
+function seasonFromSummary(tv, summary) {
+  return {
+    number: summary.season_number,
+    name: seasonName(summary.name, summary.season_number),
+    subtitle: summary.air_date || '',
+    posterUrl: poster(summary.poster_path || tv.poster_path),
+    episodes: Array.from({length: summary.episode_count || 0}, (_, index) => ({
+      number: index + 1,
+      title: `${index + 1}화`,
+      airDate: '',
+    })),
+  };
+}
+
+function seasonName(name, number) {
+  if (!name || /^Season\s*\d+$/i.test(name)) return `${number}기`;
+  return name;
+}
 async function newAnime(env, region, until) {
   const today = parseDateOnly(until) || koreaToday();
+  const [jikanItems, tmdbItems] = await Promise.all([
+    jikanNewAnime(today).catch(() => []),
+    tmdbNewAnime(env, region, today).catch(() => []),
+  ]);
+  return mergeAnimeItems([...jikanItems, ...tmdbItems])
+    .sort((a, b) => animeItemDate(b).localeCompare(animeItemDate(a)))
+    .slice(0, 300);
+}
+
+async function tmdbNewAnime(env, region, today) {
   const months = monthsFromYearStart(today);
   const seen = new Set();
   const items = [];
@@ -129,8 +216,52 @@ async function newAnime(env, region, until) {
   return items
     .filter((item) => hasKorean(animeItemTitle(item)) && animeItemDate(item) && isAnimeTv(item))
     .sort((a, b) => animeItemDate(b).localeCompare(animeItemDate(a)))
-    .slice(0, 160)
     .map(toAnime);
+}
+
+async function jikanNewAnime(today) {
+  const releases = [];
+  for (const season of jikanSeasonsFromYearStart(today)) {
+    try {
+      releases.push(...await jikanSeason(season.year, season.name));
+    } catch (_) {
+      // Keep already fetched seasons when Jikan rate-limits one season.
+    }
+    await sleep(700);
+  }
+  return releases
+    .filter(isJikanAnimeRelease)
+    .map(toAnimeFromJikan)
+    .filter((item) => item.firstAirDate);
+}
+
+async function jikanSeason(year, season) {
+  const items = [];
+  let lastPage = 1;
+  for (let page = 1; page <= Math.min(lastPage, 6); page += 1) {
+    try {
+      const data = await jikan(`/seasons/${year}/${season}?page=${page}&sfw=true`);
+      items.push(...(data.data || []));
+      lastPage = data.pagination?.last_visible_page || 1;
+    } catch (error) {
+      if (items.length > 0) break;
+      throw error;
+    }
+    if (page < Math.min(lastPage, 6)) await sleep(450);
+  }
+  return items;
+}
+
+async function jikan(path) {
+  const response = await fetch(`${JIKAN}${path}`, {
+    headers: {
+      accept: 'application/json',
+      'user-agent': 'anime-checker-worker',
+    },
+    signal: AbortSignal.timeout(9000),
+  });
+  if (!response.ok) throw new Error(`Jikan ${response.status}`);
+  return response.json();
 }
 
 async function newAnimeForMonth(env, region, start, end) {
@@ -147,7 +278,7 @@ async function newAnimeForMonth(env, region, start, end) {
 
 async function discoverNewAnime(env, start, end, extraParams) {
   const items = [];
-  for (let page = 1; page <= 2; page += 1) {
+  for (let page = 1; page <= 4; page += 1) {
     const params = new URLSearchParams({
       'first_air_date.gte': isoDate(start),
       'first_air_date.lte': isoDate(end),
@@ -166,7 +297,7 @@ async function discoverNewAnime(env, start, end, extraParams) {
 
 async function discoverNewAnimeMovies(env, start, end) {
   const items = [];
-  for (let page = 1; page <= 2; page += 1) {
+  for (let page = 1; page <= 4; page += 1) {
     const params = new URLSearchParams({
       'primary_release_date.gte': isoDate(start),
       'primary_release_date.lte': isoDate(end),
@@ -225,7 +356,6 @@ async function fetchNewsRss() {
 
 async function fetchRssText(url) {
   try {
-      if (request.method === 'OPTIONS') return cors();
     const response = await fetch(url, {
       headers: {
         'accept': 'application/rss+xml, application/xml, text/xml',
@@ -259,7 +389,6 @@ async function articleMeta(url) {
   const empty = {imageUrl: '', url};
   if (!url.startsWith('https://')) return empty;
   try {
-      if (request.method === 'OPTIONS') return cors();
     const response = await fetch(url, {
       redirect: 'follow',
       headers: {'user-agent': 'Mozilla/5.0 anime-checker-news-image'},
@@ -286,6 +415,129 @@ async function proxyImage(rawUrl) {
   return new Response(response.body, {headers: {'content-type': type, 'cache-control': 'public, max-age=86400'}});
 }
 
+function mergeAnimeItems(items) {
+  const merged = new Map();
+  for (const item of items) {
+    const key = `${animeItemDate(item)}:${normalizeTitle(animeItemTitle(item))}` || item.id;
+    const current = merged.get(key);
+    if (!current || animeCompleteness(item) > animeCompleteness(current)) merged.set(key, item);
+  }
+  return [...merged.values()];
+}
+
+function animeCompleteness(item) {
+  return (hasKorean(animeItemTitle(item)) ? 8 : 0) +
+    (item.posterUrl ? 4 : 0) +
+    ((item.genres || []).length > 0 ? 2 : 0) +
+    (String(item.id || '').startsWith('mal-') ? 0 : 1);
+}
+
+function normalizeTitle(value) {
+  return String(value || '').toLowerCase().replace(/[\s\W_]+/g, '');
+}
+
+function toAnimeFromJikan(item) {
+  return {
+    id: `mal-${item.mal_id}`,
+    title: jikanTitle(item),
+    originalTitle: item.title_japanese || item.title || '',
+    posterUrl: jikanPoster(item),
+    genres: jikanGenres(item),
+    status: jikanStatus(item.status),
+    weekday: jikanWeekday(item.broadcast?.day),
+    firstAirDate: dateOnly(item.aired?.from),
+    seasons: [],
+    movies: [],
+    dropped: false,
+  };
+}
+
+function jikanTitle(item) {
+  const titles = Array.isArray(item.titles) ? item.titles.map((title) => title.title || '') : [];
+  return titles.find(hasKorean) || item.title_english || item.title || item.title_japanese || '';
+}
+
+function jikanPoster(item) {
+  return item.images?.webp?.large_image_url || item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '';
+}
+
+function jikanGenres(item) {
+  const names = [
+    ...(item.genres || []),
+    ...(item.explicit_genres || []),
+    ...(item.themes || []),
+    ...(item.demographics || []),
+  ].map((genre) => jikanGenreName(genre.name)).filter(Boolean);
+  return [...new Set(names)].filter((name) => name !== '애니메이션').slice(0, 5);
+}
+
+function jikanGenreName(name = '') {
+  return {
+    Action: '액션',
+    Adventure: '모험',
+    'Avant Garde': '실험',
+    'Award Winning': '수상작',
+    Comedy: '코미디',
+    Drama: '드라마',
+    Fantasy: '판타지',
+    Gourmet: '요리',
+    Horror: '공포',
+    Mystery: '미스터리',
+    Romance: '로맨스',
+    'Sci-Fi': 'SF',
+    'Slice of Life': '일상',
+    Sports: '스포츠',
+    Supernatural: '초자연',
+    Suspense: '서스펜스',
+    School: '학원',
+    Seinen: '성인',
+    Shoujo: '순정',
+    Shounen: '소년',
+    Josei: '여성향',
+    Kids: '키즈',
+  }[name] || name;
+}
+
+function jikanStatus(status = '') {
+  return {
+    'Currently Airing': '방영중',
+    'Not yet aired': '방영 예정',
+    'Finished Airing': '방영 종료',
+  }[status] || status;
+}
+
+function jikanWeekday(day = '') {
+  return {
+    Mondays: '월요일',
+    Tuesdays: '화요일',
+    Wednesdays: '수요일',
+    Thursdays: '목요일',
+    Fridays: '금요일',
+    Saturdays: '토요일',
+    Sundays: '일요일',
+  }[day] || '';
+}
+
+function isJikanAnimeRelease(item) {
+  if (!item?.mal_id || !dateOnly(item.aired?.from)) return false;
+  if (String(item.rating || '').startsWith('Rx')) return false;
+  const allowedTypes = new Set(['TV', 'ONA', 'OVA', 'Movie', 'Special', 'TV Special']);
+  return allowedTypes.has(item.type) && !isClearlyNonJapaneseJikan(item);
+}
+
+function isClearlyNonJapaneseJikan(item) {
+  if (/[가-힣]/.test(item.title_japanese || '')) return true;
+  const names = [
+    ...(item.studios || []),
+    ...(item.producers || []),
+    ...(item.licensors || []),
+  ].map((entry) => entry.name || '').join(' ');
+  return /(Tencent|bilibili|iQIYI|Youku|China Literature|Yuewen|Fanqie|B\.CMAY|Thundray|Sparkly Key|Wonder Cat|Original Force|Shenman|Yien Animation|Flying Fish|Guangzhou|Haoliners|Motion Magic|Colored Pencil|PB Animation|ASK Animation)/i.test(names);
+}
+
+function isJikanMovie(item) {
+  return item.type === 'Movie';
+}
 function toAnime(item) {
   return {
     id: animeItemId(item),
@@ -311,7 +563,7 @@ function animeItemId(item) {
 }
 
 function animeItemDate(item) {
-  return item.first_air_date || item.release_date || '';
+  return item.firstAirDate || item.first_air_date || item.release_date || '';
 }
 
 function poster(path) {
@@ -348,6 +600,23 @@ function koreaToday() {
   return new Date(now.toLocaleString('en-US', {timeZone: 'Asia/Seoul'}));
 }
 
+function jikanSeasonsFromYearStart(today) {
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const seasons = [{year, name: 'winter'}];
+  if (month >= 4) seasons.push({year, name: 'spring'});
+  if (month >= 7) seasons.push({year, name: 'summer'});
+  if (month >= 10) seasons.push({year, name: 'fall'});
+  return seasons;
+}
+
+function dateOnly(value) {
+  return typeof value === 'string' && value.length >= 10 ? value.slice(0, 10) : '';
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 function monthsFromYearStart(today) {
   const months = [];
   const year = today.getFullYear();
@@ -366,7 +635,6 @@ function xml(item, tag) {
 
 function normalizeNewsUrl(url) {
   try {
-      if (request.method === 'OPTIONS') return cors();
     const parsed = new URL(url);
     const original = parsed.searchParams.get('url');
     return original ? decode(original) : url;
@@ -430,3 +698,8 @@ function json(body, status = 200) {
     headers: corsHeaders({'content-type': 'application/json; charset=utf-8'}),
   });
 }
+
+
+
+
+

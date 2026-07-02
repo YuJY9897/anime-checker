@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/section_header.dart';
 import '../detail/detail_screen.dart';
 
 class ScheduleScreen extends ConsumerWidget {
@@ -33,7 +32,13 @@ class ScheduleScreen extends ConsumerWidget {
     );
     return ListView(
       children: [
-        SectionHeader(title: '요일 편성표', meta: '방영중 $count개'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Text(
+            '방영중 $count개',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+        ),
         if (schedule.isEmpty)
           const EmptyState(
             title: '편성표가 비어 있어요',

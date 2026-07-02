@@ -156,9 +156,13 @@ class DetailScreen extends ConsumerWidget {
             ),
           SectionHeader(title: '시즌'),
           if (anime.seasons.isEmpty)
-            const EmptyState(
+            EmptyState(
               title: '시즌 정보가 없어요',
               message: '프록시에서 상세 정보를 가져오면 시즌과 에피소드가 채워져요.',
+              actionLabel: previewAnime == null ? '시즌 정보 다시 가져오기' : null,
+              onAction: previewAnime == null
+                  ? () => controller.refreshAnimeDetail(anime.id)
+                  : null,
             )
           else
             Padding(

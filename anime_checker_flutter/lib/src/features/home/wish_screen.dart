@@ -5,7 +5,6 @@ import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
 import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/section_header.dart';
 
 class WishScreen extends ConsumerWidget {
   const WishScreen({super.key});
@@ -16,7 +15,13 @@ class WishScreen extends ConsumerWidget {
     final items = controller.wishItems;
     return ListView(
       children: [
-        SectionHeader(title: '찜', meta: '${items.length}개'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Text(
+            '총 ${items.length}개',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+        ),
         if (items.isEmpty)
           const EmptyState(
             title: '찜한 작품이 없어요',

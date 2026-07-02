@@ -5,7 +5,6 @@ import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
 import '../../core/models.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/section_header.dart';
 import 'news_detail_screen.dart';
 
 enum NewsFilter { all, newRelease, season, movie, boxOffice }
@@ -61,12 +60,22 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
       onRefresh: () => controller.refreshNews(),
       child: ListView(
         children: [
-          SectionHeader(
-            title: '애니 소식',
-            meta: controller.newsBasis,
-            action: IconButton(
-              onPressed: controller.refreshNews,
-              icon: const Icon(Icons.refresh),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    controller.newsBasis,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                IconButton(
+                  tooltip: '새로고침',
+                  onPressed: controller.refreshNews,
+                  icon: const Icon(Icons.refresh),
+                ),
+              ],
             ),
           ),
           Padding(

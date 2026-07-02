@@ -366,13 +366,33 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> addAnime(Anime anime) async {
+    var nextAnime = anime.copyWith(dropped: false);
+    if (anime.seasons.isEmpty && !anime.id.startsWith('movie-')) {
+      try {
+        nextAnime =
+            (await _apiClient.fetchAnime(anime.id))?.copyWith(dropped: false) ??
+            nextAnime;
+      } catch (_) {
+        nextAnime = anime.copyWith(dropped: false);
+      }
+    }
     final list = Map<String, Anime>.from(data.animeList)
-      ..[anime.id] = anime.copyWith(dropped: false);
+      ..[anime.id] = nextAnime;
     final wish = Map<String, WishItem>.from(data.wishList)..remove(anime.id);
     final dropped = Map<String, bool>.from(data.dropped)..remove(anime.id);
     await _commit(
       data.copyWith(animeList: list, wishList: wish, dropped: dropped),
     );
+  }
+
+  Future<void> refreshAnimeDetail(String animeId) async {
+    final current = data.animeList[animeId];
+    if (current == null || current.id.startsWith('movie-')) return;
+    final fetched = await _apiClient.fetchAnime(animeId);
+    if (fetched == null) return;
+    final list = Map<String, Anime>.from(data.animeList)
+      ..[animeId] = fetched.copyWith(dropped: current.dropped);
+    await _commit(data.copyWith(animeList: list));
   }
 
   Future<void> addWish(Anime anime) async {

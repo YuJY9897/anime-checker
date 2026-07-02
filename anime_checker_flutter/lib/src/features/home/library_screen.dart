@@ -7,7 +7,6 @@ import '../../core/genre_text.dart';
 import '../../core/models.dart';
 import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/section_header.dart';
 import '../detail/detail_screen.dart';
 
 enum LibraryMode { library, dropped }
@@ -72,10 +71,15 @@ class LibraryScreen extends ConsumerWidget {
         ? controller.libraryAnime
         : controller.droppedAnime;
     final sorted = _sorted(items, controller);
-    final title = mode == LibraryMode.library ? '보관함' : '보류';
     return ListView(
       children: [
-        SectionHeader(title: title, meta: '${items.length}개'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Text(
+            '총 ${items.length}개',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: Wrap(
