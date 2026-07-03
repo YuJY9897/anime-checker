@@ -109,7 +109,12 @@ class LibraryScreen extends ConsumerWidget {
             children: sorted.map((anime) {
               final reason = controller.droppedReason(anime.id);
               final metaLines = [
-                if (mode == LibraryMode.library && hasUsefulText(anime.weekday))
+                if (mode == LibraryMode.library &&
+                    isAnimeCurrentlyAiring(
+                      anime.firstAirDate,
+                      status: anime.status,
+                    ) &&
+                    hasUsefulText(anime.weekday))
                   anime.weekday,
                 if (mode == LibraryMode.dropped && reason.isNotEmpty) reason,
                 controller.progressLabel(anime),

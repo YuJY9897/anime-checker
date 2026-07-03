@@ -276,6 +276,15 @@ void main() {
       animeAiringStatusLabel('2026-06-10', status: 'Returning Series'),
       '방영중',
     );
+    expect(
+      isAnimeCurrentlyAiring('2026-06-10', status: 'Returning Series'),
+      isTrue,
+    );
+    expect(isAnimeCurrentlyAiring('2026-06-10', status: 'Ended'), isFalse);
+    expect(
+      isAnimeCurrentlyAiring('2026-07-10', now: DateTime(2026, 6, 29)),
+      isFalse,
+    );
   });
 
   test('iso news dates are displayed as stored dates', () {

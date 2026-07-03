@@ -107,9 +107,12 @@ class DetailScreen extends ConsumerWidget {
                         const SizedBox(height: 8),
                       ],
                       Text(anime.status.isEmpty ? '상태 확인 중' : anime.status),
-                      Text(
-                        anime.weekday.isEmpty ? '편성 요일 확인 중' : anime.weekday,
-                      ),
+                      if (isAnimeCurrentlyAiring(
+                            anime.firstAirDate,
+                            status: anime.status,
+                          ) &&
+                          hasUsefulText(anime.weekday))
+                        Text(anime.weekday),
                       Text('첫 방영: ${formatStoredDate(anime.firstAirDate)}'),
                       const SizedBox(height: 8),
                       if (inLibrary) ...[

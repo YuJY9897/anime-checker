@@ -73,6 +73,14 @@ List<String> animeBroadcastMetaLines(
   ];
 }
 
+bool isAnimeCurrentlyAiring(
+  String airDate, {
+  String status = '',
+  DateTime? now,
+}) {
+  return animeAiringStatusLabel(airDate, status: status, now: now) == '방영중';
+}
+
 String weekdayLabel(DateTime date) {
   const labels = ['월', '화', '수', '목', '금', '토', '일'];
   return '${labels[date.weekday - 1]}요일';
