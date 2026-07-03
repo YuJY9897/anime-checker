@@ -109,12 +109,7 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
               child: Column(
                 children: items
-                    .map(
-                      (article) => _NewsCard(
-                        article: article,
-                        showImage: controller.settings.showNewsImages,
-                      ),
-                    )
+                    .map((article) => _NewsCard(article: article))
                     .toList(),
               ),
             ),
@@ -125,10 +120,9 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
 }
 
 class _NewsCard extends StatelessWidget {
-  const _NewsCard({required this.article, required this.showImage});
+  const _NewsCard({required this.article});
 
   final NewsArticle article;
-  final bool showImage;
 
   @override
   Widget build(BuildContext context) {
@@ -146,20 +140,6 @@ class _NewsCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (showImage && article.imageUrl.trim().isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: Image.network(
-                    article.imageUrl,
-                    width: 74,
-                    height: 74,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const SizedBox.shrink(),
-                  ),
-                ),
-              if (showImage && article.imageUrl.trim().isNotEmpty)
-                const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +159,7 @@ class _NewsCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xA6000000),
+                        color: colors.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 7),
@@ -198,7 +178,7 @@ class _NewsCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(color: const Color(0xB3000000)),
+                              ?.copyWith(color: colors.onSurfaceVariant),
                         ),
                       ),
                     ),

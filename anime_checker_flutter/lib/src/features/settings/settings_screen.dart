@@ -64,6 +64,12 @@ class SettingsScreen extends ConsumerWidget {
                 settings.copyWith(showPosterImages: value),
               ),
             ),
+            _SwitchRow(
+              title: '다크 모드',
+              value: settings.darkMode,
+              onChanged: (value) =>
+                  controller.updateSettings(settings.copyWith(darkMode: value)),
+            ),
             const SizedBox(height: 10),
             _DropdownRow<String>(
               label: '보관함 정렬',
@@ -85,13 +91,6 @@ class SettingsScreen extends ConsumerWidget {
         _SettingsGroup(
           title: '애니 소식 설정',
           children: [
-            _SwitchRow(
-              title: '기사 이미지 표시',
-              value: settings.showNewsImages,
-              onChanged: (value) => controller.updateSettings(
-                settings.copyWith(showNewsImages: value),
-              ),
-            ),
             _SwitchRow(
               title: '원문을 앱 안에서 열기',
               value: settings.openNewsInsideApp,

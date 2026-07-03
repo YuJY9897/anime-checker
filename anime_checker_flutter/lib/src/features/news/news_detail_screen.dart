@@ -20,18 +20,6 @@ class NewsDetailScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          if (settings.showNewsImages && article.imageUrl.trim().isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                article.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const SizedBox.shrink(),
-              ),
-            ),
-          if (settings.showNewsImages && article.imageUrl.trim().isNotEmpty)
-            const SizedBox(height: 14),
           Text(
             article.title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -42,9 +30,9 @@ class NewsDetailScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             '${article.source} · ${formatStoredDate(article.date)}',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: const Color(0x99000000)),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 14),
           Text(

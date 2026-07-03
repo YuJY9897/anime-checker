@@ -141,7 +141,9 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: const Color(0xB3000000),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                                 height: 1.22,
                               ),
                         ),

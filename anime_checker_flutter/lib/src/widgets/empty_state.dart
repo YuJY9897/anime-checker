@@ -23,7 +23,7 @@ class EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: colors.outlineVariant),
           boxShadow: const [
@@ -60,9 +60,9 @@ class EmptyState extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: const Color(0xB3000000)),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               if (actionLabel != null && onAction != null) ...[
                 const SizedBox(height: 14),

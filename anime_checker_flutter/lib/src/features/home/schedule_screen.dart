@@ -96,7 +96,7 @@ class _DaySection extends StatelessWidget {
               Text(
                 '${items.length}개',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: const Color(0x99000000),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -105,7 +105,7 @@ class _DaySection extends StatelessWidget {
           const SizedBox(height: 8),
           DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -162,7 +162,9 @@ class _ScheduleRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: hasNewEpisode ? colors.primaryContainer : colors.surface,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0x14000000)),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
         child: Text(
           label,

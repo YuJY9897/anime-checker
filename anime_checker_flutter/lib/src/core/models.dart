@@ -249,6 +249,7 @@ class AppSettings {
     required this.inferScheduleWeekday,
     required this.showNewsImages,
     required this.openNewsInsideApp,
+    required this.darkMode,
   });
 
   factory AppSettings.defaults() {
@@ -257,8 +258,9 @@ class AppSettings {
       showPosterImages: true,
       includeDroppedInSchedule: true,
       inferScheduleWeekday: true,
-      showNewsImages: true,
+      showNewsImages: false,
       openNewsInsideApp: true,
+      darkMode: false,
     );
   }
 
@@ -268,6 +270,7 @@ class AppSettings {
   final bool inferScheduleWeekday;
   final bool showNewsImages;
   final bool openNewsInsideApp;
+  final bool darkMode;
 
   AppSettings copyWith({
     String? librarySort,
@@ -276,6 +279,7 @@ class AppSettings {
     bool? inferScheduleWeekday,
     bool? showNewsImages,
     bool? openNewsInsideApp,
+    bool? darkMode,
   }) => AppSettings(
     librarySort: librarySort ?? this.librarySort,
     showPosterImages: showPosterImages ?? this.showPosterImages,
@@ -284,6 +288,7 @@ class AppSettings {
     inferScheduleWeekday: inferScheduleWeekday ?? this.inferScheduleWeekday,
     showNewsImages: showNewsImages ?? this.showNewsImages,
     openNewsInsideApp: openNewsInsideApp ?? this.openNewsInsideApp,
+    darkMode: darkMode ?? this.darkMode,
   );
 
   factory AppSettings.fromJson(Map<String, dynamic>? json) {
@@ -303,6 +308,7 @@ class AppSettings {
           json['showNewsImages'] as bool? ?? defaults.showNewsImages,
       openNewsInsideApp:
           json['openNewsInsideApp'] as bool? ?? defaults.openNewsInsideApp,
+      darkMode: json['darkMode'] as bool? ?? defaults.darkMode,
     );
   }
 
@@ -313,6 +319,7 @@ class AppSettings {
     'inferScheduleWeekday': inferScheduleWeekday,
     'showNewsImages': showNewsImages,
     'openNewsInsideApp': openNewsInsideApp,
+    'darkMode': darkMode,
   };
 }
 

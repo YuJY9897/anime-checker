@@ -42,7 +42,7 @@ class EpisodeScreen extends ConsumerWidget {
                       Text(
                         '방영일: ${formatStoredDate(episode.airDate)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0x99000000),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

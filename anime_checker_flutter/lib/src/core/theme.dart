@@ -1,31 +1,39 @@
 import 'package:flutter/material.dart';
 
-ThemeData buildAppTheme() {
+ThemeData buildAppTheme(Brightness brightness) {
   const seed = Color(0xFF275F57);
-  const background = Color(0xFFF4F6F5);
-  const ink = Color(0xFF151C19);
-  const muted = Color(0xFF68736E);
-  const outline = Color(0xFFDDE5E0);
-  final scheme = ColorScheme.fromSeed(
-    seedColor: seed,
-    brightness: Brightness.light,
-  );
+  final isDark = brightness == Brightness.dark;
+  final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+  final background = isDark ? const Color(0xFF101614) : const Color(0xFFF4F6F5);
+  final card = isDark ? const Color(0xFF17211E) : const Color(0xFFFFFFFF);
+  final cardHigh = isDark ? const Color(0xFF22302B) : const Color(0xFFEFF4F1);
+  final cardHighest = isDark
+      ? const Color(0xFF2B3C35)
+      : const Color(0xFFE4ECE8);
+  final ink = isDark ? const Color(0xFFE9F1ED) : const Color(0xFF151C19);
+  final muted = isDark ? const Color(0xFFB8C7C0) : const Color(0xFF68736E);
+  final outline = isDark ? const Color(0xFF3B4C45) : const Color(0xFFDDE5E0);
+  final shadow = isDark ? Colors.black54 : const Color(0x26000000);
+
   return ThemeData(
     useMaterial3: true,
+    brightness: brightness,
     colorScheme: scheme.copyWith(
       surface: background,
-      surfaceContainer: const Color(0xFFFFFFFF),
-      surfaceContainerHigh: const Color(0xFFEFF4F1),
-      surfaceContainerHighest: const Color(0xFFE4ECE8),
-      primary: seed,
-      onPrimary: Colors.white,
-      secondary: const Color(0xFFC55F42),
-      tertiary: const Color(0xFF2F7199),
+      onSurface: ink,
+      onSurfaceVariant: muted,
+      surfaceContainer: card,
+      surfaceContainerHigh: cardHigh,
+      surfaceContainerHighest: cardHighest,
+      primary: isDark ? const Color(0xFF8FD8C4) : seed,
+      onPrimary: isDark ? const Color(0xFF08201A) : Colors.white,
+      secondary: isDark ? const Color(0xFFFFB29B) : const Color(0xFFC55F42),
+      tertiary: isDark ? const Color(0xFF92D4FF) : const Color(0xFF2F7199),
       outlineVariant: outline,
     ),
     scaffoldBackgroundColor: background,
     fontFamilyFallback: const ['Roboto', 'Noto Sans KR'],
-    textTheme: const TextTheme(
+    textTheme: TextTheme(
       headlineSmall: TextStyle(
         fontSize: 23,
         fontWeight: FontWeight.w900,
@@ -52,11 +60,23 @@ ThemeData buildAppTheme() {
       ),
       bodyMedium: TextStyle(fontSize: 14, color: ink, height: 1.38),
       bodySmall: TextStyle(fontSize: 13, color: muted, height: 1.34),
-      labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-      labelMedium: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-      labelSmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+      labelLarge: TextStyle(
+        fontSize: 14,
+        color: ink,
+        fontWeight: FontWeight.w800,
+      ),
+      labelMedium: TextStyle(
+        fontSize: 13,
+        color: ink,
+        fontWeight: FontWeight.w700,
+      ),
+      labelSmall: TextStyle(
+        fontSize: 12,
+        color: muted,
+        fontWeight: FontWeight.w700,
+      ),
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       centerTitle: false,
       backgroundColor: background,
       foregroundColor: ink,
@@ -72,20 +92,20 @@ ThemeData buildAppTheme() {
       ),
     ),
     cardTheme: CardThemeData(
-      elevation: 1,
-      color: Colors.white,
+      elevation: isDark ? 0 : 1,
+      color: card,
       margin: EdgeInsets.zero,
-      shadowColor: Color(0x26000000),
-      surfaceTintColor: Colors.white,
+      shadowColor: shadow,
+      surfaceTintColor: card,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderRadius: const BorderRadius.all(Radius.circular(8)),
         side: BorderSide(color: outline),
       ),
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
         foregroundColor: ink,
-        backgroundColor: Colors.white,
+        backgroundColor: card,
         fixedSize: const Size(44, 44),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -100,8 +120,11 @@ ThemeData buildAppTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: seed,
-        side: const BorderSide(color: Color(0xFF789188), width: 1.2),
+        foregroundColor: scheme.primary,
+        side: BorderSide(
+          color: isDark ? const Color(0xFF6B827A) : const Color(0xFF789188),
+          width: 1.2,
+        ),
         minimumSize: const Size(0, 34),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -117,35 +140,35 @@ ThemeData buildAppTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white,
-      labelStyle: const TextStyle(color: muted, fontWeight: FontWeight.w700),
-      hintStyle: const TextStyle(color: Color(0x99000000)),
+      fillColor: card,
+      labelStyle: TextStyle(color: muted, fontWeight: FontWeight.w700),
+      hintStyle: TextStyle(color: muted.withValues(alpha: 0.72)),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: outline),
+        borderSide: BorderSide(color: outline),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: outline),
+        borderSide: BorderSide(color: outline),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: seed, width: 1.4),
+        borderSide: BorderSide(color: scheme.primary, width: 1.4),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: Colors.white,
-      selectedColor: const Color(0xFFD7EDE2),
-      checkmarkColor: seed,
-      side: const BorderSide(color: outline),
+      backgroundColor: card,
+      selectedColor: isDark ? const Color(0xFF284A3F) : const Color(0xFFD7EDE2),
+      checkmarkColor: scheme.primary,
+      side: BorderSide(color: outline),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      labelStyle: const TextStyle(
+      labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w700,
         color: ink,
       ),
-      secondaryLabelStyle: const TextStyle(
+      secondaryLabelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w800,
         color: ink,
@@ -153,26 +176,41 @@ ThemeData buildAppTheme() {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
     ),
     popupMenuTheme: PopupMenuThemeData(
-      color: Colors.white,
-      elevation: 5,
-      shadowColor: const Color(0x26000000),
+      color: card,
+      elevation: isDark ? 0 : 5,
+      shadowColor: shadow,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      textStyle: const TextStyle(
+      textStyle: TextStyle(
         color: ink,
         fontSize: 14,
         fontWeight: FontWeight.w700,
       ),
     ),
-    listTileTheme: const ListTileThemeData(
-      iconColor: seed,
+    listTileTheme: ListTileThemeData(
+      iconColor: scheme.primary,
       textColor: ink,
       subtitleTextStyle: TextStyle(color: muted, fontSize: 13),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: ink,
-      contentTextStyle: const TextStyle(fontWeight: FontWeight.w700),
+      backgroundColor: isDark ? const Color(0xFFE9F1ED) : ink,
+      contentTextStyle: TextStyle(
+        color: isDark ? const Color(0xFF101614) : Colors.white,
+        fontWeight: FontWeight.w700,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+    dividerTheme: DividerThemeData(color: outline),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) =>
+            states.contains(WidgetState.selected) ? scheme.primary : muted,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? scheme.primary.withValues(alpha: 0.35)
+            : outline,
+      ),
     ),
   );
 }
