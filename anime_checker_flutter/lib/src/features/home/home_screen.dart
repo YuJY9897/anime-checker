@@ -19,11 +19,11 @@ class HomeScreen extends ConsumerWidget {
       onRefresh: () async => controller.load(),
       child: ListView(
         children: [
-          SectionHeader(title: '오늘 볼 애니', meta: nowBasisText()),
+          SectionHeader(title: '이어볼 애니', meta: nowBasisText()),
           if (targets.isEmpty)
             const EmptyState(
-              title: '볼 새 화가 없어요',
-              message: '보관함에 추가한 작품 중 아직 안 본 새 화가 있으면 여기에 보여요.',
+              title: '이어볼 작품이 없어요',
+              message: '보관함에 추가한 작품 중 아직 안 본 화가 있으면 여기에 보여요.',
             )
           else
             TwoColumnAnimeGrid(
@@ -38,20 +38,8 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                   metaLines: [
-                    '다음 ${target.season.name} ${target.episode.number}화',
+                    '이어볼 화: ${target.season.name} ${target.episode.number}화부터',
                     '방영일: ${formatStoredDate(target.episode.airDate)}',
-                  ],
-                  actions: [
-                    AnimeCardAction(
-                      label: '시청',
-                      filled: true,
-                      onPressed: () => controller.setEpisodeWatched(
-                        target.anime,
-                        target.season,
-                        target.episode,
-                        true,
-                      ),
-                    ),
                   ],
                   onLongPress: () =>
                       _showAnimeMenu(context, controller, target.anime.id),

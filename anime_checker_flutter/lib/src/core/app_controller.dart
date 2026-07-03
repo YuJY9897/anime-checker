@@ -123,19 +123,17 @@ class AppController extends ChangeNotifier {
   List<EpisodeTarget> get todayTargets {
     final today = DateTime.now();
     final todayOnly = DateTime(today.year, today.month, today.day);
-    final startDate = todayOnly.subtract(const Duration(days: 13));
     final targets = <EpisodeTarget>[];
     for (final anime in libraryAnime) {
       EpisodeTarget? nextTarget;
       for (final season in anime.seasons) {
         for (final episode in season.episodes) {
           final date = parseDate(episode.airDate);
-          if (date == null) continue;
-          final day = DateTime(date.year, date.month, date.day);
-          final isInWindow =
-              !day.isBefore(startDate) && !day.isAfter(todayOnly);
-          if (isInWindow &&
-              !isEpisodeWatched(anime.id, season.number, episode.number)) {
+          if (date != null) {
+            final airDay = DateTime(date.year, date.month, date.day);
+            if (airDay.isAfter(todayOnly)) continue;
+          }
+          if (!isEpisodeWatched(anime.id, season.number, episode.number)) {
             nextTarget = EpisodeTarget(
               anime: anime,
               season: season,
@@ -148,8 +146,22 @@ class AppController extends ChangeNotifier {
       }
       if (nextTarget != null) targets.add(nextTarget);
     }
-    targets.sort((a, b) => a.episode.airDate.compareTo(b.episode.airDate));
+    targets.sort(_compareEpisodeTargets);
     return targets;
+  }
+
+  int _compareEpisodeTargets(EpisodeTarget a, EpisodeTarget b) {
+    final aDate = parseDate(a.episode.airDate);
+    final bDate = parseDate(b.episode.airDate);
+    if (aDate != null && bDate != null) {
+      final compared = aDate.compareTo(bDate);
+      if (compared != 0) return compared;
+    } else if (aDate != null) {
+      return -1;
+    } else if (bDate != null) {
+      return 1;
+    }
+    return a.anime.title.compareTo(b.anime.title);
   }
 
   Map<String, List<Anime>> get scheduleByWeekday {
@@ -393,6 +405,24 @@ class AppController extends ChangeNotifier {
     final list = Map<String, Anime>.from(data.animeList)
       ..[animeId] = fetched.copyWith(dropped: current.dropped);
     await _commit(data.copyWith(animeList: list));
+  }
+
+  Future<Anime> previewAnimeDetail(Anime anime) async {
+    final stored = data.animeList[anime.id];
+    if (stored != null &&
+        (stored.seasons.isNotEmpty || stored.movies.isNotEmpty)) {
+      return stored;
+    }
+    if (anime.id.startsWith('movie-') ||
+        anime.seasons.isNotEmpty ||
+        anime.movies.isNotEmpty) {
+      return anime;
+    }
+    try {
+      return await _apiClient.fetchAnime(anime.id) ?? anime;
+    } catch (_) {
+      return anime;
+    }
   }
 
   Future<void> addWish(Anime anime) async {

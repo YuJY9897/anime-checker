@@ -31,6 +31,33 @@ class DetailScreen extends ConsumerWidget {
         ),
       );
     }
+    if (previewAnime != null &&
+        anime.seasons.isEmpty &&
+        anime.movies.isEmpty &&
+        !anime.id.startsWith('movie-')) {
+      return FutureBuilder<Anime>(
+        future: controller.previewAnimeDetail(anime),
+        builder: (context, snapshot) {
+          final detailed = snapshot.data ?? anime;
+          if (snapshot.connectionState != ConnectionState.done &&
+              snapshot.data == null) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('상세')),
+              body: const Center(child: CircularProgressIndicator()),
+            );
+          }
+          return _buildDetail(context, controller, detailed);
+        },
+      );
+    }
+    return _buildDetail(context, controller, anime);
+  }
+
+  Widget _buildDetail(
+    BuildContext context,
+    AppController controller,
+    Anime anime,
+  ) {
     final inLibrary = controller.isInLibrary(anime.id);
     final genres = visibleGenres(anime.genres);
     final note = controller.animeNote(anime.id);
@@ -107,7 +134,7 @@ class DetailScreen extends ConsumerWidget {
                 if (!inLibrary)
                   FilledButton(
                     onPressed: () => controller.addAnime(anime),
-                    child: const Text('보관함 추가'),
+                    child: const Text('추가'),
                   )
                 else ...[
                   OutlinedButton(
@@ -155,7 +182,9 @@ class DetailScreen extends ConsumerWidget {
               ),
             ),
           SectionHeader(title: '시즌'),
-          if (anime.seasons.isEmpty)
+          if (anime.seasons.isEmpty && !inLibrary)
+            const SizedBox.shrink()
+          else if (anime.seasons.isEmpty)
             EmptyState(
               title: '시즌 정보가 없어요',
               message: '프록시에서 상세 정보를 가져오면 시즌과 에피소드가 채워져요.',
@@ -232,7 +261,13 @@ class DetailScreen extends ConsumerWidget {
                           ),
                         ),
                         OutlinedButton(
-                          onPressed: () => controller.toggleMovieWatched(movie),
+                          onPressed: () => _toggleMovieWatched(
+                            context,
+                            controller,
+                            anime,
+                            movie,
+                            watched,
+                          ),
                           child: Text(watched ? '완료' : '시청'),
                         ),
                       ],
@@ -245,6 +280,37 @@ class DetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _toggleMovieWatched(
+    BuildContext context,
+    AppController controller,
+    Anime anime,
+    AnimeMovie movie,
+    bool watched,
+  ) async {
+    if (!watched && !controller.isInLibrary(anime.id)) {
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('보관함에 추가할까요?'),
+          content: Text('${anime.title}을 보관함에 추가하고 이 영화를 시청 완료로 표시합니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
+      if (accepted != true) return;
+      await controller.addAnime(anime);
+    }
+    await controller.toggleMovieWatched(movie);
   }
 
   void _confirmDelete(

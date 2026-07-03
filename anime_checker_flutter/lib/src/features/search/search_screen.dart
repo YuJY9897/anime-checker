@@ -77,12 +77,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ),
                   ),
                   metaLines: [
-                    formatNewAnimeAirDate(anime.firstAirDate),
-                    anime.status,
+                    ...animeBroadcastMetaLines(
+                      anime.firstAirDate,
+                      status: anime.status,
+                    ),
                   ],
                   actions: [
                     AnimeCardAction(
-                      label: inLibrary ? '추가됨' : '보관함 추가',
+                      label: inLibrary ? '추가됨' : '추가',
                       filled: !inLibrary,
                       onPressed: inLibrary
                           ? null

@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
+import '../../core/models.dart';
 import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
+import '../detail/detail_screen.dart';
 
 class WishScreen extends ConsumerWidget {
   const WishScreen({super.key});
@@ -35,12 +37,17 @@ class WishScreen extends ConsumerWidget {
                 title: item.title,
                 posterUrl: item.posterUrl,
                 genres: item.genres,
-                metaLines: [formatNewAnimeAirDate(item.firstAirDate)],
+                metaLines: animeBroadcastMetaLines(item.firstAirDate),
                 showImage: controller.settings.showPosterImages,
-                onTap: () => controller.addWishToLibrary(item),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        DetailScreen.preview(anime: _animeFromWish(item)),
+                  ),
+                ),
                 actions: [
                   AnimeCardAction(
-                    label: '보관함 추가',
+                    label: '추가',
                     filled: true,
                     onPressed: () => controller.addWishToLibrary(item),
                   ),
@@ -57,6 +64,22 @@ class WishScreen extends ConsumerWidget {
     );
   }
 
+  Anime _animeFromWish(WishItem item) {
+    return Anime(
+      id: item.id,
+      title: item.title,
+      originalTitle: '',
+      posterUrl: item.posterUrl,
+      genres: item.genres,
+      status: '정보 확인 중',
+      weekday: '',
+      firstAirDate: item.firstAirDate,
+      seasons: const [],
+      movies: const [],
+      dropped: false,
+    );
+  }
+
   void _showMenu(BuildContext context, AppController controller, item) {
     showModalBottomSheet<void>(
       context: context,
@@ -66,7 +89,7 @@ class WishScreen extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.archive_outlined),
-              title: const Text('보관함 추가'),
+              title: const Text('추가'),
               onTap: () {
                 Navigator.pop(context);
                 controller.addWishToLibrary(item);

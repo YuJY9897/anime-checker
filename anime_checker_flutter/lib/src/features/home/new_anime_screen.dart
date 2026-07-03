@@ -146,10 +146,13 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                       builder: (_) => DetailScreen.preview(anime: anime),
                     ),
                   ),
-                  metaLines: [formatNewAnimeAirDate(anime.firstAirDate)],
+                  metaLines: animeBroadcastMetaLines(
+                    anime.firstAirDate,
+                    status: anime.status,
+                  ),
                   actions: [
                     AnimeCardAction(
-                      label: inLibrary ? '추가됨' : '보관함 추가',
+                      label: inLibrary ? '추가됨' : '추가',
                       filled: !inLibrary,
                       onPressed: inLibrary
                           ? null
@@ -199,7 +202,7 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.archive_outlined),
-              title: Text(controller.isInLibrary(anime.id) ? '추가됨' : '보관함 추가'),
+              title: Text(controller.isInLibrary(anime.id) ? '추가됨' : '추가'),
               onTap: controller.isInLibrary(anime.id)
                   ? null
                   : () {

@@ -109,7 +109,7 @@ async function jikanAnimeDetail(id) {
   const malId = id.replace(/^mal-/, '');
   const data = await jikan(`/anime/${encodeURIComponent(malId)}/full`);
   const item = data.data || {};
-  const anime = toAnimeFromJikan(item);
+  const anime = applyKnownKoreanTitle(toAnimeFromJikan(item));
   if (isJikanMovie(item)) {
     return {
       ...anime,
@@ -126,11 +126,7 @@ async function jikanAnimeDetail(id) {
     };
   }
   const episodeCount = Number.isFinite(item.episodes) ? item.episodes : 0;
-  const episodes = Array.from({length: episodeCount}, (_, index) => ({
-    number: index + 1,
-    title: `${index + 1}화`,
-    airDate: '',
-  }));
+  const episodes = await jikanAnimeEpisodes(malId, episodeCount);
   return {
     ...anime,
     seasons: episodes.length > 0
@@ -146,6 +142,35 @@ async function jikanAnimeDetail(id) {
       : [],
     movies: [],
   };
+}
+async function jikanAnimeEpisodes(malId, fallbackCount) {
+  const episodes = [];
+  let lastPage = 1;
+  for (let page = 1; page <= Math.min(lastPage, 6); page += 1) {
+    try {
+      const data = await jikan(`/anime/${encodeURIComponent(malId)}/episodes?page=${page}`);
+      episodes.push(...(data.data || []));
+      lastPage = data.pagination?.last_visible_page || 1;
+    } catch (_) {
+      break;
+    }
+    if (page < Math.min(lastPage, 6)) await sleep(350);
+  }
+  if (episodes.length > 0) {
+    return episodes
+      .map((episode, index) => ({
+        number: Number(episode.mal_id || index + 1),
+        title: episode.title || `${Number(episode.mal_id || index + 1)}화`,
+        airDate: dateOnly(episode.aired),
+      }))
+      .filter((episode) => Number.isFinite(episode.number) && episode.number > 0)
+      .sort((a, b) => a.number - b.number);
+  }
+  return Array.from({length: fallbackCount || 0}, (_, index) => ({
+    number: index + 1,
+    title: `${index + 1}화`,
+    airDate: '',
+  }));
 }
 async function seasonDetail(env, tvId, tv, summary) {
   try {
@@ -1204,6 +1229,7 @@ function json(body, status = 200) {
     headers: corsHeaders({'content-type': 'application/json; charset=utf-8'}),
   });
 }
+
 
 
 

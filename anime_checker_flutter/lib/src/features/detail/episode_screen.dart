@@ -51,21 +51,13 @@ class EpisodeScreen extends ConsumerWidget {
                 const SizedBox(width: 10),
                 watched
                     ? FilledButton.tonal(
-                        onPressed: () => controller.setEpisodeWatched(
-                          anime,
-                          season,
-                          episode,
-                          false,
-                        ),
+                        onPressed: () =>
+                            _setWatched(context, controller, episode, false),
                         child: const Text('완료'),
                       )
                     : OutlinedButton(
-                        onPressed: () => controller.setEpisodeWatched(
-                          anime,
-                          season,
-                          episode,
-                          true,
-                        ),
+                        onPressed: () =>
+                            _setWatched(context, controller, episode, true),
                         child: const Text('시청'),
                       ),
               ],
@@ -76,5 +68,37 @@ class EpisodeScreen extends ConsumerWidget {
         itemCount: season.episodes.length,
       ),
     );
+  }
+
+  Future<void> _setWatched(
+    BuildContext context,
+    AppController controller,
+    Episode episode,
+    bool watched,
+  ) async {
+    if (watched && !controller.isInLibrary(anime.id)) {
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('보관함에 추가할까요?'),
+          content: Text(
+            '${anime.title}을 보관함에 추가하고 ${episode.number}화까지 시청 완료로 표시합니다.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
+      if (accepted != true) return;
+      await controller.addAnime(anime);
+    }
+    await controller.setEpisodeWatched(anime, season, episode, watched);
   }
 }

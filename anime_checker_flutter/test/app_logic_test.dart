@@ -145,48 +145,48 @@ void main() {
     expect(targetIds.toSet().length, targetIds.length);
   });
 
-  test('today target window hides old unwatched episodes', () async {
-    final today = DateTime.now();
-    final old = today.subtract(const Duration(days: 30));
-    final current = today.subtract(const Duration(days: 3));
-    String iso(DateTime date) =>
-        '${date.year.toString().padLeft(4, '0')}-'
-        '${date.month.toString().padLeft(2, '0')}-'
-        '${date.day.toString().padLeft(2, '0')}';
-    final anime = Anime(
-      id: 'window',
-      title: '기간 테스트',
-      originalTitle: '',
-      posterUrl: '',
-      genres: const ['드라마'],
-      status: 'Returning Series',
-      weekday: '',
-      firstAirDate: iso(old),
-      seasons: [
-        AnimeSeason(
-          number: 1,
-          name: '1기',
-          subtitle: '',
-          posterUrl: '',
-          episodes: [
-            Episode(number: 1, title: '오래된 화', airDate: iso(old)),
-            Episode(number: 2, title: '최근 화', airDate: iso(current)),
-          ],
-        ),
-      ],
-      movies: const [],
-      dropped: false,
-    );
-    final repo = FakeRepository()
-      ..saved = AppData.empty().copyWith(
-        animeList: {'window': anime},
-        watchedEpisodes: {'window:s1:e1': true},
+  test(
+    'today targets include old unwatched episodes and skip future episodes',
+    () async {
+      final today = DateTime.now();
+      final old = today.subtract(const Duration(days: 30));
+      final future = today.add(const Duration(days: 7));
+      String iso(DateTime date) =>
+          '${date.year.toString().padLeft(4, '0')}-'
+          '${date.month.toString().padLeft(2, '0')}-'
+          '${date.day.toString().padLeft(2, '0')}';
+      final anime = Anime(
+        id: 'window',
+        title: '기간 테스트',
+        originalTitle: '',
+        posterUrl: '',
+        genres: const ['드라마'],
+        status: 'Ended',
+        weekday: '',
+        firstAirDate: iso(old),
+        seasons: [
+          AnimeSeason(
+            number: 1,
+            name: '1기',
+            subtitle: '',
+            posterUrl: '',
+            episodes: [
+              Episode(number: 1, title: '오래된 화', airDate: iso(old)),
+              Episode(number: 2, title: '미래 화', airDate: iso(future)),
+            ],
+          ),
+        ],
+        movies: const [],
+        dropped: false,
       );
-    final controller = AppController(repo, FakeApiClient());
-    await controller.load();
+      final repo = FakeRepository()
+        ..saved = AppData.empty().copyWith(animeList: {'window': anime});
+      final controller = AppController(repo, FakeApiClient());
+      await controller.load();
 
-    expect(controller.todayTargets.single.episode.number, 2);
-  });
+      expect(controller.todayTargets.single.episode.number, 1);
+    },
+  );
 
   test(
     'schedule shows only currently airing anime regardless of settings',
@@ -263,12 +263,17 @@ void main() {
     expect(controller.searchResults.map((item) => item.id), contains(anime.id));
   });
 
-  test('future new anime date is displayed as planned release', () {
-    final result = formatNewAnimeAirDate(
-      '2026-07-10',
-      now: DateTime(2026, 6, 29),
+  test('new anime air date and status are displayed on separate lines', () {
+    expect(formatNewAnimeAirDate('2026-07-10'), '방영일: 2026.07.10.');
+    expect(
+      animeAiringStatusLabel('2026-07-10', now: DateTime(2026, 6, 29)),
+      '방영예정',
     );
-    expect(result, '방영일: 2026.07.10. 방영예정');
+    expect(animeAiringStatusLabel('2026-06-10', status: 'Ended'), '완결');
+    expect(
+      animeAiringStatusLabel('2026-06-10', status: 'Returning Series'),
+      '방영중',
+    );
   });
 
   test('iso news dates are displayed as stored dates', () {

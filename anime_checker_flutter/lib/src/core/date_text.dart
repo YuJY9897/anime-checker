@@ -23,19 +23,54 @@ String formatStoredDate(String value) {
   return date == null ? '-' : formatDotDate(date);
 }
 
-String formatNewAnimeAirDate(String value, {DateTime? now}) {
+String formatNewAnimeAirDate(String value) {
   final date = parseDate(value);
-  if (date == null) return '방영일: 확인 중';
+  return date == null ? '방영일: 확인 중' : '방영일: ${formatDotDate(date)}';
+}
+
+String animeAiringStatusLabel(
+  String airDate, {
+  String status = '',
+  DateTime? now,
+}) {
+  final date = parseDate(airDate);
   final today = DateTime(
     now?.year ?? DateTime.now().year,
     now?.month ?? DateTime.now().month,
     now?.day ?? DateTime.now().day,
   );
-  final target = DateTime(date.year, date.month, date.day);
-  if (target.isAfter(today)) {
-    return '방영일: ${formatDotDate(target)} 방영예정';
+  if (date != null) {
+    final target = DateTime(date.year, date.month, date.day);
+    if (target.isAfter(today)) return '방영예정';
   }
-  return '방영일: ${formatDotDate(target)}';
+
+  final normalized = status.trim().toLowerCase();
+  if (normalized.contains('ended') ||
+      normalized.contains('canceled') ||
+      normalized.contains('cancelled') ||
+      normalized.contains('방영 종료') ||
+      normalized.contains('완결') ||
+      normalized.contains('종영') ||
+      normalized.contains('취소')) {
+    return '완결';
+  }
+  if (normalized.contains('planned') ||
+      normalized.contains('upcoming') ||
+      normalized.contains('예정')) {
+    return '방영예정';
+  }
+  return '방영중';
+}
+
+List<String> animeBroadcastMetaLines(
+  String airDate, {
+  String status = '',
+  DateTime? now,
+}) {
+  return [
+    formatNewAnimeAirDate(airDate),
+    animeAiringStatusLabel(airDate, status: status, now: now),
+  ];
 }
 
 String weekdayLabel(DateTime date) {
