@@ -101,9 +101,21 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
             ),
           ),
           if (controller.newsLoading && controller.news.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 60),
-              child: Center(child: CircularProgressIndicator()),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 60),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 14),
+                    Text(
+                      '새 소식을 모으고 있어요. 조금만 기다려 주세요.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
             )
           else if (controller.news.isEmpty)
             const EmptyState(

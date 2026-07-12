@@ -104,6 +104,7 @@ class Anime {
     required this.seasons,
     required this.movies,
     required this.dropped,
+    this.isMovie = false,
   });
 
   final String id;
@@ -118,6 +119,9 @@ class Anime {
   final List<AnimeMovie> movies;
   final bool dropped;
 
+  /// 극장판/영화 여부 (Jikan type: Movie).
+  final bool isMovie;
+
   Anime copyWith({bool? dropped}) => Anime(
     id: id,
     title: title,
@@ -130,6 +134,7 @@ class Anime {
     seasons: seasons,
     movies: movies,
     dropped: dropped ?? this.dropped,
+    isMovie: isMovie,
   );
 
   factory Anime.fromJson(Map<String, dynamic> json) => Anime(
@@ -152,6 +157,9 @@ class Anime {
         .map((item) => AnimeMovie.fromJson(Map<String, dynamic>.from(item)))
         .toList(),
     dropped: json['dropped'] == true,
+    isMovie:
+        json['isMovie'] == true ||
+        json['id']?.toString().startsWith('movie-') == true,
   );
 
   Map<String, dynamic> toJson() => {
@@ -166,6 +174,7 @@ class Anime {
     'seasons': seasons.map((item) => item.toJson()).toList(),
     'movies': movies.map((item) => item.toJson()).toList(),
     'dropped': dropped,
+    'isMovie': isMovie,
   };
 }
 
@@ -176,6 +185,7 @@ class WishItem {
     required this.posterUrl,
     required this.genres,
     required this.firstAirDate,
+    this.isMovie = false,
   });
 
   final String id;
@@ -183,6 +193,7 @@ class WishItem {
   final String posterUrl;
   final List<String> genres;
   final String firstAirDate;
+  final bool isMovie;
 
   factory WishItem.fromAnime(Anime anime) => WishItem(
     id: anime.id,
@@ -190,6 +201,7 @@ class WishItem {
     posterUrl: anime.posterUrl,
     genres: anime.genres,
     firstAirDate: anime.firstAirDate,
+    isMovie: anime.isMovie,
   );
 
   factory WishItem.fromJson(Map<String, dynamic> json) => WishItem(
@@ -200,6 +212,7 @@ class WishItem {
         .map((item) => '$item')
         .toList(),
     firstAirDate: json['firstAirDate'] as String? ?? '',
+    isMovie: json['isMovie'] == true,
   );
 
   Map<String, dynamic> toJson() => {
@@ -208,6 +221,7 @@ class WishItem {
     'posterUrl': posterUrl,
     'genres': genres,
     'firstAirDate': firstAirDate,
+    'isMovie': isMovie,
   };
 }
 

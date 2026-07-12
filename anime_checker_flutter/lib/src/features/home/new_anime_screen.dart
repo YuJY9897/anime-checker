@@ -135,9 +135,21 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
               ),
             ),
           if (controller.newAnimeLoading && items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 60),
-              child: Center(child: CircularProgressIndicator()),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 60),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 14),
+                    Text(
+                      '신작 정보를 모으고 있어요. 조금만 기다려 주세요.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
             )
           else if (items.isEmpty)
             const EmptyState(
@@ -165,6 +177,7 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                   metaLines: animeBroadcastMetaLines(
                     anime.firstAirDate,
                     status: anime.status,
+                    isMovie: anime.isMovie,
                   ),
                   actions: [
                     AnimeCardAction(

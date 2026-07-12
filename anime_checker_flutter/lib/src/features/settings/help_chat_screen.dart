@@ -15,7 +15,11 @@ class _HelpChatScreenState extends State<HelpChatScreen> {
   final scrollController = ScrollController();
   final messages = <_ChatMessage>[
     const _ChatMessage(
-      text: '안녕하세요, 애니 체크 도우미예요.\n앱 사용법이나 개인정보, 데이터 출처가 궁금하면 편하게 물어보세요.',
+      text:
+          '안녕하세요, 애니 체크 도우미예요.\n'
+          '앱 사용법이나 개인정보, 데이터 출처가 궁금하면 편하게 물어보세요.\n\n'
+          '아직 배우는 중이라 답변이 많이 부족할 수 있어요.\n'
+          '어색한 답변이나 개선 의견은 환경설정 → 피드백 보내기로 알려주시면 큰 도움이 돼요.',
       fromUser: false,
     ),
   ];
@@ -141,7 +145,8 @@ class _HelpChatScreenState extends State<HelpChatScreen> {
           '· 신작 애니 / 요일 편성표 / 애니 소식\n'
           '· 시청 체크 / 검색과 추가 / 백업과 복원\n'
           '· 다크 모드 / 뒤로가기 / 전체 초기화\n'
-          '· 개인정보 / 데이터 출처와 저작권 / 피드백';
+          '· 개인정보 / 데이터 출처와 저작권 / 피드백\n\n'
+          '필요한 답변이 없었다면 환경설정 → 피드백 보내기로 알려주세요. 다음 업데이트에 반영할게요.';
     }
     return best.answer;
   }

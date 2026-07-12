@@ -106,14 +106,23 @@ class DetailScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                       ],
-                      Text(anime.status.isEmpty ? '상태 확인 중' : anime.status),
-                      if (isAnimeCurrentlyAiring(
+                      Text(
+                        anime.isMovie
+                            ? '극장판'
+                            : (anime.status.isEmpty ? '상태 확인 중' : anime.status),
+                      ),
+                      if (!anime.isMovie &&
+                          isAnimeCurrentlyAiring(
                             anime.firstAirDate,
                             status: anime.status,
                           ) &&
                           hasUsefulText(anime.weekday))
                         Text(anime.weekday),
-                      Text('첫 방영: ${formatStoredDate(anime.firstAirDate)}'),
+                      Text(
+                        anime.isMovie
+                            ? '개봉일: ${formatStoredDate(anime.firstAirDate)}'
+                            : '첫 방영: ${formatStoredDate(anime.firstAirDate)}',
+                      ),
                       const SizedBox(height: 8),
                       if (inLibrary) ...[
                         Text(

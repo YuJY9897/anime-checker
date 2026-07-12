@@ -36,7 +36,10 @@ class WishScreen extends ConsumerWidget {
                 title: item.title,
                 posterUrl: item.posterUrl,
                 genres: item.genres,
-                metaLines: animeBroadcastMetaLines(item.firstAirDate),
+                metaLines: animeBroadcastMetaLines(
+                  item.firstAirDate,
+                  isMovie: item.isMovie,
+                ),
                 showImage: controller.settings.showPosterImages,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -76,6 +79,7 @@ class WishScreen extends ConsumerWidget {
       seasons: const [],
       movies: const [],
       dropped: false,
+      isMovie: item.isMovie,
     );
   }
 

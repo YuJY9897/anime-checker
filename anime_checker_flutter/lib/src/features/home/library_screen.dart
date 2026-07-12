@@ -124,7 +124,9 @@ class LibraryScreen extends ConsumerWidget {
             children: sorted.map((anime) {
               final reason = controller.droppedReason(anime.id);
               final metaLines = [
+                if (anime.isMovie) '극장판',
                 if (mode == LibraryMode.library &&
+                    !anime.isMovie &&
                     isAnimeCurrentlyAiring(
                       anime.firstAirDate,
                       status: anime.status,

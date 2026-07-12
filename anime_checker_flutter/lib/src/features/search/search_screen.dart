@@ -79,6 +79,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ...animeBroadcastMetaLines(
                       anime.firstAirDate,
                       status: anime.status,
+                      isMovie: anime.isMovie,
                     ),
                   ],
                   actions: [

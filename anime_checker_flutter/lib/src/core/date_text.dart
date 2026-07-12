@@ -65,8 +65,21 @@ String animeAiringStatusLabel(
 List<String> animeBroadcastMetaLines(
   String airDate, {
   String status = '',
+  bool isMovie = false,
   DateTime? now,
 }) {
+  if (isMovie) {
+    final date = parseDate(airDate);
+    final reference = now ?? DateTime.now();
+    final today = DateTime(reference.year, reference.month, reference.day);
+    final upcoming =
+        date != null &&
+        DateTime(date.year, date.month, date.day).isAfter(today);
+    return [
+      date == null ? '개봉일: 확인 중' : '개봉일: ${formatDotDate(date)}',
+      upcoming ? '극장판 · 개봉예정' : '극장판',
+    ];
+  }
   return [
     formatNewAnimeAirDate(airDate),
     animeAiringStatusLabel(airDate, status: status, now: now),

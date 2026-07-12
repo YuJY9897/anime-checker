@@ -1003,6 +1003,7 @@ function toAnimeFromJikan(item) {
     seasons: [],
     movies: [],
     dropped: false,
+    isMovie: item.type === 'Movie',
   };
 }
 
@@ -1156,6 +1157,7 @@ function toAnime(item) {
     seasons: [],
     movies: [],
     dropped: false,
+    isMovie: item.anime_checker_type === 'movie' || Boolean(item.release_date && !item.first_air_date),
   };
 }
 
