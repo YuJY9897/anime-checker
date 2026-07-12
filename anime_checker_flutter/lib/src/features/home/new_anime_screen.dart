@@ -18,6 +18,7 @@ class NewAnimeScreen extends ConsumerStatefulWidget {
 class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
   int? selectedYear;
   int? selectedMonth;
+  String typeFilter = 'all';
   bool initializedFromSettings = false;
 
   @override
@@ -50,6 +51,8 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
       if (date == null) return false;
       if (selectedYear != null && date.year != selectedYear) return false;
       if (selectedMonth != null && date.month != selectedMonth) return false;
+      if (typeFilter == 'movie' && !anime.isMovie) return false;
+      if (typeFilter == 'tv' && anime.isMovie) return false;
       return true;
     }).toList();
     return RefreshIndicator(
@@ -86,6 +89,7 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       initialValue: selectedYear,
+                      style: Theme.of(context).textTheme.bodyMedium,
                       decoration: const InputDecoration(
                         labelText: '년도',
                         isDense: true,
@@ -105,10 +109,11 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                       }),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<int?>(
                       initialValue: selectedMonth,
+                      style: Theme.of(context).textTheme.bodyMedium,
                       decoration: const InputDecoration(
                         labelText: '월',
                         isDense: true,
@@ -128,6 +133,26 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                       ],
                       onChanged: (value) => setState(() {
                         selectedMonth = value;
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: typeFilter,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      decoration: const InputDecoration(
+                        labelText: '구분',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'all', child: Text('전체')),
+                        DropdownMenuItem(value: 'tv', child: Text('애니')),
+                        DropdownMenuItem(value: 'movie', child: Text('극장판')),
+                      ],
+                      onChanged: (value) => setState(() {
+                        typeFilter = value ?? 'all';
                       }),
                     ),
                   ),

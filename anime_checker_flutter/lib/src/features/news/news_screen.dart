@@ -88,16 +88,37 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: NewsFilter.values.map((value) {
-                return ChoiceChip(
-                  label: Text(value.label),
-                  selected: filter == value,
-                  onSelected: (_) => setState(() => filter = value),
-                );
-              }).toList(),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '기사 ${items.length}개',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                SizedBox(
+                  width: 160,
+                  child: DropdownButtonFormField<NewsFilter>(
+                    initialValue: filter,
+                    decoration: const InputDecoration(
+                      labelText: '주제',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    items: NewsFilter.values
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(value.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) setState(() => filter = value);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
           if (controller.newsLoading && controller.news.isEmpty)
