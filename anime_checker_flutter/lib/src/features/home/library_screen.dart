@@ -75,25 +75,41 @@ class LibraryScreen extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Text(
-            '총 ${items.length}개',
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: LibrarySort.values.map((value) {
-              return ChoiceChip(
-                label: Text(value.label),
-                selected: sort == value,
-                onSelected: (_) => controller.updateSettings(
-                  controller.settings.copyWith(librarySort: value.key),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '총 ${items.length}개',
+                  style: Theme.of(context).textTheme.labelLarge,
                 ),
-              );
-            }).toList(),
+              ),
+              SizedBox(
+                width: 172,
+                child: DropdownButtonFormField<String>(
+                  initialValue: sort.key,
+                  decoration: const InputDecoration(
+                    labelText: '정렬',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  items: LibrarySort.values
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value.key,
+                          child: Text(value.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.updateSettings(
+                        controller.settings.copyWith(librarySort: value),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
         ),
         if (items.isEmpty)

@@ -78,21 +78,6 @@ class SettingsScreen extends ConsumerWidget {
                 settings.copyWith(openNewsInsideApp: value),
               ),
             ),
-            const SizedBox(height: 10),
-            _DropdownRow<String>(
-              label: '보관함 정렬',
-              value: settings.librarySort,
-              items: const {
-                'title': '제목순',
-                'recentAirDate': '최근 방영일순',
-                'lowProgress': '진행 낮은순',
-                'highProgress': '진행 높은순',
-                'completedFirst': '완료 먼저',
-              },
-              onChanged: (value) => controller.updateSettings(
-                settings.copyWith(librarySort: value),
-              ),
-            ),
           ],
         ),
         _SettingsGroup(
@@ -218,42 +203,6 @@ class _SwitchRow extends StatelessWidget {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
       value: value,
       onChanged: onChanged,
-    );
-  }
-}
-
-class _DropdownRow<T> extends StatelessWidget {
-  const _DropdownRow({
-    required this.label,
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  final String label;
-  final T value;
-  final Map<T, String> items;
-  final ValueChanged<T> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final currentValue = items.containsKey(value) ? value : items.keys.first;
-    return DropdownButtonFormField<T>(
-      initialValue: currentValue,
-      decoration: InputDecoration(
-        labelText: label,
-        isDense: true,
-        border: const OutlineInputBorder(),
-      ),
-      items: items.entries
-          .map(
-            (entry) =>
-                DropdownMenuItem<T>(value: entry.key, child: Text(entry.value)),
-          )
-          .toList(),
-      onChanged: (value) {
-        if (value != null) onChanged(value);
-      },
     );
   }
 }
