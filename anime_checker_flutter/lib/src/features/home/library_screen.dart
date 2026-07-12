@@ -105,7 +105,6 @@ class LibraryScreen extends ConsumerWidget {
           )
         else
           TwoColumnAnimeGrid(
-            compact: !controller.settings.showPosterImages,
             children: sorted.map((anime) {
               final reason = controller.droppedReason(anime.id);
               final metaLines = [
@@ -123,6 +122,7 @@ class LibraryScreen extends ConsumerWidget {
               return AnimePosterCard.fromAnime(
                 anime: anime,
                 showImage: controller.settings.showPosterImages,
+                progress: controller.progressRatio(anime),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => DetailScreen(animeId: anime.id),

@@ -25,6 +25,7 @@ class AnimePosterCard extends StatefulWidget {
     this.metaLines = const [],
     this.actions = const [],
     this.showImage = true,
+    this.progress,
     this.onLongPress,
   });
 
@@ -35,6 +36,7 @@ class AnimePosterCard extends StatefulWidget {
     List<String> metaLines = const [],
     List<AnimeCardAction> actions = const [],
     bool showImage = true,
+    double? progress,
     VoidCallback? onLongPress,
   }) {
     return AnimePosterCard(
@@ -45,6 +47,7 @@ class AnimePosterCard extends StatefulWidget {
       metaLines: metaLines,
       actions: actions,
       showImage: showImage,
+      progress: progress,
       onTap: onTap,
       onLongPress: onLongPress,
     );
@@ -56,6 +59,9 @@ class AnimePosterCard extends StatefulWidget {
   final List<String> metaLines;
   final List<AnimeCardAction> actions;
   final bool showImage;
+
+  /// 0~1 진행률. null이면 진행률 바를 표시하지 않음.
+  final double? progress;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -119,7 +125,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                         padding: EdgeInsets.only(top: compact ? 4 : 6),
                         child: Text(
                           genres.take(compact ? 2 : 3).join(' · '),
-                          maxLines: compact ? 1 : 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(
@@ -137,7 +143,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                         padding: EdgeInsets.only(top: compact ? 4 : 5),
                         child: Text(
                           line,
-                          maxLines: compact ? 1 : 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
@@ -149,6 +155,18 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                         ),
                       ),
                     const Spacer(),
+                    if (widget.progress != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: widget.progress!.clamp(0, 1),
+                            minHeight: 4,
+                            backgroundColor: colors.surfaceContainerHighest,
+                          ),
+                        ),
+                      ),
                     if (widget.actions.isNotEmpty) ...[
                       const SizedBox(height: 9),
                       _ActionButtons(actions: widget.actions),
@@ -165,35 +183,39 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
 }
 
 class TwoColumnAnimeGrid extends StatelessWidget {
-  const TwoColumnAnimeGrid({
-    super.key,
-    required this.children,
-    this.compact = false,
-  });
+  const TwoColumnAnimeGrid({super.key, required this.children});
 
   final List<Widget> children;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const horizontalPadding = 32.0;
-        const spacing = 12.0;
-        final cardWidth =
-            (constraints.maxWidth - horizontalPadding - spacing) / 2;
-        final cardHeight = cardWidth * (compact ? 1.22 : 2.78);
-        return GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: spacing,
-          mainAxisSpacing: 12,
-          childAspectRatio: cardWidth / cardHeight,
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 22),
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          children: children,
-        );
-      },
+    // 카드가 내용만큼만 높아지도록 행 단위로 배치한다.
+    // 같은 행의 두 카드는 IntrinsicHeight로 높이를 맞춘다.
+    final rows = <Widget>[];
+    for (var index = 0; index < children.length; index += 2) {
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(top: index == 0 ? 0 : 12),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: children[index]),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: index + 1 < children.length
+                      ? children[index + 1]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 22),
+      child: Column(children: rows),
     );
   }
 }

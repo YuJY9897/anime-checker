@@ -53,6 +53,12 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
   NewsFilter filter = NewsFilter.all;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(appControllerProvider).ensureNewsLoaded());
+  }
+
+  @override
   Widget build(BuildContext context) {
     final controller = ref.watch(appControllerProvider);
     final items = controller.news.where(filter.matches).toList();
@@ -66,13 +72,15 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    controller.newsBasis,
+                    controller.newsLoading ? '불러오는 중…' : controller.newsBasis,
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                 ),
                 IconButton(
                   tooltip: '새로고침',
-                  onPressed: controller.refreshNews,
+                  onPressed: controller.newsLoading
+                      ? null
+                      : controller.refreshNews,
                   icon: const Icon(Icons.refresh),
                 ),
               ],
@@ -92,7 +100,12 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
               }).toList(),
             ),
           ),
-          if (controller.news.isEmpty)
+          if (controller.newsLoading && controller.news.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 60),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (controller.news.isEmpty)
             const EmptyState(
               title: '뉴스를 가져오지 못했어요',
               message: '프록시 설정이나 네트워크 상태를 확인해 주세요.',
@@ -153,15 +166,18 @@ class _NewsCard extends StatelessWidget {
                         height: 1.25,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      article.summary,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
+                    if (article.summary.trim().isNotEmpty &&
+                        article.summary.trim() != article.title.trim()) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        article.summary,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 7),
                     DecoratedBox(
                       decoration: BoxDecoration(

@@ -98,7 +98,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       shadowColor: shadow,
       surfaceTintColor: card,
       shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(8)),
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
         side: BorderSide(color: outline),
       ),
     ),
@@ -107,14 +107,14 @@ ThemeData buildAppTheme(Brightness brightness) {
         foregroundColor: ink,
         backgroundColor: card,
         fixedSize: const Size(44, 44),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size(0, 36),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     ),
@@ -127,7 +127,7 @@ ThemeData buildAppTheme(Brightness brightness) {
         ),
         minimumSize: const Size(0, 34),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     ),
@@ -135,7 +135,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       style: TextButton.styleFrom(
         minimumSize: const Size(0, 32),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -144,15 +144,15 @@ ThemeData buildAppTheme(Brightness brightness) {
       labelStyle: TextStyle(color: muted, fontWeight: FontWeight.w700),
       hintStyle: TextStyle(color: muted.withValues(alpha: 0.72)),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: outline),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: outline),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: scheme.primary, width: 1.4),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -162,7 +162,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       selectedColor: isDark ? const Color(0xFF284A3F) : const Color(0xFFD7EDE2),
       checkmarkColor: scheme.primary,
       side: BorderSide(color: outline),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w700,

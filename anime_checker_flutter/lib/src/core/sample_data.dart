@@ -24,7 +24,7 @@ List<Anime> sampleAnimeList() {
       title: '던전밥',
       originalTitle: 'Dungeon Meshi',
       posterUrl:
-          'https://image.tmdb.org/t/p/w500/qA7LxsJRFxTUXWB2F9ibZ8HeU6f.jpg',
+          'https://image.tmdb.org/t/p/w500/caU0EaqHlpWVK7NYwjv4FBmzfcB.jpg',
       genres: const ['판타지', '모험'],
       status: '방영 중',
       weekday: '목요일',
@@ -46,7 +46,7 @@ List<Anime> sampleAnimeList() {
       title: '괴수 8호',
       originalTitle: 'Kaiju No. 8',
       posterUrl:
-          'https://image.tmdb.org/t/p/w500/8YFL5QQVPy3AgrEQxNYVSgiPEbe.jpg',
+          'https://image.tmdb.org/t/p/w500/wBsGdFsrD9CL8xRphidx60EmgBE.jpg',
       genres: const ['액션', 'SF'],
       status: '방영 중',
       weekday: '토요일',
@@ -68,7 +68,7 @@ List<Anime> sampleAnimeList() {
       title: '장송의 프리렌',
       originalTitle: 'Frieren',
       posterUrl:
-          'https://image.tmdb.org/t/p/w500/dDRbTn2SNgvVuL6N3k6RlDY9iF2.jpg',
+          'https://image.tmdb.org/t/p/w500/mnj30hYDVAbL9BOA0f4HrKubAGF.jpg',
       genres: const ['판타지', '드라마'],
       status: '시즌 종료',
       weekday: '금요일',

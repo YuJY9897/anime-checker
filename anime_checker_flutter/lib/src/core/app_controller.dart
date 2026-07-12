@@ -80,6 +80,8 @@ class AppController extends ChangeNotifier {
   bool ready = false;
   bool busy = false;
   String? error;
+  bool newAnimeLoading = false;
+  bool newsLoading = false;
   String newAnimeBasis = '';
   String newsBasis = '';
 
@@ -93,10 +95,6 @@ class AppController extends ChangeNotifier {
     try {
       data = await _localRepository.load();
       ready = true;
-      newAnime = await _apiClient.fetchNewAnime();
-      news = await _apiClient.fetchNews();
-      newAnimeBasis = nowBasisText();
-      newsBasis = nowBasisText();
       error = null;
     } catch (e) {
       error = '$e';
@@ -105,6 +103,16 @@ class AppController extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
+  }
+
+  Future<void> ensureNewAnimeLoaded() async {
+    if (newAnime.isNotEmpty || newAnimeLoading) return;
+    await refreshNewAnime();
+  }
+
+  Future<void> ensureNewsLoaded() async {
+    if (news.isNotEmpty || newsLoading) return;
+    await refreshNews();
   }
 
   List<Anime> get allAnime =>
@@ -187,7 +195,7 @@ class AppController extends ChangeNotifier {
         status.contains('ended') ||
         status.contains('canceled') ||
         status.contains('cancelled') ||
-        status.contains('방영 종료') ||
+        status.contains('종료') ||
         status.contains('완결') ||
         status.contains('종영') ||
         status.contains('취소');
@@ -328,7 +336,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> refreshNewAnime() async {
-    busy = true;
+    newAnimeLoading = true;
     notifyListeners();
     try {
       newAnime = await _apiClient.fetchNewAnime();
@@ -337,13 +345,13 @@ class AppController extends ChangeNotifier {
     } catch (e) {
       error = '$e';
     } finally {
-      busy = false;
+      newAnimeLoading = false;
       notifyListeners();
     }
   }
 
   Future<void> refreshNews() async {
-    busy = true;
+    newsLoading = true;
     notifyListeners();
     try {
       news = await _apiClient.fetchNews();
@@ -352,7 +360,7 @@ class AppController extends ChangeNotifier {
     } catch (e) {
       error = '$e';
     } finally {
-      busy = false;
+      newsLoading = false;
       notifyListeners();
     }
   }

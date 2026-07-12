@@ -25,6 +25,11 @@ class EpisodeScreen extends ConsumerWidget {
             season.number,
             episode.number,
           );
+          final episodeTitle = episode.title.trim();
+          final episodeLabel =
+              episodeTitle.isEmpty || episodeTitle == '${episode.number}화'
+              ? '${episode.number}화'
+              : '${episode.number}화 : $episodeTitle';
           return Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -35,7 +40,7 @@ class EpisodeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${episode.number}화 : ${episode.title}',
+                        episodeLabel,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 4),

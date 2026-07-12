@@ -16,8 +16,12 @@ Worker 주소를 넣지 않으면 샘플 데이터로 동작합니다. TMDB API 
 ```powershell
 dart analyze --no-fatal-warnings
 flutter test
-flutter build apk --debug
+flutter build apk --debug --dart-define=ANIME_CHECKER_API_BASE=https://your-worker.example.workers.dev
+flutter build appbundle --release --dart-define=ANIME_CHECKER_API_BASE=https://your-worker.example.workers.dev
 ```
+
+출시용 AAB는 `build/app/outputs/bundle/release/app-release.aab`에 생성됩니다.
+Play Console에 올리기 전 `privacy_policy.html`을 공개 URL에 올리고, `play_store_checklist.md`를 확인하세요.
 
 ## 구조
 

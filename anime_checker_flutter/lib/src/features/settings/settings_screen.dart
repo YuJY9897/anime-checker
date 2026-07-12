@@ -70,6 +70,13 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (value) =>
                   controller.updateSettings(settings.copyWith(darkMode: value)),
             ),
+            _SwitchRow(
+              title: '뉴스 원문을 앱 안에서 열기',
+              value: settings.openNewsInsideApp,
+              onChanged: (value) => controller.updateSettings(
+                settings.copyWith(openNewsInsideApp: value),
+              ),
+            ),
             const SizedBox(height: 10),
             _DropdownRow<String>(
               label: '보관함 정렬',
@@ -83,19 +90,6 @@ class SettingsScreen extends ConsumerWidget {
               },
               onChanged: (value) => controller.updateSettings(
                 settings.copyWith(librarySort: value),
-              ),
-            ),
-          ],
-        ),
-
-        _SettingsGroup(
-          title: '애니 소식 설정',
-          children: [
-            _SwitchRow(
-              title: '원문을 앱 안에서 열기',
-              value: settings.openNewsInsideApp,
-              onChanged: (value) => controller.updateSettings(
-                settings.copyWith(openNewsInsideApp: value),
               ),
             ),
           ],

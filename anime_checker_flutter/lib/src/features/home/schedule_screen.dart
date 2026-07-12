@@ -106,7 +106,7 @@ class _DaySection extends StatelessWidget {
           DecoratedBox(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               children: [

@@ -33,7 +33,7 @@ class SectionHeader extends StatelessWidget {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: colors.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(999),
                         border: Border.all(color: colors.outlineVariant),
                       ),
                       child: Padding(

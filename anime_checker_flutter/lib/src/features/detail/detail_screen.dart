@@ -72,7 +72,7 @@ class DetailScreen extends ConsumerWidget {
               children: [
                 if (anime.posterUrl.trim().isNotEmpty)
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     child: Image.network(
                       anime.posterUrl,
                       width: 118,
@@ -184,7 +184,7 @@ class DetailScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          SectionHeader(title: '시즌'),
+          if (anime.seasons.isNotEmpty || inLibrary) SectionHeader(title: '시즌'),
           if (anime.seasons.isEmpty && !inLibrary)
             const SizedBox.shrink()
           else if (anime.seasons.isEmpty)
@@ -210,7 +210,7 @@ class DetailScreen extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: ListTile(
                       title: Text(
@@ -242,7 +242,7 @@ class DetailScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [

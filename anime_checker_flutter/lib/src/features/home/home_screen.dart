@@ -27,7 +27,6 @@ class HomeScreen extends ConsumerWidget {
             )
           else
             TwoColumnAnimeGrid(
-              compact: !controller.settings.showPosterImages,
               children: targets.map((target) {
                 return AnimePosterCard.fromAnime(
                   anime: target.anime,
@@ -38,7 +37,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                   metaLines: [
-                    '이어볼 화: ${target.season.name} ${target.episode.number}화부터',
+                    '이어볼 화: ${target.season.name} ${target.episode.number}화',
                     '방영일: ${formatStoredDate(target.episode.airDate)}',
                   ],
                   onLongPress: () =>

@@ -57,21 +57,29 @@ class BackupScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
-          FilledButton.icon(
-            icon: const Icon(Icons.ios_share),
-            onPressed: () => controller.shareBackup(),
-            label: const Text('JSON 내보내기'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.file_open),
-            onPressed: () async {
-              final backup = await controller.pickBackup();
-              if (backup != null && context.mounted) {
-                _confirmRestore(context, controller, backup);
-              }
-            },
-            label: const Text('JSON 불러오기'),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.ios_share),
+                  onPressed: () => controller.shareBackup(),
+                  label: const Text('JSON 내보내기'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.file_open),
+                  onPressed: () async {
+                    final backup = await controller.pickBackup();
+                    if (backup != null && context.mounted) {
+                      _confirmRestore(context, controller, backup);
+                    }
+                  },
+                  label: const Text('JSON 불러오기'),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 18),
           _Summary(controller: controller),

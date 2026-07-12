@@ -38,25 +38,24 @@ void main() {
     expect((third.dy - first.dy).abs(), greaterThan(20));
   });
 
-  testWidgets('compact anime grid uses shorter card height', (tester) async {
+  testWidgets('card height follows content amount', (tester) async {
     tester.view.physicalSize = const Size(360, 740);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    Future<double> rowGap({required bool compact}) async {
+    Future<double> rowGap({required List<String> metaLines}) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: TwoColumnAnimeGrid(
-              compact: compact,
               children: List.generate(
                 4,
                 (index) => AnimePosterCard(
                   title: '테스트 $index',
                   posterUrl: '',
                   genres: const ['액션'],
-                  metaLines: const ['방영일: 2026.07.01.', '방영예정'],
+                  metaLines: metaLines,
                   onTap: () {},
                 ),
               ),
@@ -69,10 +68,10 @@ void main() {
       return third.dy - first.dy;
     }
 
-    final normalGap = await rowGap(compact: false);
-    final compactGap = await rowGap(compact: true);
+    final shortGap = await rowGap(metaLines: const ['방영일: 2026.07.01.']);
+    final tallGap = await rowGap(metaLines: const ['방영일: 2026.07.01.', '방영예정']);
 
-    expect(compactGap, lessThan(normalGap));
+    expect(tallGap, greaterThan(shortGap));
   });
 
   testWidgets('compact anime card fits text and actions without overflow', (
@@ -87,7 +86,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: TwoColumnAnimeGrid(
-            compact: true,
             children: List.generate(
               4,
               (index) => AnimePosterCard(

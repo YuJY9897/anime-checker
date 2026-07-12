@@ -21,6 +21,14 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
   bool initializedFromSettings = false;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(
+      () => ref.read(appControllerProvider).ensureNewAnimeLoaded(),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final controller = ref.watch(appControllerProvider);
     final settings = controller.settings;
@@ -54,13 +62,17 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    controller.newAnimeBasis,
+                    controller.newAnimeLoading
+                        ? '불러오는 중…'
+                        : controller.newAnimeBasis,
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                 ),
                 IconButton(
                   tooltip: '새로고침',
-                  onPressed: controller.refreshNewAnime,
+                  onPressed: controller.newAnimeLoading
+                      ? null
+                      : controller.refreshNewAnime,
                   icon: const Icon(Icons.refresh),
                 ),
               ],
@@ -122,7 +134,12 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                 ],
               ),
             ),
-          if (items.isEmpty)
+          if (controller.newAnimeLoading && items.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 60),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (items.isEmpty)
             const EmptyState(
               title: '신작 정보를 가져오지 못했어요',
               message: '인터넷 연결이나 프록시 설정을 확인해 주세요.',
@@ -134,7 +151,6 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
             )
           else
             TwoColumnAnimeGrid(
-              compact: !settings.showPosterImages,
               children: filtered.map((anime) {
                 final inLibrary = controller.isInLibrary(anime.id);
                 final wished = controller.isWished(anime.id);

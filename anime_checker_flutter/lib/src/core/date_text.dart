@@ -48,7 +48,7 @@ String animeAiringStatusLabel(
   if (normalized.contains('ended') ||
       normalized.contains('canceled') ||
       normalized.contains('cancelled') ||
-      normalized.contains('방영 종료') ||
+      normalized.contains('종료') ||
       normalized.contains('완결') ||
       normalized.contains('종영') ||
       normalized.contains('취소')) {

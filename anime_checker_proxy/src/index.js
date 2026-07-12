@@ -20,13 +20,13 @@ export default {
       if (url.pathname === '/search') return json(await searchAnime(env, url.searchParams.get('q') || ''));
       if (url.pathname.startsWith('/anime/')) return json(await animeDetail(env, url.pathname.split('/').pop()));
       if (url.pathname === '/new-anime') {
-        return json({items: await newAnime(env, url.searchParams.get('region') || 'KR', url.searchParams.get('until') || '')});
+        return newAnimeResponse(env, url);
       }
       if (url.pathname === '/feedback' && request.method === 'POST') {
         const result = await saveFeedback(request, env);
         return json(result, result.ok ? 200 : 400);
       }
-      if (url.pathname === '/news') return json({items: await news(url.origin)});
+      if (url.pathname === '/news') return newsResponse(env, url);
       if (url.pathname === '/image') return proxyImage(url.searchParams.get('url') || '');
       return json({error: 'not found'}, 404);
     } catch (error) {
@@ -34,6 +34,49 @@ export default {
     }
   },
 };
+
+// 신작/뉴스는 수집 비용이 커서 KV에 캐시한다.
+// Jikan 레이트리밋 등으로 빈 결과가 오면 캐시하지 않고 503을 돌려
+// 앱이 기존 데이터를 유지하고 재시도할 수 있게 한다.
+async function newAnimeResponse(env, url) {
+  const region = url.searchParams.get('region') || 'KR';
+  const until = url.searchParams.get('until') || '';
+  const cacheKey = `cache:new-anime:${until || 'today'}`;
+  const cached = await kvCacheGet(env, cacheKey);
+  if (cached) return json(cached);
+  const items = await newAnime(env, region, until);
+  if (items.length === 0) return json({error: 'upstream returned no items'}, 503);
+  const body = {items};
+  await kvCachePut(env, cacheKey, body, 21600);
+  return json(body);
+}
+
+async function newsResponse(env, url) {
+  const cacheKey = 'cache:news';
+  const cached = await kvCacheGet(env, cacheKey);
+  if (cached) return json(cached);
+  const items = await news(url.origin);
+  const body = {items};
+  if (items.length > 0) await kvCachePut(env, cacheKey, body, 1800);
+  return json(body);
+}
+
+async function kvCacheGet(env, key) {
+  if (!env.FEEDBACK_KV) return null;
+  try {
+    const raw = await env.FEEDBACK_KV.get(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function kvCachePut(env, key, body, ttl) {
+  if (!env.FEEDBACK_KV) return;
+  try {
+    await env.FEEDBACK_KV.put(key, JSON.stringify(body), {expirationTtl: ttl});
+  } catch (_) {}
+}
 
 async function saveFeedback(request, env) {
   if (!env.FEEDBACK_KV) throw new Error('FEEDBACK_KV is not configured');
@@ -285,8 +328,33 @@ async function jikanUpcomingAnime(today) {
     .filter((item) => item.firstAirDate && parseDateOnly(item.firstAirDate)?.getFullYear() === today.getFullYear())
     .sort((a, b) => animeItemDate(b).localeCompare(animeItemDate(a)));
 }
+// 한국어 제목이 없는 상위 항목을 TMDB 검색으로 보강한다.
+// 무료 플랜 서브요청 제한(요청당 50회)을 고려해 TMDB 호출을 25회로 제한.
+// 결과는 KV에 캐시되므로 6시간에 한 번만 수행된다.
 async function enrichRecentJikanTitles(env, items) {
-  return items;
+  if (!env.TMDB_API_KEY) return items;
+  let budget = 25;
+  const result = [];
+  for (const anime of items) {
+    if (budget > 0 && !hasKorean(anime.title)) {
+      const query = (anime.originalTitle || anime.title || '').trim();
+      if (query.length >= 2) {
+        budget -= 1;
+        const match = await tmdbKoreanAnimeMatch(env, 'tv', query, anime.firstAirDate);
+        if (match) {
+          result.push({
+            ...anime,
+            title: animeItemTitle(match),
+            posterUrl: poster(match.poster_path) || anime.posterUrl,
+            genres: genreNames(match.genre_ids, match.genres).filter((name) => name !== '애니메이션').slice(0, 5),
+          });
+          continue;
+        }
+      }
+    }
+    result.push(anime);
+  }
+  return result;
 }
 
 async function enrichJikanTitle(env, anime) {
