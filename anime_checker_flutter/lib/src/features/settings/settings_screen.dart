@@ -6,6 +6,7 @@ import '../../core/date_text.dart';
 import '../backup/backup_screen.dart';
 import '../legal/legal_screen.dart';
 import 'feedback_screen.dart';
+import 'help_chat_screen.dart';
 import 'help_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -105,6 +106,13 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () => Navigator.of(
                 context,
               ).push(MaterialPageRoute(builder: (_) => const HelpScreen())),
+            ),
+            _OpenRow(
+              icon: Icons.forum_outlined,
+              title: '도움말 챗봇',
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const HelpChatScreen())),
             ),
             _OpenRow(
               icon: Icons.feedback_outlined,
