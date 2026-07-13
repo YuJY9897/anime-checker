@@ -52,7 +52,7 @@ async function newAnimeResponse(env, url) {
 }
 
 async function newsResponse(env, url) {
-  const cacheKey = 'cache:news';
+  const cacheKey = 'cache:news:v5';
   const cached = await kvCacheGet(env, cacheKey);
   if (cached) return json(cached);
   const items = await news(url.origin);
@@ -821,44 +821,76 @@ async function discoverNewAnimeMovies(env, start, end) {
   return items;
 }
 
+// 여러 피드를 병합해 최대 60개까지 모은다.
+// 첫 피드만 쓰던 이전 방식은 기사가 5개 안팎으로 너무 적었다.
 async function news(origin) {
-  const text = await fetchNewsRss();
-  if (!text) return fallbackNews();
-  const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)]
-    .slice(0, 20)
-    .filter((match) => isRelevantNews(decode(xml(match[1], 'title')).replace(/ - .*$/, '')));
-  const parsed = await Promise.all(items.map(async (match, index) => {
-    const item = match[1];
-    const title = decode(xml(item, 'title')).replace(/ - .*$/, '');
-    const source = decode(xml(item, 'source') || xml(item, 'News:Source'));
-    const url = normalizeNewsUrl(decode(xml(item, 'link')));
-    const date = new Date(decode(xml(item, 'pubDate')) || Date.now()).toISOString();
-    const article = index < 6 ? await articleMeta(url) : {imageUrl: '', url};
+  const texts = await fetchNewsFeeds();
+  if (texts.length === 0) return fallbackNews();
+  const seen = new Set();
+  const entries = [];
+  // 오래된 기사가 섞여 보이지 않도록 최근 90일 이내만 사용한다.
+  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  for (const text of texts) {
+    let perFeed = 0;
+    for (const match of text.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+      if (perFeed >= 25 || entries.length >= 60) break;
+      const item = match[1];
+      const title = decode(xml(item, 'title')).replace(/ - .*$/, '');
+      if (!title || !isRelevantNews(title)) continue;
+      const published = new Date(decode(xml(item, 'pubDate')) || Date.now());
+      if (Number.isNaN(published.getTime()) || published.getTime() < cutoff) continue;
+      const key = title.replace(/\s+/g, '').slice(0, 40);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      perFeed += 1;
+      entries.push({
+        title,
+        source: decode(xml(item, 'source') || xml(item, 'News:Source')),
+        url: normalizeNewsUrl(decode(xml(item, 'link'))),
+        date: published.toISOString(),
+      });
+    }
+  }
+  if (entries.length === 0) return fallbackNews();
+  entries.sort((a, b) => b.date.localeCompare(a.date));
+  return Promise.all(entries.map(async (entry, index) => {
+    const article = index < 6 ? await articleMeta(entry.url) : {imageUrl: '', url: entry.url};
     return {
-      id: `news-${index}-${hash(url)}`,
-      title,
-      summary: title,
-      source,
-      date,
+      id: `news-${index}-${hash(entry.url)}`,
+      title: entry.title,
+      summary: entry.title,
+      source: entry.source,
+      date: entry.date,
       imageUrl: article.imageUrl ? `${origin}/image?url=${encodeURIComponent(article.imageUrl)}` : '',
-      url: article.url || url,
+      url: article.url || entry.url,
     };
   }));
-  return parsed;
 }
 
-async function fetchNewsRss() {
-  const googleQuery = encodeURIComponent('애니 신작 OR 애니 시즌 OR 극장판 애니 OR 애니 흥행');
-  const bingQuery = encodeURIComponent('애니 신작 극장판 시즌 흥행');
-  const feeds = [
-    `https://news.google.com/rss/search?q=${googleQuery}&hl=ko&gl=KR&ceid=KR:ko`,
-    `https://www.bing.com/news/search?q=${bingQuery}&format=rss&cc=KR`,
+async function fetchNewsFeeds() {
+  const googleQueries = [
+    '애니 신작 OR 애니메이션 신작 방영',
+    '극장판 애니 OR 애니메이션 영화 개봉',
+    '애니 흥행 OR 애니메이션 박스오피스 OR 애니 관객수',
+    '애니 시즌 OR 애니 2기 제작',
+    '라프텔 OR 애니플러스 OR 애니맥스 신작',
+    '일본 애니메이션 국내 개봉 OR 더빙 개봉',
   ];
-  for (const feed of feeds) {
-    const text = await fetchRssText(feed);
-    if (text) return text;
-  }
-  return '';
+  // Cloudflare 환경에서 Google News가 차단될 수 있어 Bing도 쿼리별로 함께 수집한다.
+  const bingQueries = [
+    '애니메이션 신작',
+    '애니메이션 극장판 개봉',
+    '애니메이션 흥행 관객',
+    '애니메이션 시즌 2기',
+  ];
+  const feeds = [
+    ...googleQueries.map((query) =>
+      `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`),
+    ...bingQueries.map((query) =>
+      `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss&cc=KR`),
+  ];
+  const results = await Promise.all(feeds.map((feed) => fetchRssText(feed)));
+  return results.filter((text) => text.includes('<item>'));
 }
 
 async function fetchRssText(url) {
@@ -867,7 +899,8 @@ async function fetchRssText(url) {
       headers: {
         'accept': 'application/rss+xml, application/xml, text/xml',
         'accept-language': 'ko-KR,ko;q=0.9,en;q=0.7',
-        'user-agent': 'Mozilla/5.0 anime-checker-news',
+        'user-agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
       },
       signal: AbortSignal.timeout(4500),
     });
