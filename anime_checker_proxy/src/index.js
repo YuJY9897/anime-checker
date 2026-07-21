@@ -36,8 +36,9 @@ export default {
 };
 
 // 신작/뉴스는 수집 비용이 커서 KV에 캐시한다.
-// Jikan 레이트리밋 등으로 빈 결과가 오면 캐시하지 않고 503을 돌려
-// 앱이 기존 데이터를 유지하고 재시도할 수 있게 한다.
+// 신선 수집이 0개면 마지막 성공분(stale)을 돌려줘 빈 화면을 막는다.
+const NEW_ANIME_STALE_KEY = 'cache:new-anime:stale';
+
 async function newAnimeResponse(env, url) {
   const region = url.searchParams.get('region') || 'KR';
   const until = url.searchParams.get('until') || '';
@@ -45,9 +46,15 @@ async function newAnimeResponse(env, url) {
   const cached = await kvCacheGet(env, cacheKey);
   if (cached) return json(cached);
   const items = await newAnime(env, region, until);
-  if (items.length === 0) return json({error: 'upstream returned no items'}, 503);
+  if (items.length === 0) {
+    // 이번 수집이 비었으면 마지막 성공분을 반환(최대 30일 보관).
+    const stale = await kvCacheGet(env, NEW_ANIME_STALE_KEY);
+    if (stale) return json(stale);
+    return json({error: 'upstream returned no items'}, 503);
+  }
   const body = {items};
   await kvCachePut(env, cacheKey, body, 21600);
+  await kvCachePut(env, NEW_ANIME_STALE_KEY, body, 2592000);
   return json(body);
 }
 
@@ -261,7 +268,12 @@ async function newAnime(env, region, until) {
     jikanNewAnime(env, today).catch(() => []),
     jikanUpcomingAnime(today).catch(() => []),
   ]);
-  const sortedItems = mergeAnimeItems([...jikanItems, ...upcomingItems])
+  let merged = mergeAnimeItems([...jikanItems, ...upcomingItems]);
+  // Jikan이 완전히 실패하면(레이트리밋/차단) TMDB 신작으로 폴백한다.
+  if (merged.length === 0) {
+    merged = await tmdbNewAnime(env, region, today).catch(() => []);
+  }
+  const sortedItems = merged
     .sort((a, b) => releaseSort(a, b, today))
     .slice(0, 500)
     .map(applyKnownKoreanTitle);
@@ -763,7 +775,11 @@ async function jikan(path) {
   const response = await fetch(`${JIKAN}${path}`, {
     headers: {
       accept: 'application/json',
-      'user-agent': 'anime-checker-worker',
+      'accept-language': 'en-US,en;q=0.9',
+      // Jikan 앞단 Cloudflare가 커스텀 UA를 봇으로 차단하는 경우가 있어
+      // 실제 브라우저 UA로 위장한다.
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     },
     signal: AbortSignal.timeout(9000),
   });
