@@ -44,18 +44,25 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
       initializedFromSettings = true;
     }
     if (!years.contains(selectedYear)) selectedYear = years.firstOrNull;
-    final filtered = items.where((anime) {
-      final date = parseDate(anime.firstAirDate);
-      if (date == null) return false;
-      if (selectedYear != null && date.year != selectedYear) return false;
-      if (selectedQuarter != null &&
-          _quarterOf(date.month) != selectedQuarter) {
-        return false;
-      }
-      if (typeFilter == 'movie' && !anime.isMovie) return false;
-      if (typeFilter == 'tv' && anime.isMovie) return false;
-      return true;
-    }).toList();
+    final filtered =
+        items.where((anime) {
+          final date = parseDate(anime.firstAirDate);
+          if (date == null) return false;
+          if (selectedYear != null && date.year != selectedYear) return false;
+          if (selectedQuarter != null &&
+              _quarterOf(date.month) != selectedQuarter) {
+            return false;
+          }
+          if (typeFilter == 'movie' && !anime.isMovie) return false;
+          if (typeFilter == 'tv' && anime.isMovie) return false;
+          return true;
+        }).toList()..sort((a, b) {
+          // 방영일 빠른 순(오름차순)으로 정렬한다.
+          final da = parseDate(a.firstAirDate);
+          final db = parseDate(b.firstAirDate);
+          if (da == null || db == null) return 0;
+          return da.compareTo(db);
+        });
     return RefreshIndicator(
       onRefresh: () => controller.refreshNewAnime(),
       child: ListView(
