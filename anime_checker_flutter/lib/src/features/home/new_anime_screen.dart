@@ -17,9 +17,11 @@ class NewAnimeScreen extends ConsumerStatefulWidget {
 
 class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
   int? selectedYear;
-  int? selectedMonth;
+  int? selectedQuarter;
   String typeFilter = 'all';
   bool initializedFromSettings = false;
+
+  int _quarterOf(int month) => ((month - 1) ~/ 3) + 1;
 
   @override
   void initState() {
@@ -38,19 +40,18 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
     if (!initializedFromSettings) {
       final now = DateTime.now();
       selectedYear = now.year;
-      selectedMonth = now.month;
+      selectedQuarter = _quarterOf(now.month);
       initializedFromSettings = true;
     }
     if (!years.contains(selectedYear)) selectedYear = years.firstOrNull;
-    final months = _monthsForYear(items, selectedYear);
-    if (selectedMonth != null && !months.contains(selectedMonth)) {
-      selectedMonth = null;
-    }
     final filtered = items.where((anime) {
       final date = parseDate(anime.firstAirDate);
       if (date == null) return false;
       if (selectedYear != null && date.year != selectedYear) return false;
-      if (selectedMonth != null && date.month != selectedMonth) return false;
+      if (selectedQuarter != null &&
+          _quarterOf(date.month) != selectedQuarter) {
+        return false;
+      }
       if (typeFilter == 'movie' && !anime.isMovie) return false;
       if (typeFilter == 'tv' && anime.isMovie) return false;
       return true;
@@ -105,34 +106,28 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                           .toList(),
                       onChanged: (value) => setState(() {
                         selectedYear = value;
-                        selectedMonth = null;
                       }),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<int?>(
-                      initialValue: selectedMonth,
+                      initialValue: selectedQuarter,
                       style: Theme.of(context).textTheme.bodyMedium,
                       decoration: const InputDecoration(
-                        labelText: '월',
+                        labelText: '분기',
                         isDense: true,
                         border: OutlineInputBorder(),
                       ),
-                      items: [
-                        const DropdownMenuItem<int?>(
-                          value: null,
-                          child: Text('전체'),
-                        ),
-                        ...months.map(
-                          (month) => DropdownMenuItem<int?>(
-                            value: month,
-                            child: Text('$month월'),
-                          ),
-                        ),
+                      items: const [
+                        DropdownMenuItem<int?>(value: null, child: Text('전체')),
+                        DropdownMenuItem<int?>(value: 1, child: Text('1분기')),
+                        DropdownMenuItem<int?>(value: 2, child: Text('2분기')),
+                        DropdownMenuItem<int?>(value: 3, child: Text('3분기')),
+                        DropdownMenuItem<int?>(value: 4, child: Text('4분기')),
                       ],
                       onChanged: (value) => setState(() {
-                        selectedMonth = value;
+                        selectedQuarter = value;
                       }),
                     ),
                   ),
@@ -183,8 +178,8 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
             )
           else if (filtered.isEmpty)
             const EmptyState(
-              title: '해당 월의 작품이 없어요',
-              message: '다른 월을 선택하거나 새로고침해 주세요.',
+              title: '해당 분기의 작품이 없어요',
+              message: '다른 분기를 선택하거나 새로고침해 주세요.',
             )
           else
             TwoColumnAnimeGrid(
@@ -233,18 +228,6 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
       ...items.map((anime) => parseDate(anime.firstAirDate)?.year).nonNulls,
     }.toList()..sort((a, b) => b.compareTo(a));
     return years;
-  }
-
-  List<int> _monthsForYear(List<Anime> items, int? year) {
-    if (year == null) return const [];
-    final months = {
-      for (var month = 1; month <= 12; month += 1) month,
-      ...items
-          .map((anime) => parseDate(anime.firstAirDate))
-          .where((date) => date?.year == year)
-          .map((date) => date!.month),
-    }.toList()..sort((a, b) => b.compareTo(a));
-    return months;
   }
 
   void _showMenu(BuildContext context, AppController controller, Anime anime) {
