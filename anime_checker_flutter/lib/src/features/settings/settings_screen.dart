@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
+import '../../widgets/scroll_top_area.dart';
 import '../backup/backup_screen.dart';
 import '../legal/legal_screen.dart';
 import 'feedback_screen.dart';
@@ -16,109 +17,113 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(appControllerProvider);
     final settings = controller.settings;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: [
-        _SettingsGroup(
-          title: '데이터 관리',
-          children: [
-            _InfoRow(
-              label: '마지막 백업',
-              value: controller.data.lastBackupAt == null
-                  ? '아직 없음'
-                  : formatDotDate(
-                      controller.data.lastBackupAt!,
-                      withTime: true,
-                    ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.save_alt),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const BackupScreen()),
-                    ),
-                    label: const Text('백업 / 복원'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.delete_sweep_outlined),
-                    onPressed: () => _confirmReset(context, controller),
-                    label: const Text('전체 초기화'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        _SettingsGroup(
-          title: '표시 설정',
-          children: [
-            _SwitchRow(
-              title: '카드 이미지 표시',
-              value: settings.showPosterImages,
-              onChanged: (value) => controller.updateSettings(
-                settings.copyWith(showPosterImages: value),
+    return ScrollTopArea(
+      builder: (scrollController) => ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          _SettingsGroup(
+            title: '데이터 관리',
+            children: [
+              _InfoRow(
+                label: '마지막 백업',
+                value: controller.data.lastBackupAt == null
+                    ? '아직 없음'
+                    : formatDotDate(
+                        controller.data.lastBackupAt!,
+                        withTime: true,
+                      ),
               ),
-            ),
-            _SwitchRow(
-              title: '다크 모드',
-              value: settings.darkMode,
-              onChanged: (value) =>
-                  controller.updateSettings(settings.copyWith(darkMode: value)),
-            ),
-            _SwitchRow(
-              title: '뉴스 원문을 앱 안에서 열기',
-              value: settings.openNewsInsideApp,
-              onChanged: (value) => controller.updateSettings(
-                settings.copyWith(openNewsInsideApp: value),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.save_alt),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const BackupScreen()),
+                      ),
+                      label: const Text('백업 / 복원'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                      onPressed: () => _confirmReset(context, controller),
+                      label: const Text('전체 초기화'),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-        _SettingsGroup(
-          title: '앱 정보',
-          children: [
-            const _StaticRow(label: '앱 버전', value: '1.0.0+1'),
-            const SizedBox(height: 8),
-            _OpenRow(
-              icon: Icons.menu_book_outlined,
-              title: '설명서',
-              onTap: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const HelpScreen())),
-            ),
-            _OpenRow(
-              icon: Icons.forum_outlined,
-              title: '도움말 챗봇',
-              onTap: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const HelpChatScreen())),
-            ),
-            _OpenRow(
-              icon: Icons.feedback_outlined,
-              title: '피드백 보내기',
-              onTap: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const FeedbackScreen())),
-            ),
-            _OpenRow(
-              icon: Icons.privacy_tip_outlined,
-              title: '개인정보처리방침',
-              onTap: () => _openLegal(context, privacyPolicyDocument),
-            ),
-            _OpenRow(
-              icon: Icons.source_outlined,
-              title: '데이터 출처 및 저작권',
-              onTap: () => _openLegal(context, dataSourceDocument),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+          _SettingsGroup(
+            title: '표시 설정',
+            children: [
+              _SwitchRow(
+                title: '카드 이미지 표시',
+                value: settings.showPosterImages,
+                onChanged: (value) => controller.updateSettings(
+                  settings.copyWith(showPosterImages: value),
+                ),
+              ),
+              _SwitchRow(
+                title: '다크 모드',
+                value: settings.darkMode,
+                onChanged: (value) => controller.updateSettings(
+                  settings.copyWith(darkMode: value),
+                ),
+              ),
+              _SwitchRow(
+                title: '뉴스 원문을 앱 안에서 열기',
+                value: settings.openNewsInsideApp,
+                onChanged: (value) => controller.updateSettings(
+                  settings.copyWith(openNewsInsideApp: value),
+                ),
+              ),
+            ],
+          ),
+          _SettingsGroup(
+            title: '앱 정보',
+            children: [
+              const _StaticRow(label: '앱 버전', value: '1.0.0+1'),
+              const SizedBox(height: 8),
+              _OpenRow(
+                icon: Icons.menu_book_outlined,
+                title: '설명서',
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const HelpScreen())),
+              ),
+              _OpenRow(
+                icon: Icons.forum_outlined,
+                title: '도움말 챗봇',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const HelpChatScreen()),
+                ),
+              ),
+              _OpenRow(
+                icon: Icons.feedback_outlined,
+                title: '피드백 보내기',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FeedbackScreen()),
+                ),
+              ),
+              _OpenRow(
+                icon: Icons.privacy_tip_outlined,
+                title: '개인정보처리방침',
+                onTap: () => _openLegal(context, privacyPolicyDocument),
+              ),
+              _OpenRow(
+                icon: Icons.source_outlined,
+                title: '데이터 출처 및 저작권',
+                onTap: () => _openLegal(context, dataSourceDocument),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

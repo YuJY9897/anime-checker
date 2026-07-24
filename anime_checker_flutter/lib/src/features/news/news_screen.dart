@@ -5,6 +5,7 @@ import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
 import '../../core/models.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/scroll_top_area.dart';
 import 'news_detail_screen.dart';
 
 enum NewsFilter { all, newRelease, season, movie, boxOffice }
@@ -66,117 +67,122 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
     final controller = ref.watch(appControllerProvider);
     final filteredAll = controller.news.where(filter.matches).toList();
     final items = filteredAll.take(visibleCount).toList();
-    return RefreshIndicator(
-      onRefresh: () => controller.refreshNews(),
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          if (notification.metrics.extentAfter < 400 &&
-              visibleCount < filteredAll.length) {
-            setState(() => visibleCount += _pageSize);
-          }
-          return false;
-        },
-        child: ListView(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      controller.newsLoading ? '불러오는 중…' : controller.newsBasis,
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: '새로고침',
-                    onPressed: controller.newsLoading
-                        ? null
-                        : controller.refreshNews,
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '기사 ${filteredAll.length}개',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                  SizedBox(
-                    width: 160,
-                    child: DropdownButtonFormField<NewsFilter>(
-                      initialValue: filter,
-                      decoration: const InputDecoration(
-                        labelText: '주제',
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      items: NewsFilter.values
-                          .map(
-                            (value) => DropdownMenuItem(
-                              value: value,
-                              child: Text(value.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            filter = value;
-                            visibleCount = _pageSize;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (controller.newsLoading && controller.news.isEmpty)
+    return ScrollTopArea(
+      builder: (scrollController) => RefreshIndicator(
+        onRefresh: () => controller.refreshNews(),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.extentAfter < 400 &&
+                visibleCount < filteredAll.length) {
+              setState(() => visibleCount += _pageSize);
+            }
+            return false;
+          },
+          child: ListView(
+            controller: scrollController,
+            children: [
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 60),
-                child: Center(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        controller.newsLoading
+                            ? '불러오는 중…'
+                            : controller.newsBasis,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: '새로고침',
+                      onPressed: controller.newsLoading
+                          ? null
+                          : controller.refreshNews,
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '기사 ${filteredAll.length}개',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 160,
+                      child: DropdownButtonFormField<NewsFilter>(
+                        initialValue: filter,
+                        decoration: const InputDecoration(
+                          labelText: '주제',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: NewsFilter.values
+                            .map(
+                              (value) => DropdownMenuItem(
+                                value: value,
+                                child: Text(value.label),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              filter = value;
+                              visibleCount = _pageSize;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (controller.newsLoading && controller.news.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 60),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 14),
+                        Text(
+                          '새 소식을 모으고 있어요. 조금만 기다려 주세요.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (controller.news.isEmpty)
+                const EmptyState(
+                  title: '뉴스를 가져오지 못했어요',
+                  message: '프록시 설정이나 네트워크 상태를 확인해 주세요.',
+                  icon: Icons.article_outlined,
+                )
+              else if (items.isEmpty)
+                const EmptyState(
+                  title: '해당 소식이 없어요',
+                  message: '다른 필터를 선택하거나 새로고침해 주세요.',
+                  icon: Icons.filter_alt_outlined,
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 14),
-                      Text(
-                        '새 소식을 모으고 있어요. 조금만 기다려 주세요.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+                    children: items
+                        .map((article) => _NewsCard(article: article))
+                        .toList(),
                   ),
                 ),
-              )
-            else if (controller.news.isEmpty)
-              const EmptyState(
-                title: '뉴스를 가져오지 못했어요',
-                message: '프록시 설정이나 네트워크 상태를 확인해 주세요.',
-                icon: Icons.article_outlined,
-              )
-            else if (items.isEmpty)
-              const EmptyState(
-                title: '해당 소식이 없어요',
-                message: '다른 필터를 선택하거나 새로고침해 주세요.',
-                icon: Icons.filter_alt_outlined,
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                child: Column(
-                  children: items
-                      .map((article) => _NewsCard(article: article))
-                      .toList(),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

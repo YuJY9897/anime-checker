@@ -7,6 +7,7 @@ import '../../core/genre_text.dart';
 import '../../core/models.dart';
 import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/scroll_top_area.dart';
 import '../detail/detail_screen.dart';
 
 enum LibraryMode { library, dropped }
@@ -71,97 +72,103 @@ class LibraryScreen extends ConsumerWidget {
         ? controller.libraryAnime
         : controller.droppedAnime;
     final sorted = _sorted(items, controller);
-    return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '총 ${items.length}개',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ),
-              SizedBox(
-                width: 172,
-                child: DropdownButtonFormField<String>(
-                  initialValue: sort.key,
-                  decoration: const InputDecoration(
-                    labelText: '정렬',
-                    isDense: true,
-                    border: OutlineInputBorder(),
+    return ScrollTopArea(
+      builder: (scrollController) => ListView(
+        controller: scrollController,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '총 ${items.length}개',
+                    style: Theme.of(context).textTheme.labelLarge,
                   ),
-                  items: LibrarySort.values
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value.key,
-                          child: Text(value.label),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      controller.updateSettings(
-                        controller.settings.copyWith(librarySort: value),
-                      );
-                    }
-                  },
                 ),
-              ),
-            ],
+                SizedBox(
+                  width: 172,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: sort.key,
+                    decoration: const InputDecoration(
+                      labelText: '정렬',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    items: LibrarySort.values
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value.key,
+                            child: Text(value.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        controller.updateSettings(
+                          controller.settings.copyWith(librarySort: value),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        if (items.isEmpty)
-          EmptyState(
-            title: mode == LibraryMode.library ? '보관함이 비어 있어요' : '보류한 작품이 없어요',
-            message: mode == LibraryMode.library
-                ? '검색이나 신작 애니에서 작품을 추가해 보세요.'
-                : '잠깐 멈춘 작품은 여기에서 따로 관리돼요.',
-          )
-        else
-          TwoColumnAnimeGrid(
-            children: sorted.map((anime) {
-              final reason = controller.droppedReason(anime.id);
-              final metaLines = [
-                if (anime.isMovie) '극장판',
-                if (mode == LibraryMode.library &&
-                    !anime.isMovie &&
-                    isAnimeCurrentlyAiring(
-                      anime.firstAirDate,
-                      status: anime.status,
-                    ) &&
-                    hasUsefulText(anime.weekday))
-                  anime.weekday,
-                if (mode == LibraryMode.dropped && reason.isNotEmpty) reason,
-                controller.progressLabel(anime),
-                controller.latestWatchLabel(anime),
-              ];
-              return AnimePosterCard.fromAnime(
-                anime: anime,
-                showImage: controller.settings.showPosterImages,
-                progress: controller.progressRatio(anime),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DetailScreen(animeId: anime.id),
+          if (items.isEmpty)
+            EmptyState(
+              title: mode == LibraryMode.library
+                  ? '보관함이 비어 있어요'
+                  : '보류한 작품이 없어요',
+              message: mode == LibraryMode.library
+                  ? '검색이나 신작 애니에서 작품을 추가해 보세요.'
+                  : '잠깐 멈춘 작품은 여기에서 따로 관리돼요.',
+            )
+          else
+            TwoColumnAnimeGrid(
+              children: sorted.map((anime) {
+                final reason = controller.droppedReason(anime.id);
+                final metaLines = [
+                  if (anime.isMovie) '극장판',
+                  if (mode == LibraryMode.library &&
+                      !anime.isMovie &&
+                      isAnimeCurrentlyAiring(
+                        anime.firstAirDate,
+                        status: anime.status,
+                      ) &&
+                      hasUsefulText(anime.weekday))
+                    anime.weekday,
+                  if (mode == LibraryMode.dropped && reason.isNotEmpty) reason,
+                  controller.progressLabel(anime),
+                  controller.latestWatchLabel(anime),
+                ];
+                return AnimePosterCard.fromAnime(
+                  anime: anime,
+                  showImage: controller.settings.showPosterImages,
+                  progress: controller.progressRatio(anime),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DetailScreen(animeId: anime.id),
+                    ),
                   ),
-                ),
-                metaLines: metaLines,
-                actions: [
-                  AnimeCardAction(
-                    label: mode == LibraryMode.library ? '보류' : '복귀',
-                    onPressed: () => controller.toggleDropped(anime.id),
-                  ),
-                  AnimeCardAction(
-                    label: '삭제',
-                    onPressed: () => _confirmDelete(context, controller, anime),
-                  ),
-                ],
-                onLongPress: () => _showMenu(context, controller, anime),
-              );
-            }).toList(),
-          ),
-      ],
+                  metaLines: metaLines,
+                  actions: [
+                    AnimeCardAction(
+                      label: mode == LibraryMode.library ? '보류' : '복귀',
+                      onPressed: () => controller.toggleDropped(anime.id),
+                    ),
+                    AnimeCardAction(
+                      label: '삭제',
+                      onPressed: () =>
+                          _confirmDelete(context, controller, anime),
+                    ),
+                  ],
+                  onLongPress: () => _showMenu(context, controller, anime),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/scroll_top_area.dart';
 import '../detail/detail_screen.dart';
 
 class ScheduleScreen extends ConsumerWidget {
@@ -30,36 +31,39 @@ class ScheduleScreen extends ConsumerWidget {
       0,
       (sum, items) => sum + items.length,
     );
-    return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Text(
-            '방영중 $count개',
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-        ),
-        if (schedule.isEmpty)
-          const EmptyState(
-            title: '편성표가 비어 있어요',
-            message: '현재 방영 중이고 요일 정보가 있는 작품만 여기에 표시돼요.',
-            icon: Icons.calendar_month_outlined,
-          )
-        else
+    return ScrollTopArea(
+      builder: (scrollController) => ListView(
+        controller: scrollController,
+        children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            child: Column(
-              children: _weekdayOrder.where(schedule.containsKey).map((day) {
-                return _DaySection(
-                  day: day,
-                  items: schedule[day]!,
-                  newEpisodeIds: newEpisodeIds,
-                  controller: controller,
-                );
-              }).toList(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Text(
+              '방영중 $count개',
+              style: Theme.of(context).textTheme.labelLarge,
             ),
           ),
-      ],
+          if (schedule.isEmpty)
+            const EmptyState(
+              title: '편성표가 비어 있어요',
+              message: '현재 방영 중이고 요일 정보가 있는 작품만 여기에 표시돼요.',
+              icon: Icons.calendar_month_outlined,
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+              child: Column(
+                children: _weekdayOrder.where(schedule.containsKey).map((day) {
+                  return _DaySection(
+                    day: day,
+                    items: schedule[day]!,
+                    newEpisodeIds: newEpisodeIds,
+                    controller: controller,
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

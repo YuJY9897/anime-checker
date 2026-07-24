@@ -6,6 +6,7 @@ import '../../core/date_text.dart';
 import '../../core/models.dart';
 import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/scroll_top_area.dart';
 import '../detail/detail_screen.dart';
 
 class NewAnimeScreen extends ConsumerStatefulWidget {
@@ -63,167 +64,173 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
           if (da == null || db == null) return 0;
           return da.compareTo(db);
         });
-    return RefreshIndicator(
-      onRefresh: () => controller.refreshNewAnime(),
-      child: ListView(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    controller.newAnimeLoading
-                        ? '불러오는 중…'
-                        : controller.newAnimeBasis,
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                ),
-                IconButton(
-                  tooltip: '새로고침',
-                  onPressed: controller.newAnimeLoading
-                      ? null
-                      : controller.refreshNewAnime,
-                  icon: const Icon(Icons.refresh),
-                ),
-              ],
-            ),
-          ),
-          if (years.isNotEmpty)
+    return ScrollTopArea(
+      builder: (scrollController) => RefreshIndicator(
+        onRefresh: () => controller.refreshNewAnime(),
+        child: ListView(
+          controller: scrollController,
+          children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Row(
                 children: [
                   Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: selectedYear,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      decoration: const InputDecoration(
-                        labelText: '년도',
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      items: years
-                          .map(
-                            (year) => DropdownMenuItem(
-                              value: year,
-                              child: Text('$year년'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => setState(() {
-                        selectedYear = value;
-                      }),
+                    child: Text(
+                      controller.newAnimeLoading
+                          ? '불러오는 중…'
+                          : controller.newAnimeBasis,
+                      style: Theme.of(context).textTheme.labelLarge,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DropdownButtonFormField<int?>(
-                      initialValue: selectedQuarter,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      decoration: const InputDecoration(
-                        labelText: '분기',
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem<int?>(value: null, child: Text('전체')),
-                        DropdownMenuItem<int?>(value: 1, child: Text('1분기')),
-                        DropdownMenuItem<int?>(value: 2, child: Text('2분기')),
-                        DropdownMenuItem<int?>(value: 3, child: Text('3분기')),
-                        DropdownMenuItem<int?>(value: 4, child: Text('4분기')),
-                      ],
-                      onChanged: (value) => setState(() {
-                        selectedQuarter = value;
-                      }),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: typeFilter,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      decoration: const InputDecoration(
-                        labelText: '구분',
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'all', child: Text('전체')),
-                        DropdownMenuItem(value: 'tv', child: Text('애니')),
-                        DropdownMenuItem(value: 'movie', child: Text('극장판')),
-                      ],
-                      onChanged: (value) => setState(() {
-                        typeFilter = value ?? 'all';
-                      }),
-                    ),
+                  IconButton(
+                    tooltip: '새로고침',
+                    onPressed: controller.newAnimeLoading
+                        ? null
+                        : controller.refreshNewAnime,
+                    icon: const Icon(Icons.refresh),
                   ),
                 ],
               ),
             ),
-          if (controller.newAnimeLoading && items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 60),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+            if (years.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(
                   children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 14),
-                    Text(
-                      '신작 정보를 모으고 있어요. 조금만 기다려 주세요.',
-                      style: Theme.of(context).textTheme.bodySmall,
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        initialValue: selectedYear,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        decoration: const InputDecoration(
+                          labelText: '년도',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: years
+                            .map(
+                              (year) => DropdownMenuItem(
+                                value: year,
+                                child: Text('$year년'),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) => setState(() {
+                          selectedYear = value;
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<int?>(
+                        initialValue: selectedQuarter,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        decoration: const InputDecoration(
+                          labelText: '분기',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('전체'),
+                          ),
+                          DropdownMenuItem<int?>(value: 1, child: Text('1분기')),
+                          DropdownMenuItem<int?>(value: 2, child: Text('2분기')),
+                          DropdownMenuItem<int?>(value: 3, child: Text('3분기')),
+                          DropdownMenuItem<int?>(value: 4, child: Text('4분기')),
+                        ],
+                        onChanged: (value) => setState(() {
+                          selectedQuarter = value;
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: typeFilter,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        decoration: const InputDecoration(
+                          labelText: '구분',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'all', child: Text('전체')),
+                          DropdownMenuItem(value: 'tv', child: Text('애니')),
+                          DropdownMenuItem(value: 'movie', child: Text('극장판')),
+                        ],
+                        onChanged: (value) => setState(() {
+                          typeFilter = value ?? 'all';
+                        }),
+                      ),
                     ),
                   ],
                 ),
               ),
-            )
-          else if (items.isEmpty)
-            const EmptyState(
-              title: '신작 정보를 가져오지 못했어요',
-              message: '인터넷 연결이나 프록시 설정을 확인해 주세요.',
-            )
-          else if (filtered.isEmpty)
-            const EmptyState(
-              title: '해당 분기의 작품이 없어요',
-              message: '다른 분기를 선택하거나 새로고침해 주세요.',
-            )
-          else
-            TwoColumnAnimeGrid(
-              children: filtered.map((anime) {
-                final inLibrary = controller.isInLibrary(anime.id);
-                final wished = controller.isWished(anime.id);
-                return AnimePosterCard.fromAnime(
-                  anime: anime,
-                  showImage: settings.showPosterImages,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => DetailScreen.preview(anime: anime),
-                    ),
+            if (controller.newAnimeLoading && items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 60),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 14),
+                      Text(
+                        '신작 정보를 모으고 있어요. 조금만 기다려 주세요.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ),
-                  metaLines: animeBroadcastMetaLines(
-                    anime.firstAirDate,
-                    status: anime.status,
-                    isMovie: anime.isMovie,
-                  ),
-                  actions: [
-                    AnimeCardAction(
-                      label: inLibrary ? '추가됨' : '추가',
-                      filled: !inLibrary,
-                      onPressed: inLibrary
-                          ? null
-                          : () => controller.addAnime(anime),
+                ),
+              )
+            else if (items.isEmpty)
+              const EmptyState(
+                title: '신작 정보를 가져오지 못했어요',
+                message: '인터넷 연결이나 프록시 설정을 확인해 주세요.',
+              )
+            else if (filtered.isEmpty)
+              const EmptyState(
+                title: '해당 분기의 작품이 없어요',
+                message: '다른 분기를 선택하거나 새로고침해 주세요.',
+              )
+            else
+              TwoColumnAnimeGrid(
+                children: filtered.map((anime) {
+                  final inLibrary = controller.isInLibrary(anime.id);
+                  final wished = controller.isWished(anime.id);
+                  return AnimePosterCard.fromAnime(
+                    anime: anime,
+                    showImage: settings.showPosterImages,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DetailScreen.preview(anime: anime),
+                      ),
                     ),
-                    AnimeCardAction(
-                      label: wished ? '찜해제' : '찜',
-                      onPressed: () => controller.toggleWish(anime),
+                    metaLines: animeBroadcastMetaLines(
+                      anime.firstAirDate,
+                      status: anime.status,
+                      isMovie: anime.isMovie,
                     ),
-                  ],
-                  onLongPress: () => _showMenu(context, controller, anime),
-                );
-              }).toList(),
-            ),
-        ],
+                    actions: [
+                      AnimeCardAction(
+                        label: inLibrary ? '추가됨' : '추가',
+                        filled: !inLibrary,
+                        onPressed: inLibrary
+                            ? null
+                            : () => controller.addAnime(anime),
+                      ),
+                      AnimeCardAction(
+                        label: wished ? '찜해제' : '찜',
+                        onPressed: () => controller.toggleWish(anime),
+                      ),
+                    ],
+                    onLongPress: () => _showMenu(context, controller, anime),
+                  );
+                }).toList(),
+              ),
+          ],
+        ),
       ),
     );
   }
