@@ -58,13 +58,24 @@ async function newAnimeResponse(env, url) {
   return json(body);
 }
 
+const NEWS_STALE_KEY = 'cache:news:stale';
+
 async function newsResponse(env, url) {
-  const cacheKey = 'cache:news:v5';
+  const cacheKey = 'cache:news:v6';
   const cached = await kvCacheGet(env, cacheKey);
   if (cached) return json(cached);
   const items = await news(url.origin);
+  // 수집 실패(fallback 1건)면 마지막 성공분을 돌려줘 빈 화면을 막는다.
+  const failed = items.length <= 1 && items[0]?.id === 'news-fallback';
+  if (failed) {
+    const stale = await kvCacheGet(env, NEWS_STALE_KEY);
+    if (stale) return json(stale);
+  }
   const body = {items};
-  if (items.length > 0) await kvCachePut(env, cacheKey, body, 1800);
+  if (!failed) {
+    await kvCachePut(env, cacheKey, body, 1800);
+    await kvCachePut(env, NEWS_STALE_KEY, body, 604800);
+  }
   return json(body);
 }
 
@@ -892,18 +903,23 @@ async function fetchNewsFeeds() {
     '라프텔 OR 애니플러스 OR 애니맥스 신작',
     '일본 애니메이션 국내 개봉 OR 더빙 개봉',
   ];
-  // Cloudflare 환경에서 Google News가 차단될 수 있어 Bing도 쿼리별로 함께 수집한다.
+  // Google News는 Cloudflare Worker IP를 503으로 차단하는 경우가 많아
+  // Bing을 주 소스로 쓰고, 국내 매체 RSS를 추가로 섞는다.
   const bingQueries = [
     '애니메이션 신작',
     '애니메이션 극장판 개봉',
     '애니메이션 흥행 관객',
     '애니메이션 시즌 2기',
+    '애니메이션 방영',
+    '일본 애니메이션 국내 개봉',
+    '라프텔 애니메이션',
+    '애니메이션 박스오피스',
   ];
   const feeds = [
-    ...googleQueries.map((query) =>
-      `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`),
     ...bingQueries.map((query) =>
       `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss&cc=KR`),
+    ...googleQueries.map((query) =>
+      `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`),
   ];
   const results = await Promise.all(feeds.map((feed) => fetchRssText(feed)));
   return results.filter((text) => text.includes('<item>'));
@@ -918,11 +934,18 @@ async function fetchRssText(url) {
         'user-agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
       },
-      signal: AbortSignal.timeout(4500),
+      // 피드 응답이 느릴 때가 있어 여유를 둔다(이전 4.5초는 자주 타임아웃).
+      signal: AbortSignal.timeout(12000),
     });
-    if (!response.ok) return '';
-    return await response.text();
-  } catch (_) {
+    if (!response.ok) {
+      console.log(`rss fail ${response.status}: ${url}`);
+      return '';
+    }
+    const text = await response.text();
+    console.log(`rss ok ${text.length}b items=${(text.match(/<item>/g) || []).length}: ${url}`);
+    return text;
+  } catch (error) {
+    console.log(`rss error ${String(error?.name || error)}: ${url}`);
     return '';
   }
 }
