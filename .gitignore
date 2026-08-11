@@ -15,3 +15,5 @@ anime_checker_flutter/android/*.jks
 anime_checker_flutter/android/*.keystore
 anime_checker_flutter/android/app/*.jks
 anime_checker_flutter/android/app/*.keystore
+.secrets/
+tools/node_modules/
