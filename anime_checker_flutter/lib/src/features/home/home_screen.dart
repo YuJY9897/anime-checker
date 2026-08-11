@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_controller.dart';
 import '../../core/date_text.dart';
+import '../../core/models.dart';
 import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/scroll_top_area.dart';
@@ -18,7 +19,10 @@ class HomeScreen extends ConsumerWidget {
     final targets = controller.todayTargets;
     return ScrollTopArea(
       builder: (scrollController) => RefreshIndicator(
-        onRefresh: () async => controller.load(),
+        onRefresh: () async {
+          await controller.load();
+          await controller.syncAiringEpisodes(force: true);
+        },
         child: ListView(
           controller: scrollController,
           children: [
@@ -40,7 +44,8 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     metaLines: [
-                      '이어볼 화: ${target.season.name} ${target.episode.number}화',
+                      '이어볼 화: ${target.season.name} '
+                          '${episodeLabel(target.episode)}',
                       '방영일: ${formatStoredDate(target.episode.airDate)}',
                     ],
                     onLongPress: () =>

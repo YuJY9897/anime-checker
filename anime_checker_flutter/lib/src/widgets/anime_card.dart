@@ -143,7 +143,8 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                         padding: EdgeInsets.only(top: compact ? 4 : 5),
                         child: Text(
                           line,
-                          maxLines: 1,
+                          // 화 제목이 붙는 줄이 있어 두 줄까지 허용한다.
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(

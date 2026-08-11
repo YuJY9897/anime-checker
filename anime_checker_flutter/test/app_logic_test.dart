@@ -38,7 +38,116 @@ class FakeApiClient extends AnimeApiClient {
   Future<List<NewsArticle>> fetchNews() async => const [];
 }
 
+class SyncApiClient extends AnimeApiClient {
+  SyncApiClient(this.detail);
+
+  final Anime detail;
+  int calls = 0;
+
+  @override
+  bool get isConfigured => true;
+
+  @override
+  Future<Anime?> fetchAnime(String id) async {
+    calls += 1;
+    return detail;
+  }
+
+  @override
+  Future<List<Anime>> search(String query) async => const [];
+
+  @override
+  Future<List<Anime>> fetchNewAnime() async => const [];
+
+  @override
+  Future<List<NewsArticle>> fetchNews() async => const [];
+}
+
+Anime airingAnime(List<Episode> episodes) => Anime(
+  id: '100',
+  title: '테스트 애니',
+  originalTitle: '',
+  posterUrl: '',
+  genres: const [],
+  status: '방영 중',
+  weekday: '수요일',
+  firstAirDate: '2026-01-07',
+  seasons: [
+    AnimeSeason(
+      number: 1,
+      name: '1기',
+      subtitle: '',
+      posterUrl: '',
+      episodes: episodes,
+    ),
+  ],
+  movies: const [],
+  dropped: false,
+);
+
 void main() {
+  test('airing anime picks up newly released episodes and titles', () async {
+    final stored = airingAnime(const [
+      Episode(number: 1, title: '출항', airDate: '2026-01-07'),
+      Episode(number: 2, title: '2화', airDate: '2026-01-14'),
+    ]);
+    final fetched = airingAnime(const [
+      Episode(number: 1, title: '출항', airDate: '2026-01-07'),
+      Episode(number: 2, title: '에피소드 2', airDate: '2026-01-14'),
+      Episode(number: 3, title: '새로 나온 화', airDate: '2026-01-21'),
+    ]);
+    final repo = FakeRepository()
+      ..saved = AppData.empty().copyWith(
+        animeList: {stored.id: stored},
+        watchedEpisodes: {'100:s1:e1': true},
+      );
+    final api = SyncApiClient(fetched);
+    final controller = AppController(repo, api);
+
+    await controller.load();
+
+    final season = controller.data.animeList['100']!.seasons.first;
+    expect(api.calls, 1);
+    expect(season.episodes.length, 3);
+    expect(season.episodes[2].title, '새로 나온 화');
+    // 아직 제목이 안 나온 화는 기존 표기를 유지한다.
+    expect(season.episodes[1].title, '2화');
+    expect(controller.isEpisodeWatched('100', 1, 1), isTrue);
+    expect(repo.saved.animeSyncedAt['100'], isNotNull);
+  });
+
+  test('recently synced anime is not fetched again', () async {
+    final stored = airingAnime(const [
+      Episode(number: 1, title: '출항', airDate: '2026-01-07'),
+    ]);
+    final repo = FakeRepository()
+      ..saved = AppData.empty().copyWith(
+        animeList: {stored.id: stored},
+        animeSyncedAt: {'100': DateTime.now().toIso8601String()},
+      );
+    final api = SyncApiClient(stored);
+    final controller = AppController(repo, api);
+
+    await controller.load();
+
+    expect(api.calls, 0);
+  });
+
+  test('episode label hides auto generated titles', () {
+    expect(
+      episodeLabel(const Episode(number: 12, title: '에피소드 12', airDate: '')),
+      '12화',
+    );
+    expect(
+      episodeLabel(const Episode(number: 12, title: 'Episode 12', airDate: '')),
+      '12화',
+    );
+    expect(
+      episodeLabel(const Episode(number: 12, title: '결전', airDate: '')),
+      '12화 : 결전',
+    );
+  });
+
   test('watching one episode completes previous episodes', () async {
     final repo = FakeRepository()..saved = sampleAppData();
     final controller = AppController(repo, FakeApiClient());

@@ -24,6 +24,24 @@ class Episode {
   };
 }
 
+/// 제목이 없어 "12화" / "에피소드 12" 같은 자동 생성 이름만 있는 화인지 판단한다.
+bool isPlaceholderEpisodeTitle(String title, int number) {
+  final text = title.trim();
+  if (text.isEmpty || text == '$number화') return true;
+  return RegExp(
+    '^(에피소드|episode|第)\\s*$number\\s*(화|話)?\$',
+    caseSensitive: false,
+  ).hasMatch(text);
+}
+
+/// 목록에 표시할 회차 라벨. 제목이 있으면 "12화 : 제목".
+String episodeLabel(Episode episode) {
+  if (isPlaceholderEpisodeTitle(episode.title, episode.number)) {
+    return '${episode.number}화';
+  }
+  return '${episode.number}화 : ${episode.title.trim()}';
+}
+
 class AnimeSeason {
   const AnimeSeason({
     required this.number,
@@ -346,6 +364,7 @@ class AppData {
     required this.dropped,
     required this.animeNotes,
     required this.droppedReasons,
+    required this.animeSyncedAt,
     required this.updatedAt,
     required this.backupVersion,
     required this.lastBackupAt,
@@ -360,6 +379,7 @@ class AppData {
     dropped: const {},
     animeNotes: const {},
     droppedReasons: const {},
+    animeSyncedAt: const {},
     updatedAt: DateTime.now(),
     backupVersion: 1,
     lastBackupAt: null,
@@ -373,6 +393,9 @@ class AppData {
   final Map<String, bool> dropped;
   final Map<String, String> animeNotes;
   final Map<String, String> droppedReasons;
+
+  /// 작품별 마지막 회차 동기화 시각(ISO8601).
+  final Map<String, String> animeSyncedAt;
   final DateTime updatedAt;
   final int backupVersion;
   final DateTime? lastBackupAt;
@@ -386,6 +409,7 @@ class AppData {
     Map<String, bool>? dropped,
     Map<String, String>? animeNotes,
     Map<String, String>? droppedReasons,
+    Map<String, String>? animeSyncedAt,
     DateTime? updatedAt,
     int? backupVersion,
     DateTime? lastBackupAt,
@@ -398,6 +422,7 @@ class AppData {
     dropped: dropped ?? this.dropped,
     animeNotes: animeNotes ?? this.animeNotes,
     droppedReasons: droppedReasons ?? this.droppedReasons,
+    animeSyncedAt: animeSyncedAt ?? this.animeSyncedAt,
     updatedAt: updatedAt ?? this.updatedAt,
     backupVersion: backupVersion ?? this.backupVersion,
     lastBackupAt: lastBackupAt ?? this.lastBackupAt,
@@ -433,6 +458,7 @@ class AppData {
       dropped: boolMapFrom(json['dropped']),
       animeNotes: stringMapFrom(json['animeNotes']),
       droppedReasons: stringMapFrom(json['droppedReasons']),
+      animeSyncedAt: stringMapFrom(json['animeSyncedAt']),
       updatedAt:
           DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.now(),
@@ -454,6 +480,7 @@ class AppData {
     'dropped': dropped,
     'animeNotes': animeNotes,
     'droppedReasons': droppedReasons,
+    'animeSyncedAt': animeSyncedAt,
     'updatedAt': updatedAt.toIso8601String(),
     'backupVersion': backupVersion,
     'lastBackupAt': lastBackupAt?.toIso8601String(),

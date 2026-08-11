@@ -273,14 +273,23 @@ class DetailScreen extends ConsumerWidget {
                           ),
                         ),
                         OutlinedButton(
-                          onPressed: () => _toggleMovieWatched(
-                            context,
-                            controller,
-                            anime,
-                            movie,
-                            watched,
+                          // 아직 개봉 전이면 시청 처리를 막는다.
+                          onPressed: !watched && _isUpcoming(movie.releaseDate)
+                              ? null
+                              : () => _toggleMovieWatched(
+                                  context,
+                                  controller,
+                                  anime,
+                                  movie,
+                                  watched,
+                                ),
+                          child: Text(
+                            watched
+                                ? '완료'
+                                : (_isUpcoming(movie.releaseDate)
+                                      ? '개봉 전'
+                                      : '시청'),
                           ),
-                          child: Text(watched ? '완료' : '시청'),
                         ),
                       ],
                     ),
@@ -292,6 +301,18 @@ class DetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// 개봉일/방영일이 오늘보다 뒤면 아직 안 나온 것.
+  bool _isUpcoming(String storedDate) {
+    final date = parseDate(storedDate);
+    if (date == null) return false;
+    final now = DateTime.now();
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+    ).isAfter(DateTime(now.year, now.month, now.day));
   }
 
   Future<void> _toggleMovieWatched(

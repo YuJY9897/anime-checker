@@ -82,6 +82,7 @@ class AppController extends ChangeNotifier {
   String? error;
   bool newAnimeLoading = false;
   bool newsLoading = false;
+  bool episodeSyncing = false;
   String newAnimeBasis = '';
   String newsBasis = '';
 
@@ -103,7 +104,108 @@ class AppController extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
+    await syncAiringEpisodes();
   }
+
+  /// 방영 중인 작품의 새 화(제목/방영일)를 프록시에서 다시 받아온다.
+  /// 새 화는 매주 나오는데 저장된 상세는 추가 시점에서 멈춰 있어 갱신이 필요하다.
+  Future<void> syncAiringEpisodes({bool force = false}) async {
+    if (!_apiClient.isConfigured || episodeSyncing) return;
+    final now = DateTime.now();
+    final targets = libraryAnime
+        .where((anime) => !anime.isMovie && !anime.id.startsWith('movie-'))
+        .where(isCurrentlyAiring)
+        .where((anime) => force || _needsEpisodeSync(anime.id, now))
+        .take(12)
+        .toList();
+    if (targets.isEmpty) return;
+
+    episodeSyncing = true;
+    notifyListeners();
+    final list = Map<String, Anime>.from(data.animeList);
+    final syncedAt = Map<String, String>.from(data.animeSyncedAt);
+    var changed = false;
+    try {
+      for (final anime in targets) {
+        try {
+          final fetched = await _apiClient.fetchAnime(anime.id);
+          if (fetched != null) {
+            list[anime.id] = _mergeEpisodes(anime, fetched);
+            syncedAt[anime.id] = now.toIso8601String();
+            changed = true;
+          }
+        } catch (_) {
+          // 한 작품이 실패해도 나머지는 계속 갱신한다.
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+      }
+      if (changed) {
+        await _commit(data.copyWith(animeList: list, animeSyncedAt: syncedAt));
+      }
+    } finally {
+      episodeSyncing = false;
+      notifyListeners();
+    }
+  }
+
+  bool _needsEpisodeSync(String animeId, DateTime now) {
+    final last = DateTime.tryParse(data.animeSyncedAt[animeId] ?? '');
+    if (last == null) return true;
+    return now.difference(last) >= const Duration(hours: 12);
+  }
+
+  /// 받아온 상세로 회차를 갱신하되, 아직 제목이 안 나온 화는 기존 제목을 지킨다.
+  Anime _mergeEpisodes(Anime current, Anime fetched) {
+    if (fetched.seasons.isEmpty) return current;
+    final seasons = fetched.seasons.map((season) {
+      final previous = current.seasons
+          .where((item) => item.number == season.number)
+          .toList();
+      if (previous.isEmpty) return season;
+      final oldTitles = {
+        for (final episode in previous.first.episodes)
+          episode.number: episode.title,
+      };
+      return AnimeSeason(
+        number: season.number,
+        name: season.name,
+        subtitle: season.subtitle,
+        posterUrl: season.posterUrl,
+        episodes: season.episodes.map((episode) {
+          if (!_isPlaceholderTitle(episode.title, episode.number)) return episode;
+          final old = oldTitles[episode.number] ?? '';
+          return Episode(
+            number: episode.number,
+            title: _isPlaceholderTitle(old, episode.number)
+                ? '${episode.number}화'
+                : old,
+            airDate: episode.airDate,
+          );
+        }).toList(),
+      );
+    }).toList();
+    return Anime(
+      id: current.id,
+      title: fetched.title.trim().isEmpty ? current.title : fetched.title,
+      originalTitle: fetched.originalTitle,
+      posterUrl: fetched.posterUrl.trim().isEmpty
+          ? current.posterUrl
+          : fetched.posterUrl,
+      genres: fetched.genres.isEmpty ? current.genres : fetched.genres,
+      status: fetched.status,
+      weekday: fetched.weekday.trim().isEmpty
+          ? current.weekday
+          : fetched.weekday,
+      firstAirDate: fetched.firstAirDate,
+      seasons: seasons,
+      movies: fetched.movies.isEmpty ? current.movies : fetched.movies,
+      dropped: current.dropped,
+      isMovie: current.isMovie,
+    );
+  }
+
+  bool _isPlaceholderTitle(String title, int number) =>
+      isPlaceholderEpisodeTitle(title, number);
 
   Future<void> ensureNewAnimeLoaded() async {
     if (newAnime.isNotEmpty || newAnimeLoading) return;
@@ -400,8 +502,15 @@ class AppController extends ChangeNotifier {
       ..[anime.id] = nextAnime;
     final wish = Map<String, WishItem>.from(data.wishList)..remove(anime.id);
     final dropped = Map<String, bool>.from(data.dropped)..remove(anime.id);
+    final syncedAt = Map<String, String>.from(data.animeSyncedAt)
+      ..[anime.id] = DateTime.now().toIso8601String();
     await _commit(
-      data.copyWith(animeList: list, wishList: wish, dropped: dropped),
+      data.copyWith(
+        animeList: list,
+        wishList: wish,
+        dropped: dropped,
+        animeSyncedAt: syncedAt,
+      ),
     );
   }
 
@@ -411,8 +520,12 @@ class AppController extends ChangeNotifier {
     final fetched = await _apiClient.fetchAnime(animeId);
     if (fetched == null) return;
     final list = Map<String, Anime>.from(data.animeList)
-      ..[animeId] = fetched.copyWith(dropped: current.dropped);
-    await _commit(data.copyWith(animeList: list));
+      ..[animeId] = current.seasons.isEmpty
+          ? fetched.copyWith(dropped: current.dropped)
+          : _mergeEpisodes(current, fetched);
+    final syncedAt = Map<String, String>.from(data.animeSyncedAt)
+      ..[animeId] = DateTime.now().toIso8601String();
+    await _commit(data.copyWith(animeList: list, animeSyncedAt: syncedAt));
   }
 
   Future<Anime> previewAnimeDetail(Anime anime) async {
@@ -497,6 +610,8 @@ class AppController extends ChangeNotifier {
       ..remove(animeId);
     final watched = Map<String, bool>.from(data.watchedEpisodes)
       ..removeWhere((key, value) => key.startsWith('$animeId:'));
+    final syncedAt = Map<String, String>.from(data.animeSyncedAt)
+      ..remove(animeId);
     await _commit(
       data.copyWith(
         animeList: list,
@@ -504,6 +619,7 @@ class AppController extends ChangeNotifier {
         animeNotes: notes,
         droppedReasons: reasons,
         watchedEpisodes: watched,
+        animeSyncedAt: syncedAt,
       ),
     );
   }

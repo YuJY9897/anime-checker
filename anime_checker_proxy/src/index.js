@@ -135,10 +135,10 @@ function cleanText(value, maxLength) {
     .trim()
     .slice(0, maxLength);
 }
-async function tmdb(env, path) {
+async function tmdb(env, path, language = 'ko-KR') {
   if (!env.TMDB_API_KEY) throw new Error('TMDB_API_KEY is not configured');
   const join = path.includes('?') ? '&' : '?';
-  const response = await fetch(`${TMDB}${path}${join}api_key=${env.TMDB_API_KEY}&language=ko-KR`);
+  const response = await fetch(`${TMDB}${path}${join}api_key=${env.TMDB_API_KEY}&language=${language}`);
   if (!response.ok) throw new Error(`TMDB ${response.status}`);
   return response.json();
 }
@@ -221,7 +221,7 @@ async function jikanAnimeEpisodes(malId, fallbackCount) {
     return episodes
       .map((episode, index) => ({
         number: Number(episode.mal_id || index + 1),
-        title: episode.title || `${Number(episode.mal_id || index + 1)}화`,
+        title: episodeTitle(episode.title, Number(episode.mal_id || index + 1)),
         airDate: dateOnly(episode.aired),
       }))
       .filter((episode) => Number.isFinite(episode.number) && episode.number > 0)
@@ -240,9 +240,10 @@ async function seasonDetail(env, tvId, tv, summary) {
       .filter((episode) => Number.isFinite(episode.episode_number) && episode.episode_number > 0)
       .map((episode) => ({
         number: episode.episode_number,
-        title: episode.name || `${episode.episode_number}화`,
+        title: episodeTitle(episode.name, episode.episode_number),
         airDate: episode.air_date || '',
       }));
+    await fillPlaceholderTitles(env, tvId, summary.season_number, episodes);
     return {
       number: summary.season_number,
       name: seasonName(detail.name || summary.name, summary.season_number),
@@ -253,6 +254,37 @@ async function seasonDetail(env, tvId, tv, summary) {
   } catch (_) {
     return seasonFromSummary(tv, summary);
   }
+}
+
+// TMDB ko-KR는 제목이 없으면 "에피소드 12" 같은 자동 생성 이름을 준다.
+// 이런 값은 제목이 아니므로 "12화"로 통일한다.
+function episodeTitle(name, number) {
+  const text = String(name || '').trim();
+  if (!text) return `${number}화`;
+  if (new RegExp(`^(에피소드|episode|第)\\s*${number}\\s*(화|話)?$`, 'i').test(text)) {
+    return `${number}화`;
+  }
+  return text;
+}
+
+function isPlaceholderTitle(title, number) {
+  return !title || title === `${number}화`;
+}
+
+// 한국어 제목이 비어 있는 화는 원제(en-US)로 채운다.
+async function fillPlaceholderTitles(env, tvId, seasonNumber, episodes) {
+  if (!episodes.some((episode) => isPlaceholderTitle(episode.title, episode.number))) return;
+  try {
+    const fallback = await tmdb(env, `/tv/${tvId}/season/${seasonNumber}`, 'en-US');
+    const names = new Map(
+      (fallback.episodes || []).map((episode) => [episode.episode_number, episode.name]),
+    );
+    for (const episode of episodes) {
+      if (!isPlaceholderTitle(episode.title, episode.number)) continue;
+      const name = episodeTitle(names.get(episode.number), episode.number);
+      if (!isPlaceholderTitle(name, episode.number)) episode.title = name;
+    }
+  } catch (_) {}
 }
 
 function seasonFromSummary(tv, summary) {

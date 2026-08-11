@@ -25,11 +25,7 @@ class EpisodeScreen extends ConsumerWidget {
             season.number,
             episode.number,
           );
-          final episodeTitle = episode.title.trim();
-          final episodeLabel =
-              episodeTitle.isEmpty || episodeTitle == '${episode.number}화'
-              ? '${episode.number}화'
-              : '${episode.number}화 : $episodeTitle';
+          final label = episodeLabel(episode);
           return Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -40,7 +36,7 @@ class EpisodeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        episodeLabel,
+                        label,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 4),
@@ -61,9 +57,12 @@ class EpisodeScreen extends ConsumerWidget {
                         child: const Text('완료'),
                       )
                     : OutlinedButton(
-                        onPressed: () =>
-                            _setWatched(context, controller, episode, true),
-                        child: const Text('시청'),
+                        // 아직 방영 전인 화는 시청 처리를 막는다.
+                        onPressed: _isUnaired(episode)
+                            ? null
+                            : () =>
+                                  _setWatched(context, controller, episode, true),
+                        child: Text(_isUnaired(episode) ? '방영 전' : '시청'),
                       ),
               ],
             ),
@@ -73,6 +72,18 @@ class EpisodeScreen extends ConsumerWidget {
         itemCount: season.episodes.length,
       ),
     );
+  }
+
+  /// 방영일이 오늘보다 뒤면 아직 안 나온 화.
+  bool _isUnaired(Episode episode) {
+    final date = parseDate(episode.airDate);
+    if (date == null) return false;
+    final now = DateTime.now();
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+    ).isAfter(DateTime(now.year, now.month, now.day));
   }
 
   Future<void> _setWatched(
