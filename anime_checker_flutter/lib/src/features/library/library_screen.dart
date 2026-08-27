@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_controller.dart';
-import '../../core/date_text.dart';
-import '../../core/genre_text.dart';
-import '../../core/models.dart';
+import '../../state/app_controller.dart';
+import '../../core/format/date_text.dart';
+import '../../core/format/genre_text.dart';
+import '../../data/models/models.dart';
 import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/scroll_top_area.dart';

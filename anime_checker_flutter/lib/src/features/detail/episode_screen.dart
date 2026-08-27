@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_controller.dart';
-import '../../core/date_text.dart';
-import '../../core/models.dart';
+import '../../state/app_controller.dart';
+import '../../core/format/date_text.dart';
+import '../../data/models/models.dart';
 
 class EpisodeScreen extends ConsumerWidget {
   const EpisodeScreen({super.key, required this.anime, required this.season});

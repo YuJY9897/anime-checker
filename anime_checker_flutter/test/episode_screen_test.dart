@@ -1,4 +1,4 @@
-import 'package:anime_checker_flutter/src/core/models.dart';
+import 'package:anime_checker_flutter/src/data/models/models.dart';
 import 'package:anime_checker_flutter/src/features/detail/episode_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

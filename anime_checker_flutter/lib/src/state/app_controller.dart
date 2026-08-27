@@ -6,10 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:share_plus/share_plus.dart';
 
-import 'api_client.dart';
-import 'date_text.dart';
-import 'local_repository.dart';
-import 'models.dart';
+import '../data/remote/api_client.dart';
+import '../core/format/date_text.dart';
+import '../data/local/local_repository.dart';
+import '../data/models/models.dart';
 
 final localRepositoryProvider = Provider<LocalRepository>(
   (ref) => LocalRepository(),
@@ -23,49 +23,6 @@ final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   );
 });
 
-class BackupSummary {
-  const BackupSummary({
-    required this.total,
-    required this.dropped,
-    required this.wish,
-    required this.watched,
-  });
-
-  final int total;
-  final int dropped;
-  final int wish;
-  final int watched;
-}
-
-class DataDiagnostics {
-  const DataDiagnostics({
-    required this.total,
-    required this.noPoster,
-    required this.noSeason,
-    required this.noGenre,
-    required this.dropped,
-    required this.notes,
-  });
-
-  final int total;
-  final int noPoster;
-  final int noSeason;
-  final int noGenre;
-  final int dropped;
-  final int notes;
-}
-
-class EpisodeTarget {
-  const EpisodeTarget({
-    required this.anime,
-    required this.season,
-    required this.episode,
-  });
-
-  final Anime anime;
-  final AnimeSeason season;
-  final Episode episode;
-}
 
 class AppController extends ChangeNotifier {
   AppController(this._localRepository, this._apiClient);

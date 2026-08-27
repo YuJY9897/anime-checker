@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'models.dart';
-import 'sample_data.dart';
+import '../models/models.dart';
+import '../sample/sample_data.dart';
 
 class LocalRepository {
   static const _fileName = 'anime_checker_data.json';

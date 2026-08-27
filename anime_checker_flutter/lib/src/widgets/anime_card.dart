@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../core/genre_text.dart';
-import '../core/models.dart';
+import '../core/format/genre_text.dart';
+import '../data/models/models.dart';
 
 class AnimeCardAction {
   const AnimeCardAction({

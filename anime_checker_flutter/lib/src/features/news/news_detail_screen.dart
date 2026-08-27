@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_controller.dart';
-import '../../core/date_text.dart';
-import '../../core/external_links.dart';
-import '../../core/models.dart';
+import '../../state/app_controller.dart';
+import '../../core/format/date_text.dart';
+import '../../core/util/external_links.dart';
+import '../../data/models/models.dart';
 import 'news_webview_screen.dart';
 
 class NewsDetailScreen extends ConsumerWidget {

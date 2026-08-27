@@ -1,0 +1,11 @@
+export 'anime.dart';
+export 'anime_movie.dart';
+export 'anime_season.dart';
+export 'app_data.dart';
+export 'app_settings.dart';
+export 'backup_summary.dart';
+export 'data_diagnostics.dart';
+export 'episode.dart';
+export 'episode_target.dart';
+export 'news_article.dart';
+export 'wish_item.dart';

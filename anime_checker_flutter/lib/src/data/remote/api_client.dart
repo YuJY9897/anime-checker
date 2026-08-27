@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import 'models.dart';
-import 'sample_data.dart';
+import '../models/models.dart';
+import '../sample/sample_data.dart';
 
 class AnimeApiClient {
   AnimeApiClient({http.Client? client}) : _client = client ?? http.Client();

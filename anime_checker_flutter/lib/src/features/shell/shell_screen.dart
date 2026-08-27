@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_controller.dart';
+import '../../state/app_controller.dart';
 import '../home/main_sections.dart';
 import '../search/search_screen.dart';
 

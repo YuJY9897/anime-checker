@@ -4,10 +4,10 @@ import '../news/news_screen.dart';
 import '../settings/settings_screen.dart';
 import '../shell/shell_screen.dart';
 import 'home_screen.dart';
-import 'library_screen.dart';
-import 'new_anime_screen.dart';
-import 'schedule_screen.dart';
-import 'wish_screen.dart';
+import '../library/library_screen.dart';
+import '../new_anime/new_anime_screen.dart';
+import '../schedule/schedule_screen.dart';
+import '../wish/wish_screen.dart';
 
 class MainSectionBody extends StatelessWidget {
   const MainSectionBody({super.key, required this.section});

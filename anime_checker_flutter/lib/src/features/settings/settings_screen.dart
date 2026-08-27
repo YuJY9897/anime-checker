@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_controller.dart';
-import '../../core/date_text.dart';
+import '../../state/app_controller.dart';
+import '../../core/format/date_text.dart';
 import '../../widgets/scroll_top_area.dart';
 import '../backup/backup_screen.dart';
 import '../legal/legal_screen.dart';

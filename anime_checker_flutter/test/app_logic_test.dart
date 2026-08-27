@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:anime_checker_flutter/src/core/api_client.dart';
-import 'package:anime_checker_flutter/src/core/app_controller.dart';
-import 'package:anime_checker_flutter/src/core/date_text.dart';
-import 'package:anime_checker_flutter/src/core/genre_text.dart';
-import 'package:anime_checker_flutter/src/core/local_repository.dart';
-import 'package:anime_checker_flutter/src/core/models.dart';
-import 'package:anime_checker_flutter/src/core/sample_data.dart';
+import 'package:anime_checker_flutter/src/data/remote/api_client.dart';
+import 'package:anime_checker_flutter/src/state/app_controller.dart';
+import 'package:anime_checker_flutter/src/core/format/date_text.dart';
+import 'package:anime_checker_flutter/src/core/format/genre_text.dart';
+import 'package:anime_checker_flutter/src/data/local/local_repository.dart';
+import 'package:anime_checker_flutter/src/data/models/models.dart';
+import 'package:anime_checker_flutter/src/data/sample/sample_data.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class FakeRepository extends LocalRepository {

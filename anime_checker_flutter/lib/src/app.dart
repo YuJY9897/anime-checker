@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/app_controller.dart';
-import 'core/theme.dart';
+import 'state/app_controller.dart';
+import 'core/theme/theme.dart';
 import 'features/shell/shell_screen.dart';
 
 class AnimeCheckerApp extends ConsumerWidget {

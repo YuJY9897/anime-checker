@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_controller.dart';
-import '../../core/models.dart';
+import '../../state/app_controller.dart';
+import '../../data/models/models.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/scroll_top_area.dart';
 import '../detail/detail_screen.dart';
