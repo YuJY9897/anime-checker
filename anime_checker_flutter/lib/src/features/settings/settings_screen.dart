@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../state/app_controller.dart';
 import '../../core/format/date_text.dart';
@@ -87,7 +88,7 @@ class SettingsScreen extends ConsumerWidget {
           _SettingsGroup(
             title: '앱 정보',
             children: [
-              const _StaticRow(label: '앱 버전', value: '1.0.0+1'),
+              const _AppVersionRow(),
               const SizedBox(height: 8),
               _OpenRow(
                 icon: Icons.menu_book_outlined,
@@ -236,6 +237,24 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AppVersionRow extends StatelessWidget {
+  const _AppVersionRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) {
+        final info = snapshot.data;
+        return _StaticRow(
+          label: '앱 버전',
+          value: info == null ? '-' : '${info.version}+${info.buildNumber}',
+        );
+      },
     );
   }
 }
