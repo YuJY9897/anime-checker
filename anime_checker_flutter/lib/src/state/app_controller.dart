@@ -6,10 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../data/remote/api_client.dart';
 import '../core/format/date_text.dart';
 import '../data/local/local_repository.dart';
 import '../data/models/models.dart';
+import '../data/remote/api_client.dart';
+import 'anime_mutation.dart' as mutate;
+import 'anime_query.dart' as query;
+import 'episode_sync.dart' as sync;
 
 final localRepositoryProvider = Provider<LocalRepository>(
   (ref) => LocalRepository(),
@@ -23,7 +26,9 @@ final appControllerProvider = ChangeNotifierProvider<AppController>((ref) {
   );
 });
 
-
+/// 앱 전체가 공유하는 상태를 들고, 저장과 화면 갱신을 맡는다.
+/// 계산은 anime_query, 데이터 변경은 anime_mutation, 회차 갱신 규칙은
+/// episode_sync에 있고 여기서는 그 결과를 저장하고 알리는 일만 한다.
 class AppController extends ChangeNotifier {
   AppController(this._localRepository, this._apiClient);
 
@@ -64,6 +69,64 @@ class AppController extends ChangeNotifier {
     await syncAiringEpisodes();
   }
 
+  // --- 조회 -----------------------------------------------------------------
+
+  List<Anime> get allAnime => query.allAnime(data);
+
+  List<Anime> get libraryAnime => query.libraryAnime(data);
+
+  List<Anime> get droppedAnime => query.droppedAnime(data);
+
+  List<WishItem> get wishItems => query.wishItems(data);
+
+  List<EpisodeTarget> get todayTargets => query.todayTargets(data);
+
+  Map<String, List<Anime>> get scheduleByWeekday => query.scheduleByWeekday(data);
+
+  bool isCurrentlyAiring(Anime anime) => query.isCurrentlyAiring(anime);
+
+  String normalizedWeekday(String value) => query.normalizedWeekday(value);
+
+  String inferredCurrentWeekday(Anime anime) =>
+      query.inferredCurrentWeekday(anime);
+
+  bool isDropped(String animeId) => query.isDropped(data, animeId);
+
+  bool isWished(String animeId) => query.isWished(data, animeId);
+
+  bool isInLibrary(String animeId) => query.isInLibrary(data, animeId);
+
+  String episodeKey(String animeId, int seasonNumber, int episodeNumber) =>
+      query.episodeKey(animeId, seasonNumber, episodeNumber);
+
+  bool isEpisodeWatched(String animeId, int seasonNumber, int episodeNumber) =>
+      query.isEpisodeWatched(data, animeId, seasonNumber, episodeNumber);
+
+  bool isMovieWatched(String movieId) => query.isMovieWatched(data, movieId);
+
+  int watchedCount(Anime anime) => query.watchedCount(data, anime);
+
+  int watchedCountForSeason(Anime anime, AnimeSeason season) =>
+      query.watchedCountForSeason(data, anime, season);
+
+  int totalEpisodeCount(Anime anime) => query.totalEpisodeCount(anime);
+
+  String progressLabel(Anime anime) => query.progressLabel(data, anime);
+
+  String latestWatchLabel(Anime anime) => query.latestWatchLabel(data, anime);
+
+  double progressRatio(Anime anime) => query.progressRatio(data, anime);
+
+  String animeNote(String animeId) => query.animeNote(data, animeId);
+
+  String droppedReason(String animeId) => query.droppedReason(data, animeId);
+
+  BackupSummary summarize(AppData target) => query.summarize(target);
+
+  DataDiagnostics diagnostics() => query.diagnostics(data);
+
+  // --- 회차 갱신 ------------------------------------------------------------
+
   /// 방영 중인 작품의 새 화(제목/방영일)를 프록시에서 다시 받아온다.
   /// 새 화는 매주 나오는데 저장된 상세는 추가 시점에서 멈춰 있어 갱신이 필요하다.
   Future<void> syncAiringEpisodes({bool force = false}) async {
@@ -71,8 +134,8 @@ class AppController extends ChangeNotifier {
     final now = DateTime.now();
     final targets = libraryAnime
         .where((anime) => !anime.isMovie && !anime.id.startsWith('movie-'))
-        .where(isCurrentlyAiring)
-        .where((anime) => force || _needsEpisodeSync(anime.id, now))
+        .where(query.isCurrentlyAiring)
+        .where((anime) => force || sync.needsEpisodeSync(data, anime.id, now))
         .take(12)
         .toList();
     if (targets.isEmpty) return;
@@ -87,7 +150,7 @@ class AppController extends ChangeNotifier {
         try {
           final fetched = await _apiClient.fetchAnime(anime.id);
           if (fetched != null) {
-            list[anime.id] = _mergeEpisodes(anime, fetched);
+            list[anime.id] = sync.mergeEpisodes(anime, fetched);
             syncedAt[anime.id] = now.toIso8601String();
             changed = true;
           }
@@ -97,7 +160,7 @@ class AppController extends ChangeNotifier {
         await Future<void>.delayed(const Duration(milliseconds: 400));
       }
       if (changed) {
-        await _commit(data.copyWith(animeList: list, animeSyncedAt: syncedAt));
+        await _commit(mutate.withSyncedAnime(data, list, syncedAt));
       }
     } finally {
       episodeSyncing = false;
@@ -105,386 +168,18 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  bool _needsEpisodeSync(String animeId, DateTime now) {
-    final last = DateTime.tryParse(data.animeSyncedAt[animeId] ?? '');
-    if (last == null) return true;
-    return now.difference(last) >= const Duration(hours: 12);
-  }
-
-  /// 받아온 상세로 회차를 갱신하되, 아직 제목이 안 나온 화는 기존 제목을 지킨다.
-  Anime _mergeEpisodes(Anime current, Anime fetched) {
-    if (fetched.seasons.isEmpty) return current;
-    final seasons = fetched.seasons.map((season) {
-      final previous = current.seasons
-          .where((item) => item.number == season.number)
-          .toList();
-      if (previous.isEmpty) return season;
-      final oldTitles = {
-        for (final episode in previous.first.episodes)
-          episode.number: episode.title,
-      };
-      return AnimeSeason(
-        number: season.number,
-        name: season.name,
-        subtitle: season.subtitle,
-        posterUrl: season.posterUrl,
-        episodes: season.episodes.map((episode) {
-          if (!_isPlaceholderTitle(episode.title, episode.number)) return episode;
-          final old = oldTitles[episode.number] ?? '';
-          return Episode(
-            number: episode.number,
-            title: _isPlaceholderTitle(old, episode.number)
-                ? '${episode.number}화'
-                : old,
-            airDate: episode.airDate,
-          );
-        }).toList(),
-      );
-    }).toList();
-    return Anime(
-      id: current.id,
-      title: fetched.title.trim().isEmpty ? current.title : fetched.title,
-      originalTitle: fetched.originalTitle,
-      posterUrl: fetched.posterUrl.trim().isEmpty
-          ? current.posterUrl
-          : fetched.posterUrl,
-      genres: fetched.genres.isEmpty ? current.genres : fetched.genres,
-      status: fetched.status,
-      weekday: fetched.weekday.trim().isEmpty
-          ? current.weekday
-          : fetched.weekday,
-      firstAirDate: fetched.firstAirDate,
-      seasons: seasons,
-      movies: fetched.movies.isEmpty ? current.movies : fetched.movies,
-      dropped: current.dropped,
-      isMovie: current.isMovie,
-    );
-  }
-
-  bool _isPlaceholderTitle(String title, int number) =>
-      isPlaceholderEpisodeTitle(title, number);
-
-  Future<void> ensureNewAnimeLoaded() async {
-    if (newAnime.isNotEmpty || newAnimeLoading) return;
-    await refreshNewAnime();
-  }
-
-  Future<void> ensureNewsLoaded() async {
-    if (news.isNotEmpty || newsLoading) return;
-    await refreshNews();
-  }
-
-  List<Anime> get allAnime =>
-      data.animeList.values.toList()
-        ..sort((a, b) => a.title.compareTo(b.title));
-
-  List<Anime> get libraryAnime =>
-      allAnime.where((anime) => !isDropped(anime.id)).toList();
-
-  List<Anime> get droppedAnime =>
-      allAnime.where((anime) => isDropped(anime.id)).toList();
-
-  List<WishItem> get wishItems =>
-      data.wishList.values.toList()..sort((a, b) => a.title.compareTo(b.title));
-
-  List<EpisodeTarget> get todayTargets {
-    final today = DateTime.now();
-    final todayOnly = DateTime(today.year, today.month, today.day);
-    final targets = <EpisodeTarget>[];
-    for (final anime in libraryAnime) {
-      EpisodeTarget? nextTarget;
-      for (final season in anime.seasons) {
-        for (final episode in season.episodes) {
-          final date = parseDate(episode.airDate);
-          if (date != null) {
-            final airDay = DateTime(date.year, date.month, date.day);
-            if (airDay.isAfter(todayOnly)) continue;
-          }
-          if (!isEpisodeWatched(anime.id, season.number, episode.number)) {
-            nextTarget = EpisodeTarget(
-              anime: anime,
-              season: season,
-              episode: episode,
-            );
-            break;
-          }
-        }
-        if (nextTarget != null) break;
-      }
-      if (nextTarget != null) targets.add(nextTarget);
-    }
-    targets.sort(_compareEpisodeTargets);
-    return targets;
-  }
-
-  int _compareEpisodeTargets(EpisodeTarget a, EpisodeTarget b) {
-    final aDate = parseDate(a.episode.airDate);
-    final bDate = parseDate(b.episode.airDate);
-    if (aDate != null && bDate != null) {
-      final compared = aDate.compareTo(bDate);
-      if (compared != 0) return compared;
-    } else if (aDate != null) {
-      return -1;
-    } else if (bDate != null) {
-      return 1;
-    }
-    return a.anime.title.compareTo(b.anime.title);
-  }
-
-  Map<String, List<Anime>> get scheduleByWeekday {
-    final map = <String, List<Anime>>{};
-    for (final anime in allAnime) {
-      if (!isCurrentlyAiring(anime)) continue;
-      final storedWeekday = normalizedWeekday(anime.weekday);
-      final weekday = storedWeekday.isNotEmpty
-          ? storedWeekday
-          : inferredCurrentWeekday(anime);
-      if (weekday.isEmpty) continue;
-      map.putIfAbsent(weekday, () => []).add(anime);
-    }
-    for (final items in map.values) {
-      items.sort((a, b) => a.title.compareTo(b.title));
-    }
-    return map;
-  }
-
-  bool isCurrentlyAiring(Anime anime) {
-    final status = anime.status.trim().toLowerCase();
-    final ended =
-        status.contains('ended') ||
-        status.contains('canceled') ||
-        status.contains('cancelled') ||
-        status.contains('종료') ||
-        status.contains('완결') ||
-        status.contains('종영') ||
-        status.contains('취소');
-    if (ended) return false;
-    if (status.isNotEmpty) return true;
-    return inferredCurrentWeekday(anime).isNotEmpty;
-  }
-
-  String normalizedWeekday(String value) {
-    const weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
-    final text = value.trim();
-    for (final weekday in weekdays) {
-      if (text.contains(weekday)) return weekday;
-    }
-    return '';
-  }
-
-  String inferredCurrentWeekday(Anime anime) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    DateTime? bestDate;
-    for (final season in anime.seasons) {
-      for (final episode in season.episodes) {
-        final date = parseDate(episode.airDate);
-        if (date == null || date.year != today.year) continue;
-        final day = DateTime(date.year, date.month, date.day);
-        if (day.isBefore(today.subtract(const Duration(days: 14)))) continue;
-        if (bestDate == null || day.isBefore(bestDate)) bestDate = day;
-      }
-    }
-    if (bestDate == null) return '';
-    return weekdayLabel(bestDate);
-  }
-
-  bool isDropped(String animeId) =>
-      data.dropped[animeId] == true || data.animeList[animeId]?.dropped == true;
-
-  bool isWished(String animeId) => data.wishList.containsKey(animeId);
-
-  bool isInLibrary(String animeId) => data.animeList.containsKey(animeId);
-
-  String episodeKey(String animeId, int seasonNumber, int episodeNumber) =>
-      '$animeId:s$seasonNumber:e$episodeNumber';
-
-  bool isEpisodeWatched(String animeId, int seasonNumber, int episodeNumber) {
-    return data.watchedEpisodes[episodeKey(
-          animeId,
-          seasonNumber,
-          episodeNumber,
-        )] ==
-        true;
-  }
-
-  bool isMovieWatched(String movieId) => data.watchedMovies[movieId] == true;
-
-  int watchedCount(Anime anime) {
-    var count = 0;
-    for (final season in anime.seasons) {
-      for (final episode in season.episodes) {
-        if (isEpisodeWatched(anime.id, season.number, episode.number)) count++;
-      }
-    }
-    return count;
-  }
-
-  int watchedCountForSeason(Anime anime, AnimeSeason season) {
-    var count = 0;
-    for (final episode in season.episodes) {
-      if (isEpisodeWatched(anime.id, season.number, episode.number)) count++;
-    }
-    return count;
-  }
-
-  int totalEpisodeCount(Anime anime) =>
-      anime.seasons.fold(0, (sum, season) => sum + season.episodes.length);
-
-  String progressLabel(Anime anime) {
-    final total = totalEpisodeCount(anime);
-    final watched = watchedCount(anime);
-    if (total == 0) return '정보 확인 중';
-    if (watched >= total) return '$watched/$total화 완료';
-    final percent = ((watched / total) * 100).round();
-    return '$watched/$total화 · $percent%';
-  }
-
-  String latestWatchLabel(Anime anime) {
-    var latestSeason = 0;
-    var latestEpisode = 0;
-    for (final season in anime.seasons) {
-      for (final episode in season.episodes) {
-        if (isEpisodeWatched(anime.id, season.number, episode.number)) {
-          latestSeason = season.number;
-          latestEpisode = episode.number;
-        }
-      }
-    }
-    if (latestEpisode == 0) return '아직 시청 기록 없음';
-    return '최근 $latestSeason기 $latestEpisode화';
-  }
-
-  String animeNote(String animeId) => data.animeNotes[animeId]?.trim() ?? '';
-
-  String droppedReason(String animeId) =>
-      data.droppedReasons[animeId]?.trim() ?? '';
-
-  double progressRatio(Anime anime) {
-    final total = totalEpisodeCount(anime);
-    if (total == 0) return 0;
-    return watchedCount(anime) / total;
-  }
-
-  Future<void> search(String query) async {
-    final keyword = query.trim();
-    if (keyword.isEmpty) {
-      searchResults = const [];
-      error = null;
-      notifyListeners();
-      return;
-    }
-    busy = true;
-    notifyListeners();
-    try {
-      final localResults = _searchLocal(keyword);
-      if (_apiClient.isConfigured) {
-        final remoteResults = await _apiClient.search(keyword);
-        searchResults = _mergeAnimeResults(localResults, remoteResults);
-      } else {
-        searchResults = localResults;
-      }
-      error = null;
-    } catch (e) {
-      error = '$e';
-      searchResults = _searchLocal(keyword);
-    } finally {
-      busy = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> refreshNewAnime() async {
-    newAnimeLoading = true;
-    notifyListeners();
-    try {
-      newAnime = await _apiClient.fetchNewAnime();
-      newAnimeBasis = nowBasisText();
-      error = null;
-    } catch (e) {
-      error = '$e';
-    } finally {
-      newAnimeLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> refreshNews() async {
-    newsLoading = true;
-    notifyListeners();
-    try {
-      news = await _apiClient.fetchNews();
-      newsBasis = nowBasisText();
-      error = null;
-    } catch (e) {
-      error = '$e';
-    } finally {
-      newsLoading = false;
-      notifyListeners();
-    }
-  }
-
-  List<Anime> _searchLocal(String keyword) {
-    final lowered = keyword.toLowerCase();
-    return allAnime.where((anime) {
-      return anime.id.toLowerCase().contains(lowered) ||
-          anime.title.toLowerCase().contains(lowered) ||
-          anime.originalTitle.toLowerCase().contains(lowered);
-    }).toList();
-  }
-
-  List<Anime> _mergeAnimeResults(List<Anime> local, List<Anime> remote) {
-    final merged = <String, Anime>{};
-    for (final item in local) {
-      merged[item.id] = item;
-    }
-    for (final item in remote) {
-      merged.putIfAbsent(item.id, () => item);
-    }
-    return merged.values.toList();
-  }
-
-  Future<void> addAnime(Anime anime) async {
-    var nextAnime = anime.copyWith(dropped: false);
-    if (anime.seasons.isEmpty && !anime.id.startsWith('movie-')) {
-      try {
-        nextAnime =
-            (await _apiClient.fetchAnime(anime.id))?.copyWith(dropped: false) ??
-            nextAnime;
-      } catch (_) {
-        nextAnime = anime.copyWith(dropped: false);
-      }
-    }
-    final list = Map<String, Anime>.from(data.animeList)
-      ..[anime.id] = nextAnime;
-    final wish = Map<String, WishItem>.from(data.wishList)..remove(anime.id);
-    final dropped = Map<String, bool>.from(data.dropped)..remove(anime.id);
-    final syncedAt = Map<String, String>.from(data.animeSyncedAt)
-      ..[anime.id] = DateTime.now().toIso8601String();
-    await _commit(
-      data.copyWith(
-        animeList: list,
-        wishList: wish,
-        dropped: dropped,
-        animeSyncedAt: syncedAt,
-      ),
-    );
-  }
-
   Future<void> refreshAnimeDetail(String animeId) async {
     final current = data.animeList[animeId];
     if (current == null || current.id.startsWith('movie-')) return;
     final fetched = await _apiClient.fetchAnime(animeId);
     if (fetched == null) return;
-    final list = Map<String, Anime>.from(data.animeList)
-      ..[animeId] = current.seasons.isEmpty
-          ? fetched.copyWith(dropped: current.dropped)
-          : _mergeEpisodes(current, fetched);
-    final syncedAt = Map<String, String>.from(data.animeSyncedAt)
-      ..[animeId] = DateTime.now().toIso8601String();
-    await _commit(data.copyWith(animeList: list, animeSyncedAt: syncedAt));
+    final next = current.seasons.isEmpty
+        ? fetched.copyWith(dropped: current.dropped)
+        : sync.mergeEpisodes(current, fetched);
+    await _commit(mutate.withAnimeDetail(data, animeId, next));
   }
 
+  /// 상세 화면을 열기 전에 보여줄 정보를 준비한다. 저장본이 있으면 그대로 쓴다.
   Future<Anime> previewAnimeDetail(Anime anime) async {
     final stored = data.animeList[anime.id];
     if (stored != null &&
@@ -503,11 +198,133 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  // --- 검색·신작·소식 --------------------------------------------------------
+
+  Future<void> search(String text) async {
+    final keyword = text.trim();
+    if (keyword.isEmpty) {
+      searchResults = const [];
+      error = null;
+      notifyListeners();
+      return;
+    }
+    busy = true;
+    notifyListeners();
+    try {
+      final localResults = query.searchLocal(data, keyword);
+      if (_apiClient.isConfigured) {
+        final remoteResults = await _apiClient.search(keyword);
+        searchResults = query.mergeAnimeResults(localResults, remoteResults);
+      } else {
+        searchResults = localResults;
+      }
+      error = null;
+    } catch (e) {
+      error = '$e';
+      searchResults = query.searchLocal(data, keyword);
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> ensureNewAnimeLoaded() async {
+    if (newAnime.isNotEmpty || newAnimeLoading) return;
+    await refreshNewAnime();
+  }
+
+  Future<void> refreshNewAnime() async {
+    newAnimeLoading = true;
+    notifyListeners();
+    try {
+      newAnime = await _apiClient.fetchNewAnime();
+      newAnimeBasis = nowBasisText();
+      error = null;
+    } catch (e) {
+      error = '$e';
+    } finally {
+      newAnimeLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> ensureNewsLoaded() async {
+    if (news.isNotEmpty || newsLoading) return;
+    await refreshNews();
+  }
+
+  Future<void> refreshNews() async {
+    newsLoading = true;
+    notifyListeners();
+    try {
+      news = await _apiClient.fetchNews();
+      newsBasis = nowBasisText();
+      error = null;
+    } catch (e) {
+      error = '$e';
+    } finally {
+      newsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // --- 보관함 ---------------------------------------------------------------
+
+  /// 회차 정보가 없는 작품은 추가하면서 상세를 한 번 받아온다.
+  Future<void> addAnime(Anime anime) async {
+    var stored = anime.copyWith(dropped: false);
+    if (anime.seasons.isEmpty && !anime.id.startsWith('movie-')) {
+      try {
+        stored =
+            (await _apiClient.fetchAnime(anime.id))?.copyWith(dropped: false) ??
+            stored;
+      } catch (_) {
+        stored = anime.copyWith(dropped: false);
+      }
+    }
+    await _commit(mutate.withAnimeAdded(data, anime.id, stored));
+  }
+
+  Future<void> deleteAnime(String animeId) async {
+    await _commit(mutate.withAnimeRemoved(data, animeId));
+  }
+
+  Future<void> toggleDropped(String animeId) async {
+    final anime = data.animeList[animeId];
+    if (anime == null) return;
+    await _commit(mutate.withDroppedToggled(data, animeId, anime));
+  }
+
+  Future<void> setAnimeNote(String animeId, String note) async {
+    if (!data.animeList.containsKey(animeId)) return;
+    await _commit(mutate.withAnimeNote(data, animeId, note));
+  }
+
+  Future<void> setDroppedReason(String animeId, String reason) async {
+    if (!data.animeList.containsKey(animeId)) return;
+    await _commit(mutate.withDroppedReason(data, animeId, reason));
+  }
+
+  Future<void> setEpisodeWatched(
+    Anime anime,
+    AnimeSeason season,
+    Episode episode,
+    bool watched,
+  ) async {
+    await _commit(
+      mutate.withEpisodeWatched(data, anime, season, episode, watched),
+    );
+  }
+
+  Future<void> toggleMovieWatched(AnimeMovie movie) async {
+    await _commit(mutate.withMovieWatchedToggled(data, movie));
+  }
+
+  // --- 찜 -------------------------------------------------------------------
+
   Future<void> addWish(Anime anime) async {
     if (isInLibrary(anime.id)) return;
-    final wish = Map<String, WishItem>.from(data.wishList)
-      ..[anime.id] = WishItem.fromAnime(anime);
-    await _commit(data.copyWith(wishList: wish));
+    await _commit(mutate.withWishAdded(data, anime));
   }
 
   Future<void> toggleWish(Anime anime) async {
@@ -519,91 +336,28 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> removeWish(String animeId) async {
-    final wish = Map<String, WishItem>.from(data.wishList)..remove(animeId);
-    await _commit(data.copyWith(wishList: wish));
+    await _commit(mutate.withWishRemoved(data, animeId));
   }
 
   Future<void> addWishToLibrary(WishItem item) async {
-    final anime = Anime(
-      id: item.id,
-      title: item.title,
-      originalTitle: '',
-      posterUrl: item.posterUrl,
-      genres: item.genres,
-      status: '정보 확인 중',
-      weekday: '',
-      firstAirDate: item.firstAirDate,
-      seasons: const [],
-      movies: const [],
-      dropped: false,
-    );
-    await addAnime(anime);
-  }
-
-  Future<void> toggleDropped(String animeId) async {
-    final anime = data.animeList[animeId];
-    if (anime == null) return;
-    final next = !isDropped(animeId);
-    final list = Map<String, Anime>.from(data.animeList)
-      ..[animeId] = anime.copyWith(dropped: next);
-    final dropped = Map<String, bool>.from(data.dropped);
-    if (next) {
-      dropped[animeId] = true;
-    } else {
-      dropped.remove(animeId);
-    }
-    final reasons = Map<String, String>.from(data.droppedReasons);
-    if (!next) reasons.remove(animeId);
-    await _commit(
-      data.copyWith(animeList: list, dropped: dropped, droppedReasons: reasons),
-    );
-  }
-
-  Future<void> deleteAnime(String animeId) async {
-    final list = Map<String, Anime>.from(data.animeList)..remove(animeId);
-    final dropped = Map<String, bool>.from(data.dropped)..remove(animeId);
-    final notes = Map<String, String>.from(data.animeNotes)..remove(animeId);
-    final reasons = Map<String, String>.from(data.droppedReasons)
-      ..remove(animeId);
-    final watched = Map<String, bool>.from(data.watchedEpisodes)
-      ..removeWhere((key, value) => key.startsWith('$animeId:'));
-    final syncedAt = Map<String, String>.from(data.animeSyncedAt)
-      ..remove(animeId);
-    await _commit(
-      data.copyWith(
-        animeList: list,
-        dropped: dropped,
-        animeNotes: notes,
-        droppedReasons: reasons,
-        watchedEpisodes: watched,
-        animeSyncedAt: syncedAt,
+    await addAnime(
+      Anime(
+        id: item.id,
+        title: item.title,
+        originalTitle: '',
+        posterUrl: item.posterUrl,
+        genres: item.genres,
+        status: '정보 확인 중',
+        weekday: '',
+        firstAirDate: item.firstAirDate,
+        seasons: const [],
+        movies: const [],
+        dropped: false,
       ),
     );
   }
 
-  Future<void> setAnimeNote(String animeId, String note) async {
-    if (!data.animeList.containsKey(animeId)) return;
-    final notes = Map<String, String>.from(data.animeNotes);
-    final value = note.trim();
-    if (value.isEmpty) {
-      notes.remove(animeId);
-    } else {
-      notes[animeId] = value;
-    }
-    await _commit(data.copyWith(animeNotes: notes));
-  }
-
-  Future<void> setDroppedReason(String animeId, String reason) async {
-    if (!data.animeList.containsKey(animeId)) return;
-    final reasons = Map<String, String>.from(data.droppedReasons);
-    final value = reason.trim();
-    if (value.isEmpty) {
-      reasons.remove(animeId);
-    } else {
-      reasons[animeId] = value;
-    }
-    await _commit(data.copyWith(droppedReasons: reasons));
-  }
+  // --- 설정·백업 ------------------------------------------------------------
 
   Future<void> updateSettings(AppSettings settings) async {
     await _commit(data.copyWith(settings: settings));
@@ -611,57 +365,6 @@ class AppController extends ChangeNotifier {
 
   Future<void> resetAllData() async {
     await _commit(AppData.empty().copyWith(settings: settings));
-  }
-
-  Future<void> setEpisodeWatched(
-    Anime anime,
-    AnimeSeason season,
-    Episode episode,
-    bool watched,
-  ) async {
-    final next = Map<String, bool>.from(data.watchedEpisodes);
-    for (final item in season.episodes) {
-      final key = episodeKey(anime.id, season.number, item.number);
-      if (watched && item.number <= episode.number) {
-        next[key] = true;
-      } else if (!watched && item.number >= episode.number) {
-        next.remove(key);
-      }
-    }
-    await _commit(data.copyWith(watchedEpisodes: next));
-  }
-
-  Future<void> toggleMovieWatched(AnimeMovie movie) async {
-    final next = Map<String, bool>.from(data.watchedMovies);
-    if (next[movie.id] == true) {
-      next.remove(movie.id);
-    } else {
-      next[movie.id] = true;
-    }
-    await _commit(data.copyWith(watchedMovies: next));
-  }
-
-  BackupSummary summarize(AppData target) {
-    return BackupSummary(
-      total: target.animeList.length,
-      dropped: target.dropped.values.where((value) => value).length,
-      wish: target.wishList.length,
-      watched:
-          target.watchedEpisodes.values.where((value) => value).length +
-          target.watchedMovies.values.where((value) => value).length,
-    );
-  }
-
-  DataDiagnostics diagnostics() {
-    final items = data.animeList.values;
-    return DataDiagnostics(
-      total: items.length,
-      noPoster: items.where((anime) => anime.posterUrl.trim().isEmpty).length,
-      noSeason: items.where((anime) => anime.seasons.isEmpty).length,
-      noGenre: items.where((anime) => anime.genres.isEmpty).length,
-      dropped: droppedAnime.length,
-      notes: data.animeNotes.length,
-    );
   }
 
   Future<File> exportBackup() async {
