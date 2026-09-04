@@ -211,6 +211,68 @@ void main() {
     );
   });
 
+  test('원본 좌표계가 통째로 바뀌어도 순번으로 기록을 지킨다', () {
+    // TMDB가 시즌 구조를 바꾸면 옛 s2 좌표가 새 좌표계에 아예 없다(주술회전 사례).
+    final before = [
+      season(number: 1, name: '1기', episodes: [for (var i = 1; i <= 24; i++) ep(i)]),
+      season(number: 2, name: '2기', episodes: [for (var i = 1; i <= 23; i++) ep(i)]),
+    ];
+    // 새 구성은 전부 s1 연속 번호를 원본으로 갖는다.
+    final after = [
+      season(
+        number: 1,
+        name: '1기',
+        episodes: [for (var i = 1; i <= 24; i++) ep(i, srcSeason: 1, srcEpisode: i)],
+      ),
+      season(
+        number: 2,
+        name: '2기',
+        episodes: [
+          for (var i = 1; i <= 23; i++) ep(i, srcSeason: 1, srcEpisode: 24 + i),
+        ],
+      ),
+    ];
+    final watched = {
+      for (var i = 1; i <= 24; i++) 'a:s1:e$i': true,
+      for (var i = 1; i <= 10; i++) 'a:s2:e$i': true,
+    };
+
+    final moved = migrateWatchedEpisodes(
+      animeId: 'a',
+      watchedEpisodes: watched,
+      before: before,
+      after: after,
+    );
+
+    expect(moved.values.where((v) => v).length, 34);
+    expect(moved['a:s2:e10'], isTrue);
+    expect(moved['a:s2:e11'], isNull);
+  });
+
+  test('새 구성이 옛 구성보다 짧으면 순번 추정을 쓰지 않는다', () {
+    final before = [
+      season(number: 1, name: '1기', episodes: [for (var i = 1; i <= 10; i++) ep(i)]),
+    ];
+    final after = [
+      season(
+        number: 1,
+        name: '1기',
+        episodes: [for (var i = 1; i <= 4; i++) ep(i, srcSeason: 9, srcEpisode: i)],
+      ),
+    ];
+    final watched = {for (var i = 1; i <= 10; i++) 'a:s1:e$i': true};
+
+    final moved = migrateWatchedEpisodes(
+      animeId: 'a',
+      watchedEpisodes: watched,
+      before: before,
+      after: after,
+    );
+
+    // 좌표도 안 맞고 화수도 줄었으면 함부로 채우지 않는다.
+    expect(moved.values.where((v) => v).length, 0);
+  });
+
   test('새 구성에 없는 키를 찾아낸다', () {
     final seasons = [
       season(

@@ -47,6 +47,12 @@ class AppController extends ChangeNotifier {
   bool newAnimeLoading = false;
   bool newsLoading = false;
   bool episodeSyncing = false;
+
+  /// 보관함 전체 다시 받기 진행 상태.
+  bool refreshingAll = false;
+  int refreshAllDone = 0;
+  int refreshAllTotal = 0;
+  bool _cancelRefreshAll = false;
   String newAnimeBasis = '';
   String newsBasis = '';
 
@@ -135,6 +141,70 @@ class AppController extends ChangeNotifier {
 
   /// 뒤에서 돌고 있는 회차 갱신이 끝날 때까지 기다린다(없으면 즉시 완료).
   Future<void> get pendingEpisodeSync async => _episodeSyncTask;
+
+  /// 보관함의 모든 작품 정보를 처음부터 다시 받는다.
+  ///
+  /// 완결작은 자동 갱신 대상이 아니라서, 기수가 뭉쳐 있던 작품을 나누려면
+  /// 이렇게 한 번 훑어야 한다. 시청 기록은 새 좌표로 옮겨진다.
+  Future<void> refreshAllAnimeDetails() async {
+    if (!_apiClient.isConfigured || refreshingAll || episodeSyncing) return;
+    final targets = allAnime
+        .where((anime) => !anime.isMovie && !anime.id.startsWith('movie-'))
+        .toList();
+    if (targets.isEmpty) return;
+
+    refreshingAll = true;
+    _cancelRefreshAll = false;
+    refreshAllDone = 0;
+    refreshAllTotal = targets.length;
+    notifyListeners();
+
+    final now = DateTime.now();
+    final list = Map<String, Anime>.from(data.animeList);
+    final syncedAt = Map<String, String>.from(data.animeSyncedAt);
+    var watched = data.watchedEpisodes;
+    var changed = false;
+    try {
+      for (final anime in targets) {
+        if (_cancelRefreshAll) break;
+        try {
+          final fetched = await _apiClient.fetchAnime(anime.id);
+          if (fetched != null && fetched.seasons.isNotEmpty) {
+            final merged = sync.mergeEpisodes(anime, fetched);
+            watched = migration.migrateWatchedEpisodes(
+              animeId: anime.id,
+              watchedEpisodes: watched,
+              before: anime.seasons,
+              after: merged.seasons,
+            );
+            list[anime.id] = merged;
+            syncedAt[anime.id] = now.toIso8601String();
+            changed = true;
+          }
+        } catch (_) {
+          // 한 작품이 실패해도 나머지는 계속 받는다.
+        }
+        refreshAllDone += 1;
+        notifyListeners();
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+      }
+      if (changed) {
+        await _commit(
+          mutate
+              .withSyncedAnime(data, list, syncedAt)
+              .copyWith(watchedEpisodes: watched),
+        );
+      }
+    } finally {
+      refreshingAll = false;
+      notifyListeners();
+    }
+  }
+
+  /// 진행 중인 전체 다시 받기를 멈춘다. 지금까지 받은 내용은 그대로 저장된다.
+  void cancelRefreshAll() {
+    _cancelRefreshAll = true;
+  }
 
   /// 방영 중인 작품의 새 화(제목/방영일)를 프록시에서 다시 받아온다.
   /// 새 화는 매주 나오는데 저장된 상세는 추가 시점에서 멈춰 있어 갱신이 필요하다.

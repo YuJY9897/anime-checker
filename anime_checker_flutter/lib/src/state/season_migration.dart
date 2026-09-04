@@ -32,6 +32,9 @@ bool seasonsChanged(List<AnimeSeason> before, List<AnimeSeason> after) {
 /// - 옛 구성에서 각 화의 원본 좌표를 찾아 "무엇을 봤는지"를 원본 기준으로 모은다.
 /// - 새 구성의 각 화에 같은 원본 좌표가 있으면 시청 표시를 옮긴다.
 /// - 원본 좌표가 없는 옛 데이터는 시즌/화 번호 자체를 원본으로 간주한다.
+/// - 좌표로 못 찾으면 "작품에서 몇 번째 화인지"로 맞춘다.
+///   TMDB가 시즌 구조를 바꾸면 옛 좌표(s2:e1)가 새 좌표계에 아예 없을 수 있는데,
+///   순서는 그대로라서 순번으로는 정확히 짝이 맞는다.
 /// - 이 작품의 옛 키는 지우고 새 키만 남긴다(중복 집계 방지).
 Map<String, bool> migrateWatchedEpisodes({
   required String animeId,
@@ -41,10 +44,13 @@ Map<String, bool> migrateWatchedEpisodes({
 }) {
   if (!seasonsChanged(before, after)) return watchedEpisodes;
 
-  // 원본 좌표 기준으로 시청한 화를 모은다.
+  // 원본 좌표와 순번, 두 기준으로 시청한 화를 모은다.
   final watchedSources = <String>{};
+  final watchedOrdinals = <int>{};
+  var ordinal = 0;
   for (final season in before) {
     for (final episode in season.episodes) {
+      ordinal += 1;
       final key = episodeKey(animeId, season.number, episode.number);
       if (watchedEpisodes[key] != true) continue;
       final sourceSeason = episode.sourceSeason > 0
@@ -54,22 +60,31 @@ Map<String, bool> migrateWatchedEpisodes({
           ? episode.sourceEpisode
           : episode.number;
       watchedSources.add('$sourceSeason:$sourceEpisode');
+      watchedOrdinals.add(ordinal);
     }
   }
+  // 순번으로 대신 맞춰도 될 만큼 화수가 비슷한지 본다.
+  final beforeCount = before.fold<int>(0, (sum, s) => sum + s.episodes.length);
+  final afterCount = after.fold<int>(0, (sum, s) => sum + s.episodes.length);
+  final ordinalUsable = beforeCount > 0 && afterCount >= beforeCount;
 
   final next = Map<String, bool>.from(watchedEpisodes);
   // 이 작품의 기록을 일단 비우고 새 구성으로 다시 채운다.
   next.removeWhere((key, value) => key.startsWith('$animeId:'));
 
+  var newOrdinal = 0;
   for (final season in after) {
     for (final episode in season.episodes) {
+      newOrdinal += 1;
       final sourceSeason = episode.sourceSeason > 0
           ? episode.sourceSeason
           : season.number;
       final sourceEpisode = episode.sourceEpisode > 0
           ? episode.sourceEpisode
           : episode.number;
-      if (!watchedSources.contains('$sourceSeason:$sourceEpisode')) continue;
+      final bySource = watchedSources.contains('$sourceSeason:$sourceEpisode');
+      final byOrdinal = ordinalUsable && watchedOrdinals.contains(newOrdinal);
+      if (!bySource && !byOrdinal) continue;
       next[episodeKey(animeId, season.number, episode.number)] = true;
     }
   }

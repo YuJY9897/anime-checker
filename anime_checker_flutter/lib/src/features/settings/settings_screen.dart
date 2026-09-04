@@ -57,6 +57,20 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              if (controller.refreshingAll)
+                _RefreshAllProgress(controller: controller)
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.cloud_download_outlined),
+                    onPressed: controller.apiConfigured
+                        ? () => _confirmRefreshAll(context, controller)
+                        : null,
+                    label: const Text('모든 작품 정보 다시 받기'),
+                  ),
+                ),
             ],
           ),
           _SettingsGroup(
@@ -139,6 +153,34 @@ class SettingsScreen extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => LegalDocumentScreen(document: document),
+      ),
+    );
+  }
+
+  void _confirmRefreshAll(BuildContext context, AppController controller) {
+    final count = controller.allAnime.length;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('모든 작품 정보를 다시 받을까요?'),
+        content: Text(
+          '보관함 $count개 작품의 시즌과 회차를 처음부터 다시 받아요. '
+          '기수가 하나로 묶여 있던 작품은 이때 나뉘고, 시청 기록은 새 회차로 옮겨져요. '
+          '몇 분 걸릴 수 있어요. 걱정되면 먼저 백업해 두세요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.refreshAllAnimeDetails();
+            },
+            child: const Text('다시 받기'),
+          ),
+        ],
       ),
     );
   }
@@ -300,6 +342,47 @@ class _OpenRow extends StatelessWidget {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
+    );
+  }
+}
+
+class _RefreshAllProgress extends StatelessWidget {
+  const _RefreshAllProgress({required this.controller});
+
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = controller.refreshAllTotal;
+    final done = controller.refreshAllDone;
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '정보 다시 받는 중  $done / $total',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            TextButton(
+              onPressed: controller.cancelRefreshAll,
+              child: const Text('중단'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: total == 0 ? null : done / total,
+            minHeight: 8,
+            backgroundColor: colors.surfaceContainerHighest,
+          ),
+        ),
+      ],
     );
   }
 }
