@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -66,7 +67,9 @@ class AppController extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
-    await syncAiringEpisodes();
+    // 회차 갱신은 네트워크를 여러 번 타므로 앱 진입을 막지 않고 뒤에서 돌린다.
+    _episodeSyncTask = syncAiringEpisodes();
+    unawaited(_episodeSyncTask!);
   }
 
   // --- 조회 -----------------------------------------------------------------
@@ -127,6 +130,11 @@ class AppController extends ChangeNotifier {
 
   // --- 회차 갱신 ------------------------------------------------------------
 
+  Future<void>? _episodeSyncTask;
+
+  /// 뒤에서 돌고 있는 회차 갱신이 끝날 때까지 기다린다(없으면 즉시 완료).
+  Future<void> get pendingEpisodeSync async => _episodeSyncTask;
+
   /// 방영 중인 작품의 새 화(제목/방영일)를 프록시에서 다시 받아온다.
   /// 새 화는 매주 나오는데 저장된 상세는 추가 시점에서 멈춰 있어 갱신이 필요하다.
   Future<void> syncAiringEpisodes({bool force = false}) async {
@@ -136,9 +144,13 @@ class AppController extends ChangeNotifier {
         .where((anime) => !anime.isMovie && !anime.id.startsWith('movie-'))
         .where(query.isCurrentlyAiring)
         .where((anime) => force || sync.needsEpisodeSync(data, anime.id, now))
-        .take(12)
-        .toList();
-    if (targets.isEmpty) return;
+        .toList()
+      // 오래 갱신되지 않은 작품부터 처리해 특정 작품만 계속 밀리지 않게 한다.
+      ..sort((a, b) => sync.lastSyncedAt(data, a.id).compareTo(
+            sync.lastSyncedAt(data, b.id),
+          ));
+    final batch = targets.take(12).toList();
+    if (batch.isEmpty) return;
 
     episodeSyncing = true;
     notifyListeners();
@@ -146,7 +158,7 @@ class AppController extends ChangeNotifier {
     final syncedAt = Map<String, String>.from(data.animeSyncedAt);
     var changed = false;
     try {
-      for (final anime in targets) {
+      for (final anime in batch) {
         try {
           final fetched = await _apiClient.fetchAnime(anime.id);
           if (fetched != null) {

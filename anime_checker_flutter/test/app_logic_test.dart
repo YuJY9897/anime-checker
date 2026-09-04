@@ -105,6 +105,7 @@ void main() {
     final controller = AppController(repo, api);
 
     await controller.load();
+    await controller.pendingEpisodeSync;
 
     final season = controller.data.animeList['100']!.seasons.first;
     expect(api.calls, 1);
@@ -129,6 +130,7 @@ void main() {
     final controller = AppController(repo, api);
 
     await controller.load();
+    await controller.pendingEpisodeSync;
 
     expect(api.calls, 0);
   });

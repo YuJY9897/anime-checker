@@ -8,6 +8,12 @@ bool needsEpisodeSync(AppData data, String animeId, DateTime now) {
   return now.difference(last) >= const Duration(hours: 12);
 }
 
+/// 마지막 갱신 시각. 기록이 없으면 가장 오래된 것으로 취급한다.
+DateTime lastSyncedAt(AppData data, String animeId) {
+  return DateTime.tryParse(data.animeSyncedAt[animeId] ?? '') ??
+      DateTime.fromMillisecondsSinceEpoch(0);
+}
+
 /// 받아온 상세로 회차를 갱신하되, 아직 제목이 안 나온 화는 기존 제목을 지킨다.
 Anime mergeEpisodes(Anime current, Anime fetched) {
   if (fetched.seasons.isEmpty) return current;

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../models/models.dart';
 import '../sample/sample_data.dart';
@@ -70,8 +71,18 @@ class AnimeApiClient {
       'body': body,
       'email': email,
       'createdAt': DateTime.now().toIso8601String(),
-      'appVersion': '1.0.0+1',
+      'appVersion': await _appVersion(),
     });
+  }
+
+  /// 피드백에 남길 실제 앱 버전. 조회에 실패해도 피드백 전송은 막지 않는다.
+  Future<String> _appVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      return '${info.version}+${info.buildNumber}';
+    } catch (_) {
+      return '';
+    }
   }
 
   Future<dynamic> _get(String path) async {
