@@ -14,6 +14,7 @@ enum MainSection {
   newAnime,
   schedule,
   news,
+  stats,
   settings,
 }
 
@@ -34,6 +35,8 @@ extension MainSectionText on MainSection {
         return '요일 편성표';
       case MainSection.news:
         return '애니 소식';
+      case MainSection.stats:
+        return '시청 통계';
       case MainSection.settings:
         return '환경설정';
     }
@@ -55,6 +58,8 @@ extension MainSectionText on MainSection {
         return Icons.calendar_month_outlined;
       case MainSection.news:
         return Icons.article_outlined;
+      case MainSection.stats:
+        return Icons.insights_outlined;
       case MainSection.settings:
         return Icons.tune_outlined;
     }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../news/news_screen.dart';
 import '../settings/settings_screen.dart';
 import '../shell/shell_screen.dart';
+import '../stats/stats_screen.dart';
 import 'home_screen.dart';
 import '../library/library_screen.dart';
 import '../new_anime/new_anime_screen.dart';
@@ -31,6 +32,8 @@ class MainSectionBody extends StatelessWidget {
         return const ScheduleScreen();
       case MainSection.news:
         return const NewsScreen();
+      case MainSection.stats:
+        return const StatsScreen();
       case MainSection.settings:
         return const SettingsScreen();
     }
