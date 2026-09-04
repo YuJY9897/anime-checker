@@ -242,7 +242,7 @@ void main() {
     expect(data.animeNotes, isEmpty);
     expect(data.droppedReasons, isEmpty);
     expect(data.settings.showPosterImages, isTrue);
-    expect(data.settings.showNewsImages, isFalse);
+    expect(data.settings.showNewsImages, isTrue);
     expect(data.settings.darkMode, isFalse);
   });
 

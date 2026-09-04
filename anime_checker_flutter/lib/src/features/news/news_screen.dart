@@ -181,7 +181,12 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                   child: Column(
                     children: items
-                        .map((article) => _NewsCard(article: article))
+                        .map(
+                          (article) => _NewsCard(
+                            article: article,
+                            showImage: controller.settings.showNewsImages,
+                          ),
+                        )
                         .toList(),
                   ),
                 ),
@@ -194,9 +199,10 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
 }
 
 class _NewsCard extends StatelessWidget {
-  const _NewsCard({required this.article});
+  const _NewsCard({required this.article, required this.showImage});
 
   final NewsArticle article;
+  final bool showImage;
 
   @override
   Widget build(BuildContext context) {
@@ -214,6 +220,29 @@ class _NewsCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (showImage && article.imageUrl.trim().isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    article.imageUrl,
+                    width: 92,
+                    height: 92,
+                    fit: BoxFit.cover,
+                    // 이미지를 못 받아도 카드는 그대로 보이게 한다.
+                    errorBuilder: (context, error, stackTrace) =>
+                        const SizedBox.shrink(),
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null
+                        ? child
+                        : Container(
+                            width: 92,
+                            height: 92,
+                            color: colors.surfaceContainerHigh,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

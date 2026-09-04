@@ -15,7 +15,7 @@ class AppSettings {
       showPosterImages: true,
       includeDroppedInSchedule: true,
       inferScheduleWeekday: true,
-      showNewsImages: false,
+      showNewsImages: true,
       openNewsInsideApp: true,
       darkMode: false,
     );

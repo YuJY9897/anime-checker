@@ -77,6 +77,13 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
               _SwitchRow(
+                title: '뉴스 이미지 표시',
+                value: settings.showNewsImages,
+                onChanged: (value) => controller.updateSettings(
+                  settings.copyWith(showNewsImages: value),
+                ),
+              ),
+              _SwitchRow(
                 title: '뉴스 원문을 앱 안에서 열기',
                 value: settings.openNewsInsideApp,
                 onChanged: (value) => controller.updateSettings(
