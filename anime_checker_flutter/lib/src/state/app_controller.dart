@@ -14,6 +14,7 @@ import '../data/remote/api_client.dart';
 import 'anime_mutation.dart' as mutate;
 import 'anime_query.dart' as query;
 import 'episode_sync.dart' as sync;
+import 'season_migration.dart' as migration;
 
 final localRepositoryProvider = Provider<LocalRepository>(
   (ref) => LocalRepository(),
@@ -156,13 +157,22 @@ class AppController extends ChangeNotifier {
     notifyListeners();
     final list = Map<String, Anime>.from(data.animeList);
     final syncedAt = Map<String, String>.from(data.animeSyncedAt);
+    var watched = data.watchedEpisodes;
     var changed = false;
     try {
       for (final anime in batch) {
         try {
           final fetched = await _apiClient.fetchAnime(anime.id);
           if (fetched != null) {
-            list[anime.id] = sync.mergeEpisodes(anime, fetched);
+            final merged = sync.mergeEpisodes(anime, fetched);
+            // 기수가 재편됐으면 시청 기록도 새 좌표로 옮긴다.
+            watched = migration.migrateWatchedEpisodes(
+              animeId: anime.id,
+              watchedEpisodes: watched,
+              before: anime.seasons,
+              after: merged.seasons,
+            );
+            list[anime.id] = merged;
             syncedAt[anime.id] = now.toIso8601String();
             changed = true;
           }
@@ -172,7 +182,11 @@ class AppController extends ChangeNotifier {
         await Future<void>.delayed(const Duration(milliseconds: 400));
       }
       if (changed) {
-        await _commit(mutate.withSyncedAnime(data, list, syncedAt));
+        await _commit(
+          mutate
+              .withSyncedAnime(data, list, syncedAt)
+              .copyWith(watchedEpisodes: watched),
+        );
       }
     } finally {
       episodeSyncing = false;
@@ -188,7 +202,17 @@ class AppController extends ChangeNotifier {
     final next = current.seasons.isEmpty
         ? fetched.copyWith(dropped: current.dropped)
         : sync.mergeEpisodes(current, fetched);
-    await _commit(mutate.withAnimeDetail(data, animeId, next));
+    final migrated = migration.migrateWatchedEpisodes(
+      animeId: animeId,
+      watchedEpisodes: data.watchedEpisodes,
+      before: current.seasons,
+      after: next.seasons,
+    );
+    await _commit(
+      mutate
+          .withAnimeDetail(data, animeId, next)
+          .copyWith(watchedEpisodes: migrated),
+    );
   }
 
   /// 상세 화면을 열기 전에 보여줄 정보를 준비한다. 저장본이 있으면 그대로 쓴다.

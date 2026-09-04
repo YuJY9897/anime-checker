@@ -30,6 +30,9 @@ export default {
         const result = await saveFeedback(request, env);
         return json(result, result.ok ? 200 : 400);
       }
+      if (url.pathname.startsWith('/episode-groups/')) {
+        return json(await episodeGroupsDebug(env, url.pathname.split('/').pop()));
+      }
       if (url.pathname === '/news') return newsResponse(env, url);
       if (url.pathname === '/image') {
         return proxyImage(
@@ -180,6 +183,39 @@ async function searchAnime(env, query) {
   return {items: results.slice(0, 20).map(toAnime)};
 }
 
+// 시즌이 하나로 뭉친 작품을 나눌 근거가 있는지 확인하는 임시 조회.
+async function episodeGroupsDebug(env, tvId) {
+  const list = await tmdb(env, `/tv/${tvId}/episode_groups`);
+  const groups = list.results || [];
+  const detailed = [];
+  for (const group of groups.slice(0, 3)) {
+    const detail = await tmdb(env, `/tv/episode_group/${group.id}`);
+    detailed.push({
+      id: group.id,
+      name: group.name,
+      type: group.type,
+      groupCount: group.group_count,
+      episodeCount: group.episode_count,
+      groups: (detail.groups || []).map((g) => ({
+        order: g.order,
+        name: g.name,
+        episodes: (g.episodes || []).length,
+        first: g.episodes?.[0]
+          ? {s: g.episodes[0].season_number, e: g.episodes[0].episode_number, air: g.episodes[0].air_date}
+          : null,
+        last: g.episodes?.length
+          ? {
+              s: g.episodes[g.episodes.length - 1].season_number,
+              e: g.episodes[g.episodes.length - 1].episode_number,
+              air: g.episodes[g.episodes.length - 1].air_date,
+            }
+          : null,
+      })),
+    });
+  }
+  return {count: groups.length, results: detailed};
+}
+
 async function animeDetail(env, id) {
   if (id.startsWith('mal-')) return jikanAnimeDetail(id);
   const tv = await tmdb(env, `/tv/${id}`);
@@ -189,11 +225,92 @@ async function animeDetail(env, id) {
   const seasons = await Promise.all(
     seasonSummaries.map((season) => seasonDetail(env, id, tv, season)),
   );
+  const filled = seasons.filter((season) => season.episodes.length > 0);
+  const split = await splitBundledSeasons(env, id, tv, filled);
   return {
     ...toAnime(tv),
-    seasons: seasons.filter((season) => season.episodes.length > 0),
+    seasons: split,
     movies: [],
   };
+}
+
+// TMDB가 여러 기수를 한 시즌에 몰아넣은 작품이 있다(여친 빌리겠습니다 60화, 블리치 366화).
+// 이런 작품은 TMDB의 에피소드 그룹에 기수 구분이 따로 있어서, 그 정보로 시즌을 나눈다.
+const BUNDLED_SEASON_MIN_EPISODES = 26;
+const BUNDLED_SEASON_MAX_COUNT = 2;
+
+async function splitBundledSeasons(env, tvId, tv, seasons) {
+  if (seasons.length === 0 || seasons.length > BUNDLED_SEASON_MAX_COUNT) return seasons;
+  const biggest = Math.max(...seasons.map((season) => season.episodes.length));
+  if (biggest < BUNDLED_SEASON_MIN_EPISODES) return seasons;
+
+  try {
+    const picked = await pickSeasonGroup(env, tvId);
+    if (!picked) return seasons;
+
+    // 원본 좌표로 에피소드를 찾을 수 있게 색인해 둔다.
+    const bySource = new Map();
+    for (const season of seasons) {
+      for (const episode of season.episodes) {
+        bySource.set(`${episode.sourceSeason}:${episode.sourceEpisode}`, episode);
+      }
+    }
+
+    const result = [];
+    for (const group of picked.groups) {
+      const episodes = [];
+      for (const item of group.episodes || []) {
+        const found = bySource.get(`${item.season_number}:${item.episode_number}`);
+        if (!found) continue;
+        // 기수별로 1화부터 다시 매기되, 원본 좌표는 그대로 들고 간다.
+        episodes.push({
+          number: episodes.length + 1,
+          title: found.title,
+          airDate: found.airDate,
+          sourceSeason: found.sourceSeason,
+          sourceEpisode: found.sourceEpisode,
+        });
+      }
+      if (episodes.length === 0) continue;
+      result.push({
+        number: result.length + 1,
+        name: groupSeasonName(group.name, result.length + 1),
+        subtitle: episodes[0].airDate || '',
+        posterUrl: poster(tv.poster_path),
+        episodes,
+      });
+    }
+    // 나눈 결과가 원본보다 적게 담기면(그룹이 불완전) 원본을 그대로 쓴다.
+    const before = seasons.reduce((sum, s) => sum + s.episodes.length, 0);
+    const after = result.reduce((sum, s) => sum + s.episodes.length, 0);
+    if (result.length <= seasons.length || after < before * 0.9) return seasons;
+    return result;
+  } catch (_) {
+    return seasons;
+  }
+}
+
+// 기수 구분에 쓸 만한 그룹을 고른다. 특별편 묶음이나 화수 나열은 제외한다.
+async function pickSeasonGroup(env, tvId) {
+  const list = await tmdb(env, `/tv/${tvId}/episode_groups`);
+  const candidates = (list.results || []).filter((group) => {
+    const name = String(group.name || '').toLowerCase();
+    if (name.includes('special')) return false;
+    return name.includes('season') && (group.group_count || 0) > 1;
+  });
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => (b.episode_count || 0) - (a.episode_count || 0));
+  const detail = await tmdb(env, `/tv/episode_group/${candidates[0].id}`);
+  const groups = (detail.groups || [])
+    .filter((group) => (group.episodes || []).length > 0)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  return groups.length > 1 ? {groups} : null;
+}
+
+function groupSeasonName(name, number) {
+  const text = String(name || '').trim();
+  if (!text || /^season\s*\d+$/i.test(text)) return `${number}기`;
+  return text;
 }
 
 async function jikanAnimeDetail(id) {
@@ -272,6 +389,8 @@ async function seasonDetail(env, tvId, tv, summary) {
         number: episode.episode_number,
         title: episodeTitle(episode.name, episode.episode_number),
         airDate: episode.air_date || '',
+        sourceSeason: summary.season_number,
+        sourceEpisode: episode.episode_number,
       }));
     await fillPlaceholderTitles(env, tvId, summary.season_number, episodes);
     return {
