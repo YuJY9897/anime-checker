@@ -51,6 +51,7 @@ class WatchStats {
 
 WatchStats watchStats(AppData data) {
   final library = query.libraryAnime(data);
+  final everything = query.allAnime(data);
   var finished = 0;
   var watching = 0;
   var untouched = 0;
@@ -59,10 +60,19 @@ WatchStats watchStats(AppData data) {
   var longestCount = 0;
   final genres = <String, int>{};
 
+  // 진행률 분모는 보류작까지 포함해야 총 시청 화수와 기준이 맞는다.
+  for (final anime in everything) {
+    totalEpisodes += query.totalEpisodeCount(anime);
+    final watched = query.watchedCount(data, anime);
+    if (watched > longestCount) {
+      longestCount = watched;
+      longestTitle = anime.title;
+    }
+  }
+
   for (final anime in library) {
     final total = query.totalEpisodeCount(anime);
     final watched = query.watchedCount(data, anime);
-    totalEpisodes += total;
 
     if (total > 0 && watched >= total) {
       finished += 1;
@@ -70,11 +80,6 @@ WatchStats watchStats(AppData data) {
       watching += 1;
     } else {
       untouched += 1;
-    }
-
-    if (watched > longestCount) {
-      longestCount = watched;
-      longestTitle = anime.title;
     }
 
     // 장르는 시청한 작품만 집계해야 취향이 드러난다.

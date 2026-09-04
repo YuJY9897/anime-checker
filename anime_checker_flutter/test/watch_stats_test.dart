@@ -70,7 +70,38 @@ void main() {
     final stats = watchStats(data);
 
     expect(stats.droppedAnime, 1);
-    expect(stats.totalEpisodes, 10);
+    // 진행률 분모는 보류작까지 포함해야 총 시청 화수와 기준이 맞는다.
+    expect(stats.totalEpisodes, 20);
+  });
+
+  test('보류작의 시청 기록도 진행률에 반영된다', () {
+    final data = AppData.empty().copyWith(
+      animeList: {
+        'a': anime(id: 'a', title: '보는중', episodes: 10),
+        'b': anime(id: 'b', title: '보류작', episodes: 10, dropped: true),
+      },
+      watchedEpisodes: {...watched('a', 5), ...watched('b', 5)},
+      dropped: {'b': true},
+    );
+
+    final stats = watchStats(data);
+
+    expect(stats.watchedEpisodes, 10);
+    expect(stats.totalEpisodes, 20);
+    expect(stats.completionRatio, 0.5);
+  });
+
+  test('보류작이 가장 많이 본 작품일 수도 있다', () {
+    final data = AppData.empty().copyWith(
+      animeList: {
+        'a': anime(id: 'a', title: '보는중', episodes: 30),
+        'b': anime(id: 'b', title: '보류작', episodes: 30, dropped: true),
+      },
+      watchedEpisodes: {...watched('a', 4), ...watched('b', 25)},
+      dropped: {'b': true},
+    );
+
+    expect(watchStats(data).longestTitle, '보류작');
   });
 
   test('영어 장르는 한글로 바꾸고 애니메이션 장르는 빼고 센다', () {
