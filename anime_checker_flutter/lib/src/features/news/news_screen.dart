@@ -161,10 +161,14 @@ class _NewsScreenState extends ConsumerState<NewsScreen> {
                   ),
                 )
               else if (controller.news.isEmpty)
-                const EmptyState(
+                EmptyState(
                   title: '뉴스를 가져오지 못했어요',
-                  message: '프록시 설정이나 네트워크 상태를 확인해 주세요.',
+                  message: controller.error == null
+                      ? '프록시 설정이나 네트워크 상태를 확인해 주세요.'
+                      : '네트워크 상태를 확인해 주세요. (${controller.error})',
                   icon: Icons.article_outlined,
+                  actionLabel: '다시 시도',
+                  onAction: controller.refreshNews,
                 )
               else if (items.isEmpty)
                 const EmptyState(

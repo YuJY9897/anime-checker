@@ -56,8 +56,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
           if (controller.searchResults.isEmpty)
             EmptyState(
-              title: '검색 결과가 없어요',
-              message: controller.apiConfigured
+              title: controller.error == null ? '검색 결과가 없어요' : '검색하지 못했어요',
+              message: controller.error != null
+                  ? '네트워크 상태를 확인해 주세요. (${controller.error})'
+                  : controller.apiConfigured
                   ? '제목을 입력하고 검색해 주세요.'
                   : 'API 주소가 연결되지 않아 지금은 보관함 안에서만 검색돼요.',
               icon: Icons.search,

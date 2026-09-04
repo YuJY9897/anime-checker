@@ -58,6 +58,26 @@ class LocalRepository {
     return file;
   }
 
-  AppData parseBackup(String raw) =>
-      AppData.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+  /// 백업 JSON을 읽는다. 형식이 다르면 FormatException을 던진다.
+  AppData parseBackup(String raw) {
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } catch (_) {
+      throw const FormatException('JSON 형식이 아닙니다.');
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('백업 파일 형식이 아닙니다.');
+    }
+    // 애니 체크 백업이라면 최소한 이 항목들 중 하나는 들어 있다.
+    const markers = ['animeList', 'watchedEpisodes', 'wishList'];
+    if (!markers.any(decoded.containsKey)) {
+      throw const FormatException('애니 체크 백업 파일이 아닙니다.');
+    }
+    try {
+      return AppData.fromJson(decoded);
+    } catch (_) {
+      throw const FormatException('백업 내용을 읽을 수 없습니다.');
+    }
+  }
 }

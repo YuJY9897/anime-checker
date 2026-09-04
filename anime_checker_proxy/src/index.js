@@ -23,11 +23,21 @@ export default {
         return newAnimeResponse(env, url);
       }
       if (url.pathname === '/feedback' && request.method === 'POST') {
+        const allowed = await allowFeedback(request, env);
+        if (!allowed) {
+          return json({ok: false, error: 'too many requests'}, 429);
+        }
         const result = await saveFeedback(request, env);
         return json(result, result.ok ? 200 : 400);
       }
       if (url.pathname === '/news') return newsResponse(env, url);
-      if (url.pathname === '/image') return proxyImage(url.searchParams.get('url') || '');
+      if (url.pathname === '/image') {
+        return proxyImage(
+          env,
+          url.searchParams.get('url') || '',
+          url.searchParams.get('sig') || '',
+        );
+      }
       return json({error: 'not found'}, 404);
     } catch (error) {
       return json({error: String(error?.message || error)}, 500);
@@ -61,10 +71,10 @@ async function newAnimeResponse(env, url) {
 const NEWS_STALE_KEY = 'cache:news:stale';
 
 async function newsResponse(env, url) {
-  const cacheKey = 'cache:news:v6';
+  const cacheKey = 'cache:news:v7';
   const cached = await kvCacheGet(env, cacheKey);
   if (cached) return json(cached);
-  const items = await news(url.origin);
+  const items = await news(env, url.origin);
   // 수집 실패(fallback 1건)면 마지막 성공분을 돌려줘 빈 화면을 막는다.
   const failed = items.length <= 1 && items[0]?.id === 'news-fallback';
   if (failed) {
@@ -94,6 +104,26 @@ async function kvCachePut(env, key, body, ttl) {
   try {
     await env.FEEDBACK_KV.put(key, JSON.stringify(body), {expirationTtl: ttl});
   } catch (_) {}
+}
+
+// 피드백은 인증 없이 열려 있어 한 IP가 KV를 채우지 못하도록 하루 한도를 둔다.
+const FEEDBACK_DAILY_LIMIT = 10;
+
+async function allowFeedback(request, env) {
+  if (!env.FEEDBACK_KV) return true;
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  if (!ip) return true;
+  const key = `rl:feedback:${new Date().toISOString().slice(0, 10)}:${ip}`;
+  try {
+    const count = Number((await env.FEEDBACK_KV.get(key)) || 0);
+    if (count >= FEEDBACK_DAILY_LIMIT) return false;
+    // 하루가 지나면 스스로 사라지도록 TTL을 건다.
+    await env.FEEDBACK_KV.put(key, String(count + 1), {expirationTtl: 86400});
+    return true;
+  } catch (_) {
+    // 한도 확인에 실패했다고 정상 사용자의 피드백까지 막지는 않는다.
+    return true;
+  }
 }
 
 async function saveFeedback(request, env) {
@@ -882,7 +912,7 @@ async function discoverNewAnimeMovies(env, start, end) {
 
 // 여러 피드를 병합해 최대 60개까지 모은다.
 // 첫 피드만 쓰던 이전 방식은 기사가 5개 안팎으로 너무 적었다.
-async function news(origin) {
+async function news(env, origin) {
   const texts = await fetchNewsFeeds();
   if (texts.length === 0) return fallbackNews();
   const seen = new Set();
@@ -920,7 +950,7 @@ async function news(origin) {
       summary: entry.title,
       source: entry.source,
       date: entry.date,
-      imageUrl: article.imageUrl ? `${origin}/image?url=${encodeURIComponent(article.imageUrl)}` : '',
+      imageUrl: await signedImageUrl(env, origin, article.imageUrl),
       url: article.url || entry.url,
     };
   }));
@@ -1018,11 +1048,47 @@ async function articleMeta(url) {
   }
 }
 
-async function proxyImage(rawUrl) {
+// 이미지 중계는 이 워커가 만든 주소만 허용한다.
+// 서명이 없으면 누구나 임의 URL을 중계시킬 수 있어(오픈 프록시) 사용량이 남용된다.
+const IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+
+function imageSigningKey(env) {
+  return env.IMAGE_SIGNING_KEY || env.TMDB_API_KEY || '';
+}
+
+async function imageSignature(env, rawUrl) {
+  const secret = imageSigningKey(env);
+  if (!secret) return '';
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    {name: 'HMAC', hash: 'SHA-256'},
+    false,
+    ['sign'],
+  );
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawUrl));
+  return [...new Uint8Array(mac)]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 24);
+}
+
+async function signedImageUrl(env, origin, rawUrl) {
+  if (!rawUrl) return '';
+  const sig = await imageSignature(env, rawUrl);
+  if (!sig) return '';
+  return `${origin}/image?url=${encodeURIComponent(rawUrl)}&sig=${sig}`;
+}
+
+async function proxyImage(env, rawUrl, sig) {
   if (!rawUrl.startsWith('https://')) return json({error: 'invalid image url'}, 400);
+  const expected = await imageSignature(env, rawUrl);
+  if (!expected || sig !== expected) return json({error: 'invalid signature'}, 403);
   const response = await fetch(rawUrl);
   const type = response.headers.get('content-type') || '';
   if (!response.ok || !type.startsWith('image/')) return json({error: 'not image'}, 400);
+  const size = Number(response.headers.get('content-length') || 0);
+  if (size > IMAGE_MAX_BYTES) return json({error: 'image too large'}, 413);
   return new Response(response.body, {headers: {'content-type': type, 'cache-control': 'public, max-age=86400'}});
 }
 

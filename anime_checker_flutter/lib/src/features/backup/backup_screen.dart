@@ -71,9 +71,22 @@ class BackupScreen extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.file_open),
                   onPressed: () async {
-                    final backup = await controller.pickBackup();
-                    if (backup != null && context.mounted) {
-                      _confirmRestore(context, controller, backup);
+                    try {
+                      final backup = await controller.pickBackup();
+                      if (backup != null && context.mounted) {
+                        _confirmRestore(context, controller, backup);
+                      }
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            e is FormatException
+                                ? '불러오지 못했어요. ${e.message}'
+                                : '파일을 불러오지 못했어요. 다시 시도해 주세요.',
+                          ),
+                        ),
+                      );
                     }
                   },
                   label: const Text('JSON 불러오기'),

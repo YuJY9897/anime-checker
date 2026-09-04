@@ -185,9 +185,13 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                 ),
               )
             else if (items.isEmpty)
-              const EmptyState(
+              EmptyState(
                 title: '신작 정보를 가져오지 못했어요',
-                message: '인터넷 연결이나 프록시 설정을 확인해 주세요.',
+                message: controller.error == null
+                    ? '인터넷 연결이나 프록시 설정을 확인해 주세요.'
+                    : '인터넷 연결을 확인해 주세요. (${controller.error})',
+                actionLabel: '다시 시도',
+                onAction: controller.refreshNewAnime,
               )
             else if (filtered.isEmpty)
               const EmptyState(
