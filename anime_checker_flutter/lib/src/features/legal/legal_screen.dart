@@ -86,14 +86,15 @@ class LegalSection {
 
 const privacyPolicyDocument = LegalDocument(
   title: '개인정보처리방침',
-  updatedAt: '시행일: 2026.07.01.',
+  updatedAt: '시행일: 2026.09.04.',
   sections: [
     LegalSection(
       title: '수집하는 정보',
       body: [
         '애니 체크는 계정, 이름, 연락처, 위치, 사진, 마이크 정보를 수집하지 않습니다.',
         '앱 안에는 사용자가 저장한 보관함, 보류, 찜, 시청 기록, 메모, 백업 시간이 저장될 수 있습니다.',
-        '사용자가 피드백 보내기를 이용하면 작성한 내용과 선택 입력한 이메일 주소가 Cloudflare Worker를 통해 개발자에게 전송되어 저장될 수 있습니다.',
+        '사용자가 피드백 보내기를 이용하면 작성한 내용, 선택 입력한 이메일 주소, 사용 중인 앱 버전이 Cloudflare Worker를 통해 개발자에게 전송되어 저장될 수 있습니다.',
+        '피드백 스팸을 막기 위해 전송 시점의 접속 IP 주소가 하루 동안 요청 횟수 확인 용도로만 서버에 임시 보관되며, 하루가 지나면 자동으로 삭제됩니다.',
         '이 정보는 기본적으로 기기 내부 저장소와 사용자가 직접 내보낸 JSON 백업 파일에 저장됩니다.',
       ],
     ),
@@ -128,7 +129,7 @@ const privacyPolicyDocument = LegalDocument(
 
 const dataSourceDocument = LegalDocument(
   title: '데이터 출처 및 저작권 고지',
-  updatedAt: '시행일: 2026.07.03.',
+  updatedAt: '시행일: 2026.09.04.',
   sections: [
     LegalSection(
       title: '데이터 제공자',
@@ -150,7 +151,8 @@ const dataSourceDocument = LegalDocument(
       body: [
         '작품 포스터는 외부 데이터 제공자가 제공하는 이미지 URL을 앱 화면에 표시하는 용도로만 사용합니다.',
         '기사 전문을 앱에 복제하지 않으며 원문 확인은 해당 언론사 또는 원문 페이지에서 이루어집니다.',
-        '뉴스 기사 이미지는 저작권과 표시 안정성 문제를 줄이기 위해 앱 카드에 표시하지 않습니다.',
+        '뉴스 기사 이미지는 목록에서 작게 표시되며, 환경설정에서 표시를 끌 수 있습니다.',
+        '기사 이미지는 원문 서버 주소를 그대로 노출하지 않기 위해 Cloudflare Worker가 중계해 전달합니다.',
       ],
     ),
     LegalSection(
@@ -159,6 +161,8 @@ const dataSourceDocument = LegalDocument(
         '앱은 API 키 보호와 응답 정리를 위해 Cloudflare Worker 프록시를 사용합니다.',
         'TMDB API 키는 앱에 포함하지 않고 Worker secret으로만 보관합니다.',
         'Worker는 외부 데이터를 앱에서 쓰기 쉬운 형태로 정리하며, 데이터의 원 저작권을 소유하지 않습니다.',
+        '여러 기수가 한 시즌으로 묶여 있는 작품은 TMDB의 에피소드 그룹 정보를 이용해 기수별로 나누어 보여줍니다.',
+        '이미지 중계 주소에는 서명이 붙어 있어 앱이 만든 주소만 처리합니다.',
       ],
     ),
     LegalSection(
