@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../core/format/date_text.dart';
 import '../data/local/local_repository.dart';
 import '../data/models/models.dart';
+import '../data/patch_notes.dart';
 import '../data/remote/api_client.dart';
 import 'anime_mutation.dart' as mutate;
 import 'anime_query.dart' as query;
@@ -141,6 +142,16 @@ class AppController extends ChangeNotifier {
 
   /// 뒤에서 돌고 있는 회차 갱신이 끝날 때까지 기다린다(없으면 즉시 완료).
   Future<void> get pendingEpisodeSync async => _episodeSyncTask;
+
+  /// 업데이트 후 아직 안 본 안내가 있으면 그 내용을, 없으면 null.
+  PatchNote? get pendingPatchNote =>
+      patchNoteToShow(data.lastSeenPatchVersion);
+
+  /// 안내를 봤다고 기록해 다음부터는 뜨지 않게 한다.
+  Future<void> markPatchNoteSeen(String version) async {
+    if (data.lastSeenPatchVersion == version) return;
+    await _commit(data.copyWith(lastSeenPatchVersion: version));
+  }
 
   /// 보관함의 모든 작품 정보를 처음부터 다시 받는다.
   ///

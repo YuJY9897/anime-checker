@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_controller.dart';
 import '../home/main_sections.dart';
+import '../patch_notes/patch_notes_screen.dart';
 import '../search/search_screen.dart';
 
 enum MainSection {
@@ -80,7 +81,19 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(appControllerProvider).load());
+    Future.microtask(() async {
+      final controller = ref.read(appControllerProvider);
+      await controller.load();
+      if (mounted) await _showPatchNoteOnce(controller);
+    });
+  }
+
+  /// 업데이트 후 처음 열었을 때만 안내 창을 띄운다.
+  Future<void> _showPatchNoteOnce(AppController controller) async {
+    final note = controller.pendingPatchNote;
+    if (note == null || !mounted) return;
+    await showPatchNoteDialog(context, note);
+    await controller.markPatchNoteSeen(note.version);
   }
 
   @override

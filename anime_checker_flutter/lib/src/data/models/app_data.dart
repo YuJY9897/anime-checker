@@ -14,6 +14,7 @@ class AppData {
     required this.animeNotes,
     required this.droppedReasons,
     required this.animeSyncedAt,
+    required this.lastSeenPatchVersion,
     required this.updatedAt,
     required this.backupVersion,
     required this.lastBackupAt,
@@ -29,6 +30,7 @@ class AppData {
     animeNotes: const {},
     droppedReasons: const {},
     animeSyncedAt: const {},
+    lastSeenPatchVersion: '',
     updatedAt: DateTime.now(),
     backupVersion: 1,
     lastBackupAt: null,
@@ -45,6 +47,9 @@ class AppData {
 
   /// 작품별 마지막 회차 동기화 시각(ISO8601).
   final Map<String, String> animeSyncedAt;
+
+  /// 사용자가 마지막으로 확인한 업데이트 안내 버전.
+  final String lastSeenPatchVersion;
   final DateTime updatedAt;
   final int backupVersion;
   final DateTime? lastBackupAt;
@@ -59,6 +64,7 @@ class AppData {
     Map<String, String>? animeNotes,
     Map<String, String>? droppedReasons,
     Map<String, String>? animeSyncedAt,
+    String? lastSeenPatchVersion,
     DateTime? updatedAt,
     int? backupVersion,
     DateTime? lastBackupAt,
@@ -72,6 +78,7 @@ class AppData {
     animeNotes: animeNotes ?? this.animeNotes,
     droppedReasons: droppedReasons ?? this.droppedReasons,
     animeSyncedAt: animeSyncedAt ?? this.animeSyncedAt,
+    lastSeenPatchVersion: lastSeenPatchVersion ?? this.lastSeenPatchVersion,
     updatedAt: updatedAt ?? this.updatedAt,
     backupVersion: backupVersion ?? this.backupVersion,
     lastBackupAt: lastBackupAt ?? this.lastBackupAt,
@@ -108,6 +115,7 @@ class AppData {
       animeNotes: stringMapFrom(json['animeNotes']),
       droppedReasons: stringMapFrom(json['droppedReasons']),
       animeSyncedAt: stringMapFrom(json['animeSyncedAt']),
+      lastSeenPatchVersion: json['lastSeenPatchVersion'] as String? ?? '',
       updatedAt:
           DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.now(),
@@ -130,6 +138,7 @@ class AppData {
     'animeNotes': animeNotes,
     'droppedReasons': droppedReasons,
     'animeSyncedAt': animeSyncedAt,
+    'lastSeenPatchVersion': lastSeenPatchVersion,
     'updatedAt': updatedAt.toIso8601String(),
     'backupVersion': backupVersion,
     'lastBackupAt': lastBackupAt?.toIso8601String(),

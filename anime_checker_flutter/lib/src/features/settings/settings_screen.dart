@@ -7,6 +7,7 @@ import '../../core/format/date_text.dart';
 import '../../widgets/scroll_top_area.dart';
 import '../backup/backup_screen.dart';
 import '../legal/legal_screen.dart';
+import '../patch_notes/patch_notes_screen.dart';
 import 'feedback_screen.dart';
 import 'help_chat_screen.dart';
 import 'help_screen.dart';
@@ -111,6 +112,13 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               const _AppVersionRow(),
               const SizedBox(height: 8),
+              _OpenRow(
+                icon: Icons.new_releases_outlined,
+                title: '업데이트 내용',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PatchNotesScreen()),
+                ),
+              ),
               _OpenRow(
                 icon: Icons.menu_book_outlined,
                 title: '설명서',
