@@ -155,12 +155,42 @@ int _compareEpisodeTargets(EpisodeTarget a, EpisodeTarget b) {
   return a.anime.title.compareTo(b.anime.title);
 }
 
+/// 방영일을 아는 화가 하나라도 있는지.
+bool hasEpisodeAirDates(Anime anime) {
+  for (final season in mainSeasons(anime)) {
+    for (final episode in season.episodes) {
+      if (parseDate(episode.airDate) != null) return true;
+    }
+  }
+  return false;
+}
+
+/// 최근 14일 안에 나왔거나 앞으로 나올 화가 있는지.
+bool airsAroundNow(Anime anime, {DateTime? now}) {
+  final base = now ?? DateTime.now();
+  final today = DateTime(base.year, base.month, base.day);
+  final from = today.subtract(const Duration(days: 14));
+  for (final season in mainSeasons(anime)) {
+    for (final episode in season.episodes) {
+      final date = parseDate(episode.airDate);
+      if (date == null) continue;
+      if (!DateTime(date.year, date.month, date.day).isBefore(from)) return true;
+    }
+  }
+  return false;
+}
+
 Map<String, List<Anime>> scheduleByWeekday(AppData data) {
   final map = <String, List<Anime>>{};
   for (final anime in allAnime(data)) {
     if (!isAnimeCurrentlyAiring(anime.firstAirDate, status: anime.status)) {
       continue;
     }
+    // TMDB는 완결작도 'Returning Series'로 두는 일이 많다. 상태만 믿으면
+    // 다 끝난 작품이 편성표에 영영 남으므로, 회차 정보가 있으면
+    // 최근에 나왔거나 앞으로 나올 화가 있는지 함께 본다.
+    // 회차 정보가 아예 없는 작품은 판단할 근거가 없어 상태를 따른다.
+    if (hasEpisodeAirDates(anime) && !airsAroundNow(anime)) continue;
     final storedWeekday = normalizedWeekday(anime.weekday);
     final weekday = storedWeekday.isNotEmpty
         ? storedWeekday

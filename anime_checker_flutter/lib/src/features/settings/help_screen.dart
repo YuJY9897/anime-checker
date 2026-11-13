@@ -74,7 +74,8 @@ const _helpItems = [
   _HelpItem(
     icon: Icons.calendar_month_outlined,
     title: '요일 편성표',
-    body: '현재 방영 중인 보관함과 보류 작품을 요일별로 확인합니다. 요일 정보가 없으면 최근 방영일로 추론합니다.',
+    body:
+        '현재 방영 중인 보관함과 보류 작품을 요일별로 확인합니다. 오늘 요일이 맨 위에 오고, 다른 화면과 같은 표지 카드로 보여줍니다. 요일 정보가 없으면 최근 방영일로 추론합니다.',
   ),
   _HelpItem(
     icon: Icons.article_outlined,

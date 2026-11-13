@@ -403,6 +403,39 @@ void main() {
     },
   );
 
+  test('마지막 화가 오래된 작품은 편성표에 넣지 않는다', () async {
+    // TMDB가 완결작도 'Returning Series'로 두는 탓에 상태만 보면
+    // 다 끝난 작품이 요일 편성표에 영영 남는다.
+    final finished = Anime(
+      id: 'finished',
+      title: '완결됐지만 상태가 안 바뀐 작품',
+      originalTitle: '',
+      posterUrl: '',
+      genres: const ['드라마'],
+      status: 'Returning Series',
+      weekday: '금요일',
+      firstAirDate: '2023-09-29',
+      seasons: const [
+        AnimeSeason(
+          number: 1,
+          name: '1기',
+          subtitle: '',
+          posterUrl: '',
+          episodes: [Episode(number: 1, title: '1화', airDate: '2024-03-22')],
+        ),
+      ],
+      movies: const [],
+      dropped: false,
+    );
+    final repo = FakeRepository()
+      ..saved = AppData.empty().copyWith(animeList: {'finished': finished});
+    final controller = AppController(repo, FakeApiClient());
+    await controller.load();
+
+    final friday = controller.scheduleByWeekday['금요일'] ?? const [];
+    expect(friday.map((anime) => anime.id), isNot(contains('finished')));
+  });
+
   test(
     'search falls back to local library when api is not configured',
     () async {
