@@ -199,6 +199,7 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
               )
             else
               TwoColumnAnimeGrid(
+                listMode: !controller.settings.showPosterImages,
                 children: filtered.map((anime) {
                   final inLibrary = controller.isInLibrary(anime.id);
                   final wished = controller.isWished(anime.id);

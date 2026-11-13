@@ -34,6 +34,7 @@ class WishScreen extends ConsumerWidget {
             )
           else
             TwoColumnAnimeGrid(
+              listMode: !controller.settings.showPosterImages,
               children: items.map((item) {
                 return AnimePosterCard(
                   title: item.title,
@@ -44,6 +45,7 @@ class WishScreen extends ConsumerWidget {
                     isMovie: item.isMovie,
                   ),
                   showImage: controller.settings.showPosterImages,
+                  listMode: !controller.settings.showPosterImages,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) =>

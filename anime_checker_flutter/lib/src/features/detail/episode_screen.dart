@@ -83,8 +83,12 @@ class EpisodeScreen extends ConsumerWidget {
                         // 아직 방영 전인 화는 시청 처리를 막는다.
                         onPressed: _isUnaired(episode)
                             ? null
-                            : () =>
-                                  _setWatched(context, controller, episode, true),
+                            : () => _setWatched(
+                                context,
+                                controller,
+                                episode,
+                                true,
+                              ),
                         child: Text(_isUnaired(episode) ? '방영 전' : '시청'),
                       ),
               ],

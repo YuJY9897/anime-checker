@@ -27,7 +27,10 @@ class ScheduleScreen extends ConsumerWidget {
     final today = weekdayLabel(DateTime.now());
     final start = _weekdayOrder.indexOf(today);
     if (start <= 0) return _weekdayOrder;
-    return [..._weekdayOrder.sublist(start), ..._weekdayOrder.sublist(0, start)];
+    return [
+      ..._weekdayOrder.sublist(start),
+      ..._weekdayOrder.sublist(0, start),
+    ];
   }
 
   @override
@@ -62,9 +65,9 @@ class ScheduleScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
               child: Column(
-                children: _orderFromToday()
-                    .where(schedule.containsKey)
-                    .map((day) {
+                children: _orderFromToday().where(schedule.containsKey).map((
+                  day,
+                ) {
                   return _DaySection(
                     day: day,
                     items: schedule[day]!,
@@ -142,11 +145,13 @@ class _DaySection extends StatelessWidget {
           const SizedBox(height: 10),
           // 다른 화면과 같은 표지 카드를 쓴다. 편성표만 글자 목록이면 따로 논다.
           TwoColumnAnimeGrid(
+            listMode: !controller.settings.showPosterImages,
             children: items.map((anime) {
               final isDropped = controller.isDropped(anime.id);
               return AnimePosterCard.fromAnime(
                 anime: anime,
                 showImage: controller.settings.showPosterImages,
+                listMode: !controller.settings.showPosterImages,
                 progress: controller.progressRatio(anime),
                 metaLines: [
                   if (newEpisodeIds.contains(anime.id)) '새 화',

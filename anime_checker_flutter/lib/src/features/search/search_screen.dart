@@ -80,12 +80,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               )
             else
               TwoColumnAnimeGrid(
+                listMode: !controller.settings.showPosterImages,
                 children: controller.searchResults.map((anime) {
                   final inLibrary = controller.isInLibrary(anime.id);
                   final wished = controller.isWished(anime.id);
                   return AnimePosterCard.fromAnime(
                     anime: anime,
                     showImage: controller.settings.showPosterImages,
+                    listMode: !controller.settings.showPosterImages,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => DetailScreen.preview(anime: anime),

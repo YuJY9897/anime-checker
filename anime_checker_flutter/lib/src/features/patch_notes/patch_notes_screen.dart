@@ -48,9 +48,9 @@ class _PatchNoteTile extends StatelessWidget {
             children: [
               Text(
                 '버전 ${note.version}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
               ),
               if (isLatest) ...[
                 const SizedBox(width: 8),
@@ -78,9 +78,9 @@ class _PatchNoteTile extends StatelessWidget {
             padding: const EdgeInsets.only(top: 2),
             child: Text(
               note.date,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
             ),
           ),
           children: [PatchNoteItems(note: note)],
@@ -163,9 +163,9 @@ Future<void> showPatchNoteDialog(BuildContext context, PatchNote note) {
         TextButton(
           onPressed: () {
             Navigator.pop(context);
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PatchNotesScreen()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PatchNotesScreen()));
           },
           child: const Text('지난 내용 보기'),
         ),

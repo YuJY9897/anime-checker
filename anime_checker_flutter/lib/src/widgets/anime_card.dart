@@ -25,6 +25,7 @@ class AnimePosterCard extends StatefulWidget {
     this.metaLines = const [],
     this.actions = const [],
     this.showImage = true,
+    this.listMode = false,
     this.progress,
     this.onLongPress,
   });
@@ -36,6 +37,7 @@ class AnimePosterCard extends StatefulWidget {
     List<String> metaLines = const [],
     List<AnimeCardAction> actions = const [],
     bool showImage = true,
+    bool listMode = false,
     double? progress,
     VoidCallback? onLongPress,
   }) {
@@ -47,6 +49,7 @@ class AnimePosterCard extends StatefulWidget {
       metaLines: metaLines,
       actions: actions,
       showImage: showImage,
+      listMode: listMode,
       progress: progress,
       onTap: onTap,
       onLongPress: onLongPress,
@@ -59,6 +62,10 @@ class AnimePosterCard extends StatefulWidget {
   final List<String> metaLines;
   final List<AnimeCardAction> actions;
   final bool showImage;
+
+  /// true면 큰 표지 카드 대신 작은 썸네일이 붙은 가로 한 줄로 그린다.
+  /// 「큰 표지로 보기」를 끄면 모든 목록 화면이 이 모양이 된다.
+  final bool listMode;
 
   /// 0~1 진행률. null이면 진행률 바를 표시하지 않음.
   final double? progress;
@@ -75,8 +82,9 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final hasImage =
-        widget.showImage && widget.posterUrl.trim().isNotEmpty && !imageFailed;
+    final hasPoster = widget.posterUrl.trim().isNotEmpty && !imageFailed;
+    if (widget.listMode) return _buildRow(context, colors, hasPoster);
+    final hasImage = widget.showImage && hasPoster;
     final compact = !hasImage;
     final genres = visibleGenres(widget.genres);
     return Card(
@@ -182,15 +190,146 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
       ),
     );
   }
+
+  /// 작은 썸네일 + 제목 + 메타 한두 줄. 한 화면에 더 많이 들어간다.
+  /// ListTile은 dense일 때 leading 높이를 48로 깎아 표지가 잘리므로 쓰지 않는다.
+  Widget _buildRow(BuildContext context, ColorScheme colors, bool hasPoster) {
+    final genres = visibleGenres(widget.genres);
+    final meta = widget.metaLines
+        .where((line) => line.trim().isNotEmpty)
+        .take(2)
+        .toList();
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        splashColor: colors.primary.withValues(alpha: 0.08),
+        highlightColor: colors.primary.withValues(alpha: 0.04),
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(7),
+                child: SizedBox(
+                  width: 46,
+                  height: 69,
+                  child: hasPoster
+                      ? Image.network(
+                          widget.posterUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted && !imageFailed) {
+                                setState(() => imageFailed = true);
+                              }
+                            });
+                            return ColoredBox(
+                              color: colors.surfaceContainerHighest,
+                            );
+                          },
+                        )
+                      : ColoredBox(color: colors.surfaceContainerHighest),
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+                    if (genres.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Text(
+                          genres.take(2).join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: colors.tertiary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                    for (final line in meta)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Text(
+                          line,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: colors.onSurfaceVariant,
+                                height: 1.2,
+                              ),
+                        ),
+                      ),
+                    if (widget.progress != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 7),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: widget.progress!.clamp(0, 1),
+                            minHeight: 3,
+                            backgroundColor: colors.surfaceContainerHighest,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (widget.actions.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _ActionButtons(actions: widget.actions),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
+/// 큰 표지일 땐 2열 격자, 작은 썸네일일 땐 한 줄짜리 목록으로 쌓는다.
 class TwoColumnAnimeGrid extends StatelessWidget {
-  const TwoColumnAnimeGrid({super.key, required this.children});
+  const TwoColumnAnimeGrid({
+    super.key,
+    required this.children,
+    this.listMode = false,
+  });
 
   final List<Widget> children;
+  final bool listMode;
 
   @override
   Widget build(BuildContext context) {
+    if (listMode) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 22),
+        child: Column(
+          children: [
+            for (var index = 0; index < children.length; index += 1)
+              Padding(
+                padding: EdgeInsets.only(top: index == 0 ? 0 : 8),
+                child: children[index],
+              ),
+          ],
+        ),
+      );
+    }
     // 카드가 내용만큼만 높아지도록 행 단위로 배치한다.
     // 같은 행의 두 카드는 IntrinsicHeight로 높이를 맞춘다.
     final rows = <Widget>[];

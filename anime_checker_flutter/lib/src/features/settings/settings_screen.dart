@@ -83,7 +83,7 @@ class SettingsScreen extends ConsumerWidget {
             title: '표시 설정',
             children: [
               _SwitchRow(
-                title: '카드 이미지 표시',
+                title: '큰 표지로 보기',
                 value: settings.showPosterImages,
                 onChanged: (value) => controller.updateSettings(
                   settings.copyWith(showPosterImages: value),

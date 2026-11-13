@@ -34,10 +34,12 @@ class HomeScreen extends ConsumerWidget {
               )
             else
               TwoColumnAnimeGrid(
+                listMode: !controller.settings.showPosterImages,
                 children: targets.map((target) {
                   return AnimePosterCard.fromAnime(
                     anime: target.anime,
                     showImage: controller.settings.showPosterImages,
+                    listMode: !controller.settings.showPosterImages,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => DetailScreen(animeId: target.anime.id),
