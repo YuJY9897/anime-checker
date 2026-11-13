@@ -48,18 +48,27 @@ class ScheduleScreen extends ConsumerWidget {
       builder: (scrollController) => ListView(
         controller: scrollController,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Text(
-              '방영중 $count개',
-              style: Theme.of(context).textTheme.labelLarge,
+          // 빈 상태에서는 '방영중 0개'와 아래 안내가 같은 말을 두 번 하게 된다.
+          if (schedule.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Text(
+                '방영중 $count개',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
             ),
-          ),
           if (schedule.isEmpty)
-            const EmptyState(
-              title: '편성표가 비어 있어요',
-              message: '방영 중인 작품의 요일을 아직 알아내지 못했어요.',
+            EmptyState(
+              title: '이번 주 새 화가 없어요',
+              // 예전 문구는 '요일을 알아내지 못했다'였는데 실제 이유와 달랐다.
+              // 비는 진짜 이유는 최근 2주 안에 나온 화가 없다는 것이다.
+              message: '보관함에 최근 2주 안에 새 화가 나온 작품이 없어요. '
+                  '회차 정보가 오래됐으면 다시 받아 보세요.',
               icon: Icons.calendar_month_outlined,
+              actionLabel: controller.refreshingAll ? null : '회차 다시 받기',
+              onAction: controller.refreshingAll
+                  ? null
+                  : () => controller.refreshAllAnimeDetails(),
             )
           else
             Padding(

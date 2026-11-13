@@ -211,6 +211,7 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                         builder: (_) => DetailScreen.preview(anime: anime),
                       ),
                     ),
+                    listMode: !controller.settings.showPosterImages,
                     statusLabel: animeAiringStatusLabel(
                       anime.firstAirDate,
                       status: anime.status,

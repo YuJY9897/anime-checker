@@ -138,6 +138,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      // 기본 높이는 화면의 9/16이라 제목 + 항목 9개가 안 들어가서
+      // 맨 위 '새 화'와 '보관함'이 잘려 나갔다.
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+      ),
       builder: (context) => SafeArea(
         child: ListView.separated(
           shrinkWrap: true,

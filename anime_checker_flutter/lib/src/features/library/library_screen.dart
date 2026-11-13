@@ -131,12 +131,11 @@ class LibraryScreen extends ConsumerWidget {
                 final reason = controller.droppedReason(anime.id);
                 final metaLines = [
                   if (anime.isMovie) '극장판',
+                  // 편성표와 같은 판정을 쓴다. 상태만 보면 이미 끝난 작품도
+                  // '금요일'이라고 적혀 편성표에 없는 것과 어긋난다.
                   if (mode == LibraryMode.library &&
                       !anime.isMovie &&
-                      isAnimeCurrentlyAiring(
-                        anime.firstAirDate,
-                        status: anime.status,
-                      ) &&
+                      controller.isOnAirThisWeek(anime) &&
                       hasUsefulText(anime.weekday))
                     anime.weekday,
                   if (mode == LibraryMode.dropped && reason.isNotEmpty) reason,

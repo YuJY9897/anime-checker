@@ -180,17 +180,30 @@ bool airsAroundNow(Anime anime, {DateTime? now}) {
   return false;
 }
 
+/// 이번 주에 실제로 새 화가 나오는 작품인지. 편성표에 넣는 기준과
+/// 보관함·상세의 요일 표시가 같은 함수를 써야, 보관함엔 '방영중 · 금요일'인데
+/// 편성표엔 없는 모순이 생기지 않는다.
+bool isOnAirThisWeek(Anime anime, {DateTime? now}) {
+  if (!isAnimeCurrentlyAiring(
+    anime.firstAirDate,
+    status: anime.status,
+    now: now,
+  )) {
+    return false;
+  }
+  if (hasEpisodeAirDates(anime) && !airsAroundNow(anime, now: now)) {
+    return false;
+  }
+  return true;
+}
+
 Map<String, List<Anime>> scheduleByWeekday(AppData data) {
   final map = <String, List<Anime>>{};
   for (final anime in allAnime(data)) {
-    if (!isAnimeCurrentlyAiring(anime.firstAirDate, status: anime.status)) {
-      continue;
-    }
     // TMDB는 완결작도 'Returning Series'로 두는 일이 많다. 상태만 믿으면
     // 다 끝난 작품이 편성표에 영영 남으므로, 회차 정보가 있으면
     // 최근에 나왔거나 앞으로 나올 화가 있는지 함께 본다.
-    // 회차 정보가 아예 없는 작품은 판단할 근거가 없어 상태를 따른다.
-    if (hasEpisodeAirDates(anime) && !airsAroundNow(anime)) continue;
+    if (!isOnAirThisWeek(anime)) continue;
     final storedWeekday = normalizedWeekday(anime.weekday);
     final weekday = storedWeekday.isNotEmpty
         ? storedWeekday

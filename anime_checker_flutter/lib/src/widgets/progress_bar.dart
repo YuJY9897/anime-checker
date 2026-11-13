@@ -17,6 +17,9 @@ class GradientProgressBar extends StatelessWidget {
       child: SizedBox(
         height: height,
         child: Stack(
+          // fit이 없으면 채움 칸(DecoratedBox)이 자식 없는 0 크기로 찌그러져
+          // 그라데이션이 아예 안 칠해지고, Stack 폭까지 그 칸에 맞춰 줄어든다.
+          fit: StackFit.expand,
           children: [
             Positioned.fill(
               child: ColoredBox(color: colors.surfaceContainerHighest),

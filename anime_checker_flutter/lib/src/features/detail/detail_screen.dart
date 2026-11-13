@@ -121,11 +121,9 @@ class DetailScreen extends ConsumerWidget {
                                 status: anime.status,
                               ),
                       ),
+                      // 편성표·보관함과 같은 판정을 쓴다.
                       if (!anime.isMovie &&
-                          isAnimeCurrentlyAiring(
-                            anime.firstAirDate,
-                            status: anime.status,
-                          ) &&
+                          controller.isOnAirThisWeek(anime) &&
                           hasUsefulText(anime.weekday))
                         Text(anime.weekday),
                       Text(
@@ -263,7 +261,12 @@ class DetailScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '개봉일: ${formatStoredDate(movie.releaseDate)} · ${movie.runtime}분',
+                                // TMDB 영화 검색은 상영시간을 주지 않는다. 작품마다
+                                // 따로 조회하면 원피스만 20회가 더 들어 예산을 넘긴다.
+                                // 모르는 값을 '0분'이라고 쓰지 않고 그냥 뺀다.
+                                movie.runtime > 0
+                                    ? '개봉일: ${formatStoredDate(movie.releaseDate)} · ${movie.runtime}분'
+                                    : '개봉일: ${formatStoredDate(movie.releaseDate)}',
                               ),
                             ],
                           ),

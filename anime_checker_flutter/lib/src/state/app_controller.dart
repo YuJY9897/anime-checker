@@ -127,6 +127,8 @@ class AppController extends ChangeNotifier {
 
   String progressLabel(Anime anime) => query.progressLabel(data, anime);
 
+  bool isOnAirThisWeek(Anime anime) => query.isOnAirThisWeek(anime);
+
   String latestWatchLabel(Anime anime) => query.latestWatchLabel(data, anime);
 
   double progressRatio(Anime anime) => query.progressRatio(data, anime);
