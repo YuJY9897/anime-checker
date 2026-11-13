@@ -31,19 +31,36 @@ class LocalRepository {
     return AppData.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
-  Future<void> save(AppData data) async {
+  /// 저장이 겹치면 같은 임시 파일을 두고 다투다 rename이 실패한다.
+  /// 들어온 순서대로 하나씩 쓴다.
+  Future<void> _queue = Future<void>.value();
+
+  Future<void> save(AppData data) {
     if (kIsWeb) {
       _webCache = data;
-      return;
+      return Future<void>.value();
     }
+    final next = _queue.then((_) => _write(data));
+    // 한 번 실패해도 다음 저장까지 막히지 않게 체인에서는 오류를 흘린다.
+    _queue = next.then((_) {}, onError: (_) {});
+    return next;
+  }
+
+  Future<void> _write(AppData data) async {
     final file = await _dataFile();
     await file.parent.create(recursive: true);
     final temp = File('${file.path}.tmp');
     await temp.writeAsString(data.toPrettyJson(), flush: true);
-    if (await file.exists()) {
-      await file.delete();
+    try {
+      // 안드로이드(POSIX)에서는 같은 폴더 덮어쓰기 rename이 원자적이다.
+      // 예전처럼 원본을 먼저 지우면 그 틈에 앱이 죽었을 때 파일이 없는 채로
+      // 남고, 다음 실행에서 load()가 샘플 데이터를 그대로 저장해 버린다.
+      await temp.rename(file.path);
+    } on FileSystemException {
+      // 윈도우는 덮어쓰기 rename을 막는다(테스트 환경에서만 지나간다).
+      if (await file.exists()) await file.delete();
+      await temp.rename(file.path);
     }
-    await temp.rename(file.path);
   }
 
   Future<File> exportBackup(AppData data) async {

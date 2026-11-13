@@ -80,6 +80,32 @@ void main() {
     expect(find.text('방영중'), findsNWidgets(3));
   });
 
+  // 목록 모드 Row의 오른쪽 끝은 폭이 정해져 있지 않다. 거기에 Flexible을
+  // 쓰면 "RenderFlex children have non-zero flex but incoming width
+  // constraints are unbounded"로 터진다. 릴리즈 빌드에서는 조용히 넘어가
+  // 화면만 보고는 알 수 없었다.
+  testWidgets('목록 모드에서 버튼이 있어도 RenderFlex가 터지지 않는다', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        AnimePosterCard(
+          title: '버튼 두 개가 붙은 작품',
+          posterUrl: '',
+          metaLines: const ['12/24화 · 50%'],
+          listMode: true,
+          actions: [
+            AnimeCardAction(label: '추가', filled: true, onPressed: () {}),
+            AnimeCardAction(label: '찜', onPressed: () {}),
+          ],
+          onTap: () {},
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('추가'), findsOneWidget);
+    expect(find.text('찜'), findsOneWidget);
+  });
+
   testWidgets('모르는 상태는 칩을 띄우지 않는다', (tester) async {
     await tester.pumpWidget(
       _wrap(

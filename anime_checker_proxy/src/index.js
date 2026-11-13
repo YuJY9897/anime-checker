@@ -593,7 +593,10 @@ async function tmdbNewAnime(env, region, today, budget) {
   // 직렬로 돌리면 백그라운드 수집이 시간 제한에 잘린다.
   // 받을 달 수를 예산에서 미리 정하고 병렬로 받는다.
   const left = budget ? budget.left : TMDB_CALLS_PER_MONTH * 6;
-  const allowed = Math.max(1, Math.floor(left / TMDB_CALLS_PER_MONTH));
+  // 예전에는 Math.max(1, ...)이라 예산이 0이어도 한 달치 6회를 쐈다.
+  // Jikan이 예산을 다 쓰고 실패한 직후가 바로 폴백 차례라 50회 한도를 넘겼다.
+  const allowed = Math.floor(Math.max(0, left) / TMDB_CALLS_PER_MONTH);
+  if (allowed <= 0) return [];
   const months = monthsFromYearStart(today).reverse().slice(0, allowed);
   if (budget) budget.left -= months.length * TMDB_CALLS_PER_MONTH;
   const seen = new Set();

@@ -343,7 +343,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
               ),
               if (widget.actions.isNotEmpty) ...[
                 const SizedBox(width: 8),
-                _ActionButtons(actions: widget.actions),
+                _ActionButtons(actions: widget.actions, flexible: false),
               ],
             ],
           ),
@@ -421,18 +421,26 @@ class TwoColumnAnimeGrid extends StatelessWidget {
 }
 
 class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({required this.actions});
+  const _ActionButtons({required this.actions, this.flexible = true});
 
   final List<AnimeCardAction> actions;
+
+  /// 가로 폭이 정해지지 않은 자리(목록 모드의 Row 오른쪽 끝)에서는
+  /// Flexible을 쓸 수 없다. 쓰면 RenderFlex가 터진다.
+  final bool flexible;
 
   @override
   Widget build(BuildContext context) {
     if (actions.length <= 2) {
       return Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           for (var index = 0; index < actions.length; index += 1) ...[
             if (index > 0) const SizedBox(width: 6),
-            Flexible(child: _ActionButton(action: actions[index])),
+            if (flexible)
+              Flexible(child: _ActionButton(action: actions[index]))
+            else
+              _ActionButton(action: actions[index]),
           ],
         ],
       );
