@@ -27,6 +27,7 @@ class AnimePosterCard extends StatefulWidget {
     this.actions = const [],
     this.showImage = true,
     this.listMode = false,
+    this.statusLabel = '',
     this.progress,
     this.onLongPress,
   });
@@ -39,6 +40,7 @@ class AnimePosterCard extends StatefulWidget {
     List<AnimeCardAction> actions = const [],
     bool showImage = true,
     bool listMode = false,
+    String statusLabel = '',
     double? progress,
     VoidCallback? onLongPress,
   }) {
@@ -51,6 +53,7 @@ class AnimePosterCard extends StatefulWidget {
       actions: actions,
       showImage: showImage,
       listMode: listMode,
+      statusLabel: statusLabel,
       progress: progress,
       onTap: onTap,
       onLongPress: onLongPress,
@@ -63,6 +66,13 @@ class AnimePosterCard extends StatefulWidget {
   final List<String> metaLines;
   final List<AnimeCardAction> actions;
   final bool showImage;
+
+  /// 방영중·완결 같은 상태. 제목 아래에 작은 칩으로 올린다.
+  /// 「정보 확인 중」처럼 알려 주는 게 없는 값은 칩을 띄우지 않는다.
+  final String statusLabel;
+
+  bool get _showStatusChip =>
+      statusLabel.trim().isNotEmpty && !statusLabel.contains('확인 중');
 
   /// true면 큰 표지 카드 대신 작은 썸네일이 붙은 가로 한 줄로 그린다.
   /// 「큰 표지로 보기」를 끄면 모든 목록 화면이 이 모양이 된다.
@@ -129,6 +139,14 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                         height: 1.2,
                       ),
                     ),
+                    if (widget._showStatusChip)
+                      Padding(
+                        padding: EdgeInsets.only(top: compact ? 5 : 7),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _statusChip(context, colors),
+                        ),
+                      ),
                     if (genres.isNotEmpty)
                       Padding(
                         padding: EdgeInsets.only(top: compact ? 4 : 6),
@@ -183,6 +201,37 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// 상태를 칩으로 띄울 때 쓸 색. 회색 글자로 묻히지 않게 방영중만
+  /// 민트로 올리고, 방영예정은 중간, 완결은 흐리게 둔다.
+  Color _statusTone(ColorScheme colors) {
+    final label = widget.statusLabel;
+    if (label.contains('방영중')) return colors.primary;
+    if (label.contains('예정')) return colors.onSurfaceVariant;
+    return colors.onSurfaceVariant.withValues(alpha: 0.75);
+  }
+
+  /// 상태를 회색 본문 글자 대신 작은 칩으로 띄운다.
+  Widget _statusChip(BuildContext context, ColorScheme colors) {
+    final tone = _statusTone(colors);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        widget.statusLabel,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: tone,
+          fontWeight: FontWeight.w800,
+          height: 1.1,
         ),
       ),
     );
@@ -245,6 +294,14 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                         height: 1.2,
                       ),
                     ),
+                    if (widget._showStatusChip)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _statusChip(context, colors),
+                        ),
+                      ),
                     if (genres.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 3),

@@ -40,9 +40,11 @@ class WishScreen extends ConsumerWidget {
                   title: item.title,
                   posterUrl: item.posterUrl,
                   genres: item.genres,
+                  statusLabel: animeAiringStatusLabel(item.firstAirDate),
                   metaLines: animeBroadcastMetaLines(
                     item.firstAirDate,
                     isMovie: item.isMovie,
+                    withStatus: false,
                   ),
                   showImage: controller.settings.showPosterImages,
                   listMode: !controller.settings.showPosterImages,

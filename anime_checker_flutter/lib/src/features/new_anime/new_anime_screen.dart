@@ -211,10 +211,15 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                         builder: (_) => DetailScreen.preview(anime: anime),
                       ),
                     ),
+                    statusLabel: animeAiringStatusLabel(
+                      anime.firstAirDate,
+                      status: anime.status,
+                    ),
                     metaLines: animeBroadcastMetaLines(
                       anime.firstAirDate,
                       status: anime.status,
                       isMovie: anime.isMovie,
+                      withStatus: false,
                     ),
                     actions: [
                       AnimeCardAction(

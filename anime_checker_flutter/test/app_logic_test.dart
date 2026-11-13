@@ -474,6 +474,10 @@ void main() {
       animeAiringStatusLabel('2026-06-10', status: 'Returning Series'),
       '방영중',
     );
+    // 검색 응답에는 status가 없다. 날짜가 과거라는 이유만으로 방영중이라고
+    // 하면 2004년 완결작까지 방영중으로 보인다.
+    expect(animeAiringStatusLabel('2004-10-03'), '정보 확인 중');
+    expect(isAnimeCurrentlyAiring('2004-10-03'), isFalse);
     expect(
       isAnimeCurrentlyAiring('2026-06-10', status: 'Returning Series'),
       isTrue,

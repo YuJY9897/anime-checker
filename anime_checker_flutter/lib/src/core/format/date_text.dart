@@ -65,6 +65,9 @@ String animeAiringStatusLabel(
   // 방영일을 모르면 방영중이라고 단정할 수 없다. 2027년 공개작이 '방영중'으로
   // 보이고 편성표 집계에까지 들어가던 문제가 여기서 나왔다.
   if (date == null) return '방영예정';
+  // 검색 응답에는 status가 없다(TMDB 검색 API가 안 준다). 상태를 모르는데
+  // 날짜가 과거라는 이유로 방영중이라고 하면 2004년 완결작도 방영중이 된다.
+  if (normalized.isEmpty) return '정보 확인 중';
   return '방영중';
 }
 
@@ -73,6 +76,8 @@ List<String> animeBroadcastMetaLines(
   String status = '',
   bool isMovie = false,
   DateTime? now,
+  // 상태를 카드 위쪽 칩으로 따로 보여줄 때는 줄에서 뺀다.
+  bool withStatus = true,
 }) {
   if (isMovie) {
     final date = parseDate(airDate);
@@ -83,12 +88,12 @@ List<String> animeBroadcastMetaLines(
         DateTime(date.year, date.month, date.day).isAfter(today);
     return [
       date == null ? '개봉일: 확인 중' : '개봉일: ${formatDotDate(date)}',
-      upcoming ? '극장판 · 개봉예정' : '극장판',
+      if (withStatus) upcoming ? '극장판 · 개봉예정' : '극장판',
     ];
   }
   return [
     formatNewAnimeAirDate(airDate),
-    animeAiringStatusLabel(airDate, status: status, now: now),
+    if (withStatus) animeAiringStatusLabel(airDate, status: status, now: now),
   ];
 }
 
