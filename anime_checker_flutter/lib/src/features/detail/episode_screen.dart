@@ -27,7 +27,7 @@ class EpisodeScreen extends ConsumerWidget {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
             ),
             Text(
-              season.name,
+              seasonDisplayName(season.number, season.name),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

@@ -16,6 +16,7 @@ class SearchScreen extends ConsumerStatefulWidget {
 }
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
+  bool _searched = false;
   final textController = TextEditingController();
 
   @override
@@ -48,64 +49,79 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ],
             ),
           ),
-          SectionHeader(
-            title: '검색 결과',
-            meta: controller.apiConfigured
-                ? '${controller.searchResults.length}개'
-                : '${controller.searchResults.length}개 · 보관함 검색',
-          ),
-          if (controller.searchResults.isEmpty)
-            EmptyState(
-              title: controller.searchError == null
-                  ? '검색 결과가 없어요'
-                  : '검색하지 못했어요',
-              message: controller.searchError != null
-                  ? controller.searchError!
-                  : controller.apiConfigured
-                  ? '제목을 입력하고 검색해 주세요.'
-                  : 'API 주소가 연결되지 않아 지금은 보관함 안에서만 검색돼요.',
-              icon: Icons.search,
+          // 아직 한 번도 검색하지 않았으면 '0개 / 결과가 없어요'를 띄우지 않는다.
+          // 처음 들어온 사람에게 실패 화면처럼 보인다.
+          if (!_searched)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: Text(
+                controller.apiConfigured
+                    ? '보고 싶은 애니 제목을 넣어 보세요.'
+                    : 'API 주소가 연결되지 않아 지금은 보관함 안에서만 검색돼요.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             )
-          else
-            TwoColumnAnimeGrid(
-              children: controller.searchResults.map((anime) {
-                final inLibrary = controller.isInLibrary(anime.id);
-                final wished = controller.isWished(anime.id);
-                return AnimePosterCard.fromAnime(
-                  anime: anime,
-                  showImage: controller.settings.showPosterImages,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => DetailScreen.preview(anime: anime),
-                    ),
-                  ),
-                  metaLines: [
-                    ...animeBroadcastMetaLines(
-                      anime.firstAirDate,
-                      status: anime.status,
-                      isMovie: anime.isMovie,
-                    ),
-                  ],
-                  actions: [
-                    AnimeCardAction(
-                      label: inLibrary ? '추가됨' : '추가',
-                      filled: !inLibrary,
-                      onPressed: inLibrary
-                          ? null
-                          : () => controller.addAnime(anime),
-                    ),
-                    AnimeCardAction(
-                      label: wished ? '찜해제' : '찜',
-                      onPressed: () => controller.toggleWish(anime),
-                    ),
-                  ],
-                );
-              }).toList(),
+          else ...[
+            SectionHeader(
+              title: '검색 결과',
+              meta: controller.apiConfigured
+                  ? '${controller.searchResults.length}개'
+                  : '${controller.searchResults.length}개 · 보관함 검색',
             ),
+            if (controller.searchResults.isEmpty)
+              EmptyState(
+                title: controller.searchError == null
+                    ? '검색 결과가 없어요'
+                    : '검색하지 못했어요',
+                message: controller.searchError ?? '다른 제목으로 찾아보세요.',
+                icon: Icons.search,
+              )
+            else
+              TwoColumnAnimeGrid(
+                children: controller.searchResults.map((anime) {
+                  final inLibrary = controller.isInLibrary(anime.id);
+                  final wished = controller.isWished(anime.id);
+                  return AnimePosterCard.fromAnime(
+                    anime: anime,
+                    showImage: controller.settings.showPosterImages,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DetailScreen.preview(anime: anime),
+                      ),
+                    ),
+                    metaLines: [
+                      ...animeBroadcastMetaLines(
+                        anime.firstAirDate,
+                        status: anime.status,
+                        isMovie: anime.isMovie,
+                      ),
+                    ],
+                    actions: [
+                      AnimeCardAction(
+                        label: inLibrary ? '추가됨' : '추가',
+                        filled: !inLibrary,
+                        onPressed: inLibrary
+                            ? null
+                            : () => controller.addAnime(anime),
+                      ),
+                      AnimeCardAction(
+                        label: wished ? '찜해제' : '찜',
+                        onPressed: () => controller.toggleWish(anime),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+          ],
         ],
       ),
     );
   }
 
-  void _submit() => ref.read(appControllerProvider).search(textController.text);
+  void _submit() {
+    setState(() => _searched = true);
+    ref.read(appControllerProvider).search(textController.text);
+  }
 }

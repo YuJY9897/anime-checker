@@ -44,9 +44,14 @@ bool isEpisodeWatched(
 bool isMovieWatched(AppData data, String movieId) =>
     data.watchedMovies[movieId] == true;
 
+/// 시즌 0은 OVA·특별편(외전)이라 본편 진행률과 "이어볼 화"에서 뺀다.
+/// 섞으면 다 본 작품이 미완으로 바뀌고 보관함 정렬과 통계가 흔들린다.
+List<AnimeSeason> mainSeasons(Anime anime) =>
+    anime.seasons.where((season) => season.number != 0).toList();
+
 int watchedCount(AppData data, Anime anime) {
   var count = 0;
-  for (final season in anime.seasons) {
+  for (final season in mainSeasons(anime)) {
     for (final episode in season.episodes) {
       if (isEpisodeWatched(data, anime.id, season.number, episode.number)) {
         count++;
@@ -67,7 +72,7 @@ int watchedCountForSeason(AppData data, Anime anime, AnimeSeason season) {
 }
 
 int totalEpisodeCount(Anime anime) =>
-    anime.seasons.fold(0, (sum, season) => sum + season.episodes.length);
+    mainSeasons(anime).fold(0, (sum, season) => sum + season.episodes.length);
 
 String progressLabel(AppData data, Anime anime) {
   final total = totalEpisodeCount(anime);
@@ -90,7 +95,7 @@ String latestWatchLabel(AppData data, Anime anime) {
     }
   }
   if (latestEpisode == 0) return '아직 시청 기록 없음';
-  return '최근 $latestSeason기 $latestEpisode화';
+  return '최근 시즌 $latestSeason · $latestEpisode화';
 }
 
 double progressRatio(AppData data, Anime anime) {
@@ -112,7 +117,7 @@ List<EpisodeTarget> todayTargets(AppData data) {
   final targets = <EpisodeTarget>[];
   for (final anime in libraryAnime(data)) {
     EpisodeTarget? nextTarget;
-    for (final season in anime.seasons) {
+    for (final season in mainSeasons(anime)) {
       for (final episode in season.episodes) {
         final date = parseDate(episode.airDate);
         if (date != null) {

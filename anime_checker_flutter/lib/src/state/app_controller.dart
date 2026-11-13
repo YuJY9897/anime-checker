@@ -176,6 +176,7 @@ class AppController extends ChangeNotifier {
     final now = DateTime.now();
     final updated = <String, Anime>{};
     var watched = data.watchedEpisodes;
+    final migratedIds = <String>{};
     try {
       for (final anime in targets) {
         if (_cancelRefreshAll) break;
@@ -183,12 +184,15 @@ class AppController extends ChangeNotifier {
           final fetched = await _apiClient.fetchAnime(anime.id);
           if (fetched != null && fetched.seasons.isNotEmpty) {
             final merged = sync.mergeEpisodes(anime, fetched);
-            watched = migration.migrateWatchedEpisodes(
+            final nextWatched = migration.migrateWatchedEpisodes(
               animeId: anime.id,
               watchedEpisodes: watched,
               before: anime.seasons,
               after: merged.seasons,
             );
+            // 좌표가 안 바뀌면 같은 객체가 돌아온다. 바뀐 작품만 기억한다.
+            if (!identical(nextWatched, watched)) migratedIds.add(anime.id);
+            watched = nextWatched;
             updated[anime.id] = merged;
           }
         } catch (_) {
@@ -203,7 +207,9 @@ class AppController extends ChangeNotifier {
           _withUpdatedAnime(
             updated,
             now,
-          ).copyWith(watchedEpisodes: watched),
+          ).copyWith(
+            watchedEpisodes: _mergeMigratedWatched(watched, migratedIds),
+          ),
         );
       }
     } finally {
@@ -241,6 +247,7 @@ class AppController extends ChangeNotifier {
     notifyListeners();
     final updated = <String, Anime>{};
     var watched = data.watchedEpisodes;
+    final migratedIds = <String>{};
     try {
       for (final anime in batch) {
         try {
@@ -248,12 +255,15 @@ class AppController extends ChangeNotifier {
           if (fetched != null) {
             final merged = sync.mergeEpisodes(anime, fetched);
             // 기수가 재편됐으면 시청 기록도 새 좌표로 옮긴다.
-            watched = migration.migrateWatchedEpisodes(
+            final nextWatched = migration.migrateWatchedEpisodes(
               animeId: anime.id,
               watchedEpisodes: watched,
               before: anime.seasons,
               after: merged.seasons,
             );
+            // 좌표가 안 바뀌면 같은 객체가 돌아온다. 바뀐 작품만 기억한다.
+            if (!identical(nextWatched, watched)) migratedIds.add(anime.id);
+            watched = nextWatched;
             updated[anime.id] = merged;
           }
         } catch (_) {
@@ -266,7 +276,9 @@ class AppController extends ChangeNotifier {
           _withUpdatedAnime(
             updated,
             now,
-          ).copyWith(watchedEpisodes: watched),
+          ).copyWith(
+            watchedEpisodes: _mergeMigratedWatched(watched, migratedIds),
+          ),
         );
       }
     } finally {
@@ -287,6 +299,25 @@ class AppController extends ChangeNotifier {
       syncedAt[animeId] = syncedTime.toIso8601String();
     });
     return mutate.withSyncedAnime(data, list, syncedAt);
+  }
+
+  /// 갱신이 도는 10~30초 사이에 사용자가 화를 체크할 수 있다.
+  /// 시작 시점 사본으로 통째로 덮으면 그 체크가 사라지므로,
+  /// 좌표가 바뀐 작품의 기록만 지금 데이터에 얹는다.
+  Map<String, bool> _mergeMigratedWatched(
+    Map<String, bool> migrated,
+    Set<String> migratedIds,
+  ) {
+    if (migratedIds.isEmpty) return data.watchedEpisodes;
+    final next = Map<String, bool>.from(data.watchedEpisodes);
+    for (final animeId in migratedIds) {
+      final prefix = '$animeId:';
+      next.removeWhere((key, value) => key.startsWith(prefix));
+      migrated.forEach((key, value) {
+        if (key.startsWith(prefix)) next[key] = value;
+      });
+    }
+    return next;
   }
 
   Future<void> refreshAnimeDetail(String animeId) async {

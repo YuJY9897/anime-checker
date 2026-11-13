@@ -62,6 +62,9 @@ String animeAiringStatusLabel(
       normalized.contains('예정')) {
     return '방영예정';
   }
+  // 방영일을 모르면 방영중이라고 단정할 수 없다. 2027년 공개작이 '방영중'으로
+  // 보이고 편성표 집계에까지 들어가던 문제가 여기서 나왔다.
+  if (date == null) return '방영예정';
   return '방영중';
 }
 
@@ -103,3 +106,18 @@ String weekdayLabel(DateTime date) {
 }
 
 String nowBasisText() => '${formatDotDate(DateTime.now(), withTime: true)} 기준';
+
+/// 시즌 이름이 작품마다 'Season 4: The Bount'와 '시즌 16 : 드레스로자'로 갈려
+/// 한 앱에서 세 가지로 보인다. 화면에 낼 때는 '시즌 N · 부제'로 맞춘다.
+String seasonDisplayName(int number, String name) {
+  final raw = name.trim();
+  if (number == 0) return raw.isEmpty ? '외전 · 특별편' : raw;
+  final match = RegExp(
+    r'^(?:season|시즌)\s*0*(\d+)\s*[:：·-]?\s*(.*)$',
+    caseSensitive: false,
+  ).firstMatch(raw);
+  if (match == null) return raw.isEmpty ? '시즌 $number' : raw;
+  final subtitle = match.group(2)?.trim() ?? '';
+  final shown = match.group(1) ?? '$number';
+  return subtitle.isEmpty ? '시즌 $shown' : '시즌 $shown · $subtitle';
+}

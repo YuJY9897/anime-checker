@@ -44,7 +44,8 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     metaLines: [
-                      '이어볼 화: ${target.season.name} '
+                      '이어볼 화: '
+                          '${seasonDisplayName(target.season.number, target.season.name)} '
                           '${episodeLabel(target.episode)}',
                       '방영일: ${formatStoredDate(target.episode.airDate)}',
                     ],

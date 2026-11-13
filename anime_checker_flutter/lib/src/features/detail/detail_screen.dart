@@ -61,6 +61,13 @@ class DetailScreen extends ConsumerWidget {
     final inLibrary = controller.isInLibrary(anime.id);
     final genres = visibleGenres(anime.genres);
     final note = controller.animeNote(anime.id);
+    // 서버는 시즌 0에 OVA·특별편을 모아 보낸다. 본편과 섞지 않고 따로 보여준다.
+    final mainSeasons = anime.seasons
+        .where((season) => season.number != 0)
+        .toList();
+    final extraSeasons = anime.seasons
+        .where((season) => season.number == 0)
+        .toList();
     return Scaffold(
       appBar: AppBar(title: const Text('상세')),
       body: ListView(
@@ -160,6 +167,12 @@ class DetailScreen extends ConsumerWidget {
                     onPressed: () => _editNote(context, controller, anime),
                     child: const Text('메모'),
                   ),
+                  // 완결작은 자동 갱신 대상이 아니라, 서버에 외전·극장판이
+                  // 새로 생겨도 저장본에는 영영 안 들어온다. 한 작품만 다시 받는다.
+                  OutlinedButton(
+                    onPressed: () => controller.refreshAnimeDetail(anime.id),
+                    child: const Text('새로 받기'),
+                  ),
                   if (controller.isDropped(anime.id))
                     OutlinedButton(
                       onPressed: () =>
@@ -196,10 +209,10 @@ class DetailScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          if (anime.seasons.isNotEmpty || inLibrary) SectionHeader(title: '시즌'),
-          if (anime.seasons.isEmpty && !inLibrary)
+          if (mainSeasons.isNotEmpty || inLibrary) SectionHeader(title: '본편'),
+          if (mainSeasons.isEmpty && !inLibrary)
             const SizedBox.shrink()
-          else if (anime.seasons.isEmpty)
+          else if (mainSeasons.isEmpty)
             EmptyState(
               title: '시즌 정보가 없어요',
               message: '프록시에서 상세 정보를 가져오면 시즌과 에피소드가 채워져요.',
@@ -209,41 +222,21 @@ class DetailScreen extends ConsumerWidget {
                   : null,
             )
           else
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: Column(
-                children: anime.seasons.map((season) {
-                  final watched = controller.watchedCountForSeason(
-                    anime,
-                    season,
-                  );
-                  final total = season.episodes.length;
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        season.name,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      subtitle: Text('$watched화 / $total화'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              EpisodeScreen(anime: anime, season: season),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
+            _SeasonList(
+              anime: anime,
+              seasons: mainSeasons,
+              controller: controller,
             ),
+          if (extraSeasons.isNotEmpty) ...[
+            SectionHeader(title: '외전'),
+            _SeasonList(
+              anime: anime,
+              seasons: extraSeasons,
+              controller: controller,
+            ),
+          ],
           if (anime.movies.isNotEmpty) ...[
-            SectionHeader(title: '극장판/영화'),
+            SectionHeader(title: '극장판'),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
               child: Column(
@@ -439,6 +432,52 @@ class DetailScreen extends ConsumerWidget {
             child: const Text('저장'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 본편과 외전이 같은 모양으로 보이도록 시즌 목록을 한 군데서 그린다.
+class _SeasonList extends StatelessWidget {
+  const _SeasonList({
+    required this.anime,
+    required this.seasons,
+    required this.controller,
+  });
+
+  final Anime anime;
+  final List<AnimeSeason> seasons;
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Column(
+        children: seasons.map((season) {
+          final watched = controller.watchedCountForSeason(anime, season);
+          final total = season.episodes.length;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              title: Text(
+                seasonDisplayName(season.number, season.name),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              subtitle: Text('$watched화 / $total화'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => EpisodeScreen(anime: anime, season: season),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

@@ -100,6 +100,12 @@ const _helpItems = [
         '여러 기수가 한 시즌으로 묶여 있는 작품은 기수별로 나누어 보여줍니다. 나뉘어도 이미 체크한 시청 기록은 해당 기수의 회차로 그대로 옮겨집니다.',
   ),
   _HelpItem(
+    icon: Icons.account_tree_outlined,
+    title: '본편 · 외전 · 극장판',
+    body:
+        '상세 화면에서 작품을 세 구역으로 나누어 보여줍니다. 본편은 정규 시즌, 외전은 OVA와 특별편, 극장판은 같은 작품의 극장 개봉작입니다. 외전과 극장판은 자료가 있는 작품에만 나타납니다.',
+  ),
+  _HelpItem(
     icon: Icons.cloud_download_outlined,
     title: '모든 작품 정보 다시 받기',
     body:

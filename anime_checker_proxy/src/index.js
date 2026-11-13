@@ -214,7 +214,8 @@ async function searchAnime(env, query) {
 // 상세는 서브요청이 가장 많이 드는 경로라 KV에 캐시한다.
 async function animeDetailResponse(env, id) {
   if (!/^(mal-)?\d+$/.test(id)) return json({error: 'invalid id'}, 400);
-  const cacheKey = `cache:anime:${id}`;
+  // 외전·극장판이 응답에 추가돼 모양이 바뀌었으므로 키를 올려 옛 캐시를 버린다.
+  const cacheKey = `cache:anime:v2:${id}`;
   const cached = await kvCacheGet(env, cacheKey);
   if (cached) return json(cached);
   const detail = await animeDetail(env, id);
@@ -231,12 +232,16 @@ function isEndedStatus(status) {
 }
 
 // 무료 플랜은 요청 하나당 서브요청이 50회다.
-// /tv 1회와 기수 분리 2회를 빼고 시즌 상세 → 제목 보강 순으로 나눠 쓴다.
-const DETAIL_SUBREQUEST_BUDGET = 43;
+// /tv 1회, 시즌 0 상세 1회, 극장판 검색 1회, KV 조회·기록 2회를 빼고
+// 나머지를 시즌 상세 → 제목 보강 순으로 나눠 쓴다.
+const DETAIL_SUBREQUEST_BUDGET = 40;
 
 async function animeDetail(env, id) {
   if (id.startsWith('mal-')) return jikanAnimeDetail(id);
   const tv = await tmdb(env, `/tv/${id}`);
+  // 시즌 0은 TMDB가 OVA·특별편을 모아 두는 칸이라 외전으로 따로 보여준다.
+  const specialSummary = (tv.seasons || [])
+    .find((season) => season.season_number === 0 && season.episode_count > 0);
   const seasonSummaries = (tv.seasons || [])
     .filter((season) => season.season_number > 0 && season.episode_count > 0);
   // 한도를 넘는 시즌은 회차 수만 채워 넣는다(통째로 버리지 않는다).
@@ -248,13 +253,51 @@ async function animeDetail(env, id) {
   );
   await fillSeasonTitles(env, id, seasons, DETAIL_SUBREQUEST_BUDGET - detailCount);
   const filled = seasons.filter((season) => season.episodes.length > 0);
+  // 기수 나누기는 본편에만 적용한다. 외전이 섞이면 회차 번호가 어긋난다.
   const split = await splitBundledSeasons(env, id, tv, filled);
+  const [specials, movies] = await Promise.all([
+    specialSummary
+      ? seasonDetail(env, id, tv, specialSummary).catch(() => null)
+      : Promise.resolve(null),
+    relatedMovies(env, tv).catch(() => []),
+  ]);
+  const extras = specials && specials.episodes.length > 0
+    ? [{...specials, number: 0, name: '외전 · 특별편'}]
+    : [];
   return {
     ...toAnime(tv),
     weekday: inferWeekday(split),
-    seasons: split,
-    movies: [],
+    seasons: [...split, ...extras],
+    movies,
   };
+}
+
+// TMDB는 TV 작품에 극장판을 이어 주지 않는다. 제목으로 찾아 일본 애니 영화만 남긴다.
+async function relatedMovies(env, tv) {
+  const query = (tv.name || tv.original_name || '').trim();
+  if (query.length < 2) return [];
+  const data = await tmdb(env, `/search/movie?query=${encodeURIComponent(query)}&include_adult=false`);
+  // 제목 검색만 믿으면 같은 단어가 든 다른 작품 극장판이 딸려 온다.
+  const key = normalizeTitle(query);
+  return (data.results || [])
+    .filter((item) => item.original_language === 'ja')
+    .filter((item) => Array.isArray(item.genre_ids) && item.genre_ids.includes(16))
+    .filter((item) => item.release_date)
+    .filter((item) => {
+      const name = normalizeTitle(item.title || item.original_title || '');
+      return name.includes(key) || key.includes(name);
+    })
+    // 장수 시리즈는 최신작이 잘려 나가지 않도록 최신 순으로 자른 뒤 다시 오름차순.
+    .sort((a, b) => String(b.release_date).localeCompare(String(a.release_date)))
+    .slice(0, 30)
+    .sort((a, b) => String(a.release_date).localeCompare(String(b.release_date)))
+    .map((item) => ({
+      id: String(item.id),
+      title: item.title || item.original_title || '',
+      posterUrl: poster(item.poster_path),
+      releaseDate: dateOnly(item.release_date),
+      runtime: 0,
+    }));
 }
 
 // TMDB는 편성 요일을 주지 않아 편성표가 빈다. 최근 방영분의 요일로 채운다.
@@ -636,27 +679,6 @@ async function enrichRecentJikanTitles(env, items, budget) {
     result.push(anime);
   }
   return result;
-}
-
-async function enrichJikanTitle(env, anime) {
-  if (hasKorean(anime.title)) return anime;
-  const mediaTypes = anime.movies.length > 0 || /movie/i.test(anime.status) ? ['movie', 'tv'] : ['tv', 'movie'];
-  const queries = [...new Set([anime.originalTitle, anime.title].filter((value) => value && value.trim().length >= 2))].slice(0, 2);
-  for (const mediaType of mediaTypes) {
-    for (const query of queries) {
-      const match = await tmdbKoreanAnimeMatch(env, mediaType, query, anime.firstAirDate);
-      if (match) {
-        return {
-          ...anime,
-          title: animeItemTitle(match),
-          posterUrl: poster(match.poster_path) || anime.posterUrl,
-          genres: genreNames(match.genre_ids, match.genres).filter((name) => name !== '애니메이션').slice(0, 5),
-        };
-      }
-    }
-  }
-  const fallbackTitle = knownKoreanTitle(anime.title);
-  return fallbackTitle ? {...anime, title: fallbackTitle} : anime;
 }
 
 async function tmdbKoreanAnimeMatch(env, mediaType, query, date) {

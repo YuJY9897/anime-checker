@@ -124,8 +124,9 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                       Padding(
                         padding: EdgeInsets.only(top: compact ? 4 : 6),
                         child: Text(
-                          genres.take(compact ? 2 : 3).join(' · '),
-                          maxLines: 1,
+                          // 2열 카드 폭에 3개는 늘 잘린다. 2개까지만 보여준다.
+                          genres.take(2).join(' · '),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(

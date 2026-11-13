@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../state/app_controller.dart';
 import '../../core/format/date_text.dart';
 import '../../data/models/models.dart';
+import '../../widgets/anime_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/scroll_top_area.dart';
 import '../detail/detail_screen.dart';
@@ -20,6 +21,14 @@ class ScheduleScreen extends ConsumerWidget {
     '토요일',
     '일요일',
   ];
+
+  /// 오늘 요일이 맨 위에 오도록 돌린다. "오늘 뭐 보지"가 스크롤 0번이 된다.
+  static List<String> _orderFromToday() {
+    final today = weekdayLabel(DateTime.now());
+    final start = _weekdayOrder.indexOf(today);
+    if (start <= 0) return _weekdayOrder;
+    return [..._weekdayOrder.sublist(start), ..._weekdayOrder.sublist(0, start)];
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,14 +55,16 @@ class ScheduleScreen extends ConsumerWidget {
           if (schedule.isEmpty)
             const EmptyState(
               title: '편성표가 비어 있어요',
-              message: '방영 중인 작품의 요일을 아직 알아내지 못했어요. 저장된 요일이 없으면 최근 2주 안에 나온 화의 방영일로 추론해요.',
+              message: '방영 중인 작품의 요일을 아직 알아내지 못했어요.',
               icon: Icons.calendar_month_outlined,
             )
           else
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
               child: Column(
-                children: _weekdayOrder.where(schedule.containsKey).map((day) {
+                children: _orderFromToday()
+                    .where(schedule.containsKey)
+                    .map((day) {
                   return _DaySection(
                     day: day,
                     items: schedule[day]!,
@@ -84,6 +95,7 @@ class _DaySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isToday = day == weekdayLabel(DateTime.now());
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
@@ -105,83 +117,52 @@ class _DaySection extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              if (isToday) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '오늘',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 8),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                for (var index = 0; index < items.length; index += 1) ...[
-                  _ScheduleRow(
-                    anime: items[index],
-                    isDropped: controller.isDropped(items[index].id),
-                    hasNewEpisode: newEpisodeIds.contains(items[index].id),
-                  ),
-                  if (index != items.length - 1)
-                    const Divider(height: 1, indent: 12, endIndent: 12),
+          const SizedBox(height: 10),
+          // 다른 화면과 같은 표지 카드를 쓴다. 편성표만 글자 목록이면 따로 논다.
+          TwoColumnAnimeGrid(
+            children: items.map((anime) {
+              final isDropped = controller.isDropped(anime.id);
+              return AnimePosterCard.fromAnime(
+                anime: anime,
+                showImage: controller.settings.showPosterImages,
+                progress: controller.progressRatio(anime),
+                metaLines: [
+                  if (newEpisodeIds.contains(anime.id)) '새 화',
+                  if (isDropped) '보류',
+                  controller.progressLabel(anime),
+                  controller.latestWatchLabel(anime),
                 ],
-              ],
-            ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => DetailScreen(animeId: anime.id),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ScheduleRow extends StatelessWidget {
-  const _ScheduleRow({
-    required this.anime,
-    required this.isDropped,
-    required this.hasNewEpisode,
-  });
-
-  final Anime anime;
-  final bool isDropped;
-  final bool hasNewEpisode;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = isDropped ? '보류' : (hasNewEpisode ? '새 화' : '보관함');
-    final colors = Theme.of(context).colorScheme;
-    return ListTile(
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      title: Text(
-        anime.title,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w800),
-      ),
-      subtitle: Text(
-        animeAiringStatusLabel(anime.firstAirDate, status: anime.status),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: hasNewEpisode ? colors.primaryContainer : colors.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: hasNewEpisode ? colors.onPrimaryContainer : colors.primary,
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => DetailScreen(animeId: anime.id)),
       ),
     );
   }
