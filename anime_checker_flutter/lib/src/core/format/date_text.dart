@@ -54,8 +54,11 @@ String animeAiringStatusLabel(
       normalized.contains('취소')) {
     return '완결';
   }
+  // TMDB의 'In Production'·'Post Production'은 아직 방영 전이다.
   if (normalized.contains('planned') ||
       normalized.contains('upcoming') ||
+      normalized.contains('production') ||
+      normalized.contains('제작') ||
       normalized.contains('예정')) {
     return '방영예정';
   }

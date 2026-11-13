@@ -129,13 +129,14 @@ const privacyPolicyDocument = LegalDocument(
 
 const dataSourceDocument = LegalDocument(
   title: '데이터 출처 및 저작권 고지',
-  updatedAt: '시행일: 2026.09.04.',
+  updatedAt: '시행일: 2026.11.13.',
   sections: [
     LegalSection(
       title: '데이터 제공자',
       body: [
-        '신작 애니와 일부 상세 정보는 Jikan API를 통해 제공되는 MyAnimeList 기반 공개 데이터를 사용합니다.',
+        '신작 애니와 일부 상세 정보는 Jikan API를 통해 제공되는 MyAnimeList 기반 공개 데이터를 사용합니다. Jikan 응답을 받지 못하면 TMDB 자료로 대신 채웁니다.',
         '한국어 제목, 포스터, 시즌, 에피소드, 방영일 등의 일부 보강 정보는 TMDB 데이터를 기반으로 표시될 수 있습니다.',
+        '검색 결과 중 한국어 제목 없이 일본어 가나로만 적힌 항목은 특전·단편인 경우가 많아 목록에서 제외합니다. 로마자 제목은 그대로 보여줍니다.',
         '애니 소식은 Google 뉴스 RSS, Bing 뉴스 RSS 등 외부 뉴스 검색 결과에서 제목, 요약, 출처, 날짜, 원문 링크를 정리해 보여줍니다.',
       ],
     ),

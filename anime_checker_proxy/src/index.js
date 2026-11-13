@@ -13,14 +13,16 @@ const GENRES = {
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     try {
       if (request.method === 'OPTIONS') return cors();
       if (url.pathname === '/search') return json(await searchAnime(env, url.searchParams.get('q') || ''));
-      if (url.pathname.startsWith('/anime/')) return json(await animeDetail(env, url.pathname.split('/').pop()));
+      if (url.pathname.startsWith('/anime/')) {
+        return animeDetailResponse(env, url.pathname.split('/').pop());
+      }
       if (url.pathname === '/new-anime') {
-        return newAnimeResponse(env, url);
+        return newAnimeResponse(env, url, ctx);
       }
       if (url.pathname === '/feedback' && request.method === 'POST') {
         const allowed = await allowFeedback(request, env);
@@ -29,9 +31,6 @@ export default {
         }
         const result = await saveFeedback(request, env);
         return json(result, result.ok ? 200 : 400);
-      }
-      if (url.pathname.startsWith('/episode-groups/')) {
-        return json(await episodeGroupsDebug(env, url.pathname.split('/').pop()));
       }
       if (url.pathname === '/news') return newsResponse(env, url);
       if (url.pathname === '/image') {
@@ -51,24 +50,45 @@ export default {
 // 신작/뉴스는 수집 비용이 커서 KV에 캐시한다.
 // 신선 수집이 0개면 마지막 성공분(stale)을 돌려줘 빈 화면을 막는다.
 const NEW_ANIME_STALE_KEY = 'cache:new-anime:stale';
+const NEW_ANIME_LOCK_KEY = 'cache:new-anime:collecting';
 
-async function newAnimeResponse(env, url) {
-  const region = url.searchParams.get('region') || 'KR';
-  const until = url.searchParams.get('until') || '';
-  const cacheKey = `cache:new-anime:${until || 'today'}`;
+async function newAnimeResponse(env, url, ctx) {
+  // 캐시 키에 클라이언트가 보낸 문자열을 그대로 쓰지 않는다.
+  // (날짜가 바뀔 때마다 콜드가 되고, 아무 값이나 넣어 KV를 채울 수 있다.)
+  const raw = url.searchParams.get('region') || '';
+  const region = /^[A-Za-z]{2}$/.test(raw) ? raw.toUpperCase() : 'KR';
+  const cacheKey = `cache:new-anime:${region}`;
   const cached = await kvCacheGet(env, cacheKey);
   if (cached) return json(cached);
-  const items = await newAnime(env, region, until);
-  if (items.length === 0) {
-    // 이번 수집이 비었으면 마지막 성공분을 반환(최대 30일 보관).
-    const stale = await kvCacheGet(env, NEW_ANIME_STALE_KEY);
-    if (stale) return json(stale);
-    return json({error: 'upstream returned no items'}, 503);
-  }
+  // 수집은 20초를 넘겨 앱 쪽 제한에 걸린다. 응답을 먼저 돌려주고
+  // 수집은 waitUntil로 뒤에서 끝내 다음 요청이 캐시를 받게 한다.
+  if (ctx) ctx.waitUntil(collectNewAnime(env, region, cacheKey));
+  // 이번 수집이 끝나기 전이면 마지막 성공분을 반환(최대 30일 보관).
+  const stale = await kvCacheGet(env, NEW_ANIME_STALE_KEY);
+  if (stale) return json(stale);
+  return json({error: 'collecting'}, 503);
+}
+
+async function collectNewAnime(env, region, cacheKey) {
+  if (!(await takeNewAnimeLock(env))) return;
+  // 날짜는 서버의 한국 기준 오늘을 쓴다.
+  const items = await newAnime(env, region, '').catch(() => []);
+  if (items.length === 0) return;
   const body = {items};
   await kvCachePut(env, cacheKey, body, 21600);
   await kvCachePut(env, NEW_ANIME_STALE_KEY, body, 2592000);
-  return json(body);
+}
+
+// 동시에 여러 요청이 들어와도 수집은 한 번만 돌게 한다.
+async function takeNewAnimeLock(env) {
+  if (!env.FEEDBACK_KV) return true;
+  try {
+    if (await env.FEEDBACK_KV.get(NEW_ANIME_LOCK_KEY)) return false;
+    await env.FEEDBACK_KV.put(NEW_ANIME_LOCK_KEY, '1', {expirationTtl: 300});
+    return true;
+  } catch (_) {
+    return true;
+  }
 }
 
 const NEWS_STALE_KEY = 'cache:news:stale';
@@ -176,62 +196,89 @@ async function tmdb(env, path, language = 'ko-KR') {
   return response.json();
 }
 
+// 제목이 일본어 가나로 남아 있으면 한국어 제목이 없는 특전·단편이라
+// 검색 결과만 지저분해진다. 로마자 제목(THE ONE PIECE 등)은 그대로 둔다.
+function isUntranslatedJapaneseTitle(name = '') {
+  return /[぀-ゟ゠-ヿ]/.test(name) && !hasKorean(name);
+}
+
 async function searchAnime(env, query) {
   if (!query.trim()) return {items: []};
   const data = await tmdb(env, `/search/tv?query=${encodeURIComponent(query)}&include_adult=false`);
-  const results = (data.results || []).filter((item) => isAnimeTv(item) && (item.original_language === 'ja' || hasKorean(item.name)));
+  const results = (data.results || [])
+    .filter((item) => isAnimeTv(item) && (item.original_language === 'ja' || hasKorean(item.name)))
+    .filter((item) => !isUntranslatedJapaneseTitle(item.name));
   return {items: results.slice(0, 20).map(toAnime)};
 }
 
-// 시즌이 하나로 뭉친 작품을 나눌 근거가 있는지 확인하는 임시 조회.
-async function episodeGroupsDebug(env, tvId) {
-  const list = await tmdb(env, `/tv/${tvId}/episode_groups`);
-  const groups = list.results || [];
-  const detailed = [];
-  for (const group of groups.slice(0, 3)) {
-    const detail = await tmdb(env, `/tv/episode_group/${group.id}`);
-    detailed.push({
-      id: group.id,
-      name: group.name,
-      type: group.type,
-      groupCount: group.group_count,
-      episodeCount: group.episode_count,
-      groups: (detail.groups || []).map((g) => ({
-        order: g.order,
-        name: g.name,
-        episodes: (g.episodes || []).length,
-        first: g.episodes?.[0]
-          ? {s: g.episodes[0].season_number, e: g.episodes[0].episode_number, air: g.episodes[0].air_date}
-          : null,
-        last: g.episodes?.length
-          ? {
-              s: g.episodes[g.episodes.length - 1].season_number,
-              e: g.episodes[g.episodes.length - 1].episode_number,
-              air: g.episodes[g.episodes.length - 1].air_date,
-            }
-          : null,
-      })),
-    });
-  }
-  return {count: groups.length, results: detailed};
+// 상세는 서브요청이 가장 많이 드는 경로라 KV에 캐시한다.
+async function animeDetailResponse(env, id) {
+  if (!/^(mal-)?\d+$/.test(id)) return json({error: 'invalid id'}, 400);
+  const cacheKey = `cache:anime:${id}`;
+  const cached = await kvCacheGet(env, cacheKey);
+  if (cached) return json(cached);
+  const detail = await animeDetail(env, id);
+  // 완결작은 더 바뀌지 않으니 7일, 방영 중인 작품은 앱의 12시간 갱신 주기에 맞춘다.
+  await kvCachePut(env, cacheKey, detail, isEndedStatus(detail.status) ? 604800 : 43200);
+  return json(detail);
 }
+
+function isEndedStatus(status) {
+  const text = String(status || '').toLowerCase();
+  return ['ended', 'canceled', 'cancelled', '완결', '종료', '종영', '취소'].some(
+    (word) => text.includes(word),
+  );
+}
+
+// 무료 플랜은 요청 하나당 서브요청이 50회다.
+// /tv 1회와 기수 분리 2회를 빼고 시즌 상세 → 제목 보강 순으로 나눠 쓴다.
+const DETAIL_SUBREQUEST_BUDGET = 43;
 
 async function animeDetail(env, id) {
   if (id.startsWith('mal-')) return jikanAnimeDetail(id);
   const tv = await tmdb(env, `/tv/${id}`);
   const seasonSummaries = (tv.seasons || [])
-    .filter((season) => season.season_number > 0 && season.episode_count > 0)
-    .slice(0, 24);
+    .filter((season) => season.season_number > 0 && season.episode_count > 0);
+  // 한도를 넘는 시즌은 회차 수만 채워 넣는다(통째로 버리지 않는다).
+  const detailCount = Math.min(seasonSummaries.length, DETAIL_SUBREQUEST_BUDGET);
   const seasons = await Promise.all(
-    seasonSummaries.map((season) => seasonDetail(env, id, tv, season)),
+    seasonSummaries.map((season, index) => index < detailCount
+      ? seasonDetail(env, id, tv, season)
+      : seasonFromSummary(tv, season)),
   );
+  await fillSeasonTitles(env, id, seasons, DETAIL_SUBREQUEST_BUDGET - detailCount);
   const filled = seasons.filter((season) => season.episodes.length > 0);
   const split = await splitBundledSeasons(env, id, tv, filled);
   return {
     ...toAnime(tv),
+    weekday: inferWeekday(split),
     seasons: split,
     movies: [],
   };
+}
+
+// TMDB는 편성 요일을 주지 않아 편성표가 빈다. 최근 방영분의 요일로 채운다.
+function inferWeekday(seasons) {
+  const dates = seasons
+    .flatMap((season) => season.episodes.map((episode) => episode.airDate))
+    .filter(Boolean)
+    .sort();
+  const counts = new Map();
+  for (const date of dates.slice(-3)) {
+    const label = weekdayLabelFromDate(date);
+    if (label) counts.set(label, (counts.get(label) || 0) + 1);
+  }
+  let best = '';
+  for (const [label, count] of counts) {
+    if (!best || count > counts.get(best)) best = label;
+  }
+  return best;
+}
+
+function weekdayLabelFromDate(value) {
+  const date = parseDateOnly(value);
+  if (!date) return '';
+  return ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][date.getDay()];
 }
 
 // TMDB가 여러 기수를 한 시즌에 몰아넣은 작품이 있다(여친 빌리겠습니다 60화, 블리치 366화).
@@ -392,7 +439,6 @@ async function seasonDetail(env, tvId, tv, summary) {
         sourceSeason: summary.season_number,
         sourceEpisode: episode.episode_number,
       }));
-    await fillPlaceholderTitles(env, tvId, summary.season_number, episodes);
     return {
       number: summary.season_number,
       name: seasonName(detail.name || summary.name, summary.season_number),
@@ -418,6 +464,19 @@ function episodeTitle(name, number) {
 
 function isPlaceholderTitle(title, number) {
   return !title || title === `${number}화`;
+}
+
+// 제목이 빈 화가 있는 시즌만 모아, 남은 서브요청 한도 안에서 보강한다.
+async function fillSeasonTitles(env, tvId, seasons, budget) {
+  if (budget <= 0) return;
+  const targets = seasons.filter((season) => season.episodes.some(
+    (episode) => isPlaceholderTitle(episode.title, episode.number),
+  ));
+  await Promise.all(
+    targets.slice(0, budget).map(
+      (season) => fillPlaceholderTitles(env, tvId, season.number, season.episodes),
+    ),
+  );
 }
 
 // 한국어 제목이 비어 있는 화는 원제(en-US)로 채운다.
@@ -456,31 +515,48 @@ function seasonName(name, number) {
 }
 async function newAnime(env, region, until) {
   const today = parseDateOnly(until) || koreaToday();
+  // 워커는 한 요청에서 외부 호출 50회가 한도다. Jikan이 실패해도 24회를 쓰기 때문에
+  // 단계마다 따로 세면 TMDB 폴백 차례에 한도를 넘겨 신작이 통째로 0건이 된다.
+  // 하나의 예산을 전 단계가 나눠 쓴다.
+  const budget = {left: NEW_ANIME_SUBREQUEST_BUDGET};
   const [jikanItems, upcomingItems] = await Promise.all([
-    jikanNewAnime(env, today).catch(() => []),
-    jikanUpcomingAnime(today).catch(() => []),
+    jikanNewAnime(env, today, budget).catch(() => []),
+    jikanUpcomingAnime(today, budget).catch(() => []),
   ]);
   let merged = mergeAnimeItems([...jikanItems, ...upcomingItems]);
   // Jikan이 완전히 실패하면(레이트리밋/차단) TMDB 신작으로 폴백한다.
   if (merged.length === 0) {
-    merged = await tmdbNewAnime(env, region, today).catch(() => []);
+    merged = await tmdbNewAnime(env, region, today, budget).catch(() => []);
   }
   const sortedItems = merged
     .sort((a, b) => releaseSort(a, b, today))
     .slice(0, 500)
     .map(applyKnownKoreanTitle);
-  const enrichedItems = await enrichRecentJikanTitles(env, sortedItems);
+  const enrichedItems = await enrichRecentJikanTitles(env, sortedItems, budget);
   return dedupeAnimeItemsByTitle(enrichedItems)
     .sort((a, b) => releaseSort(a, b, today))
     .slice(0, 500);
 }
 
-async function tmdbNewAnime(env, region, today) {
-  const months = monthsFromYearStart(today);
+// 50회 한도에서 KV 조회/기록 몫을 남긴 값.
+const NEW_ANIME_SUBREQUEST_BUDGET = 44;
+
+// 12개월을 한꺼번에 받으면 한도를 넘겨 전부 실패하므로,
+// 최근 달부터 남은 예산 안에서만 받아 모자라면 일부라도 돌려준다.
+// 한 달에 쓰는 호출 수: 3종류 × 2페이지.
+const TMDB_CALLS_PER_MONTH = 6;
+
+async function tmdbNewAnime(env, region, today, budget) {
+  // 직렬로 돌리면 백그라운드 수집이 시간 제한에 잘린다.
+  // 받을 달 수를 예산에서 미리 정하고 병렬로 받는다.
+  const left = budget ? budget.left : TMDB_CALLS_PER_MONTH * 6;
+  const allowed = Math.max(1, Math.floor(left / TMDB_CALLS_PER_MONTH));
+  const months = monthsFromYearStart(today).reverse().slice(0, allowed);
+  if (budget) budget.left -= months.length * TMDB_CALLS_PER_MONTH;
   const seen = new Set();
   const items = [];
   const monthGroups = await Promise.all(
-    months.map((month) => newAnimeForMonth(env, region, month.start, month.end)),
+    months.map((month) => newAnimeForMonth(env, region, month.start, month.end).catch(() => [])),
   );
   for (const monthItems of monthGroups) {
     for (const item of monthItems) {
@@ -496,11 +572,11 @@ async function tmdbNewAnime(env, region, today) {
     .map(toAnime);
 }
 
-async function jikanNewAnime(env, today) {
+async function jikanNewAnime(env, today, budget) {
   const releases = [];
   for (const season of jikanSeasonsFromYearStart(today)) {
     try {
-      releases.push(...await jikanSeason(season.year, season.name));
+      releases.push(...await jikanSeason(season.year, season.name, budget));
     } catch (_) {
       // Keep already fetched seasons when Jikan rate-limits one season.
     }
@@ -514,9 +590,11 @@ async function jikanNewAnime(env, today) {
   return items;
 }
 
-async function jikanUpcomingAnime(today) {
+async function jikanUpcomingAnime(today, budget) {
   const releases = [];
-  for (let page = 1; page <= 6; page += 1) {
+  for (let page = 1; page <= 3; page += 1) {
+    if (budget && budget.left <= 0) break;
+    if (budget) budget.left -= 1;
     try {
       const data = await jikan(`/seasons/upcoming?page=${page}&sfw=true`);
       releases.push(...(data.data || []));
@@ -533,17 +611,16 @@ async function jikanUpcomingAnime(today) {
     .sort((a, b) => animeItemDate(b).localeCompare(animeItemDate(a)));
 }
 // 한국어 제목이 없는 상위 항목을 TMDB 검색으로 보강한다.
-// 무료 플랜 서브요청 제한(요청당 50회)을 고려해 TMDB 호출을 25회로 제한.
-// 결과는 KV에 캐시되므로 6시간에 한 번만 수행된다.
-async function enrichRecentJikanTitles(env, items) {
+// 남은 공용 예산 안에서만 호출한다. 결과는 KV에 캐시되므로 6시간에 한 번만 수행된다.
+async function enrichRecentJikanTitles(env, items, budget) {
   if (!env.TMDB_API_KEY) return items;
-  let budget = 25;
+  const left = budget || {left: 12};
   const result = [];
   for (const anime of items) {
-    if (budget > 0 && !hasKorean(anime.title)) {
+    if (left.left > 0 && !hasKorean(anime.title)) {
       const query = (anime.originalTitle || anime.title || '').trim();
       if (query.length >= 2) {
-        budget -= 1;
+        left.left -= 1;
         const match = await tmdbKoreanAnimeMatch(env, 'tv', query, anime.firstAirDate);
         if (match) {
           result.push({
@@ -946,10 +1023,12 @@ function isAnimeResult(item) {
   return Array.isArray(item.genre_ids) && item.genre_ids.includes(16) && (!item.original_language || item.original_language === 'ja');
 }
 
-async function jikanSeason(year, season) {
+async function jikanSeason(year, season, budget) {
   const items = [];
   let lastPage = 1;
   for (let page = 1; page <= Math.min(lastPage, 6); page += 1) {
+    if (budget && budget.left <= 0) break;
+    if (budget) budget.left -= 1;
     try {
       const data = await jikan(`/seasons/${year}/${season}?page=${page}&sfw=true`);
       items.push(...(data.data || []));
@@ -973,7 +1052,9 @@ async function jikan(path) {
       'user-agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     },
-    signal: AbortSignal.timeout(9000),
+    // Jikan이 Cloudflare에서 막히면 호출마다 끝까지 기다리느라
+    // 분기 4번에 36초가 날아가고 백그라운드 수집이 시간 제한에 잘린다.
+    signal: AbortSignal.timeout(3000),
   });
   if (!response.ok) throw new Error(`Jikan ${response.status}`);
   return response.json();
@@ -993,7 +1074,7 @@ async function newAnimeForMonth(env, region, start, end) {
 
 async function discoverNewAnime(env, start, end, extraParams) {
   const items = [];
-  for (let page = 1; page <= 4; page += 1) {
+  for (let page = 1; page <= 2; page += 1) {
     const params = new URLSearchParams({
       'first_air_date.gte': isoDate(start),
       'first_air_date.lte': isoDate(end),
@@ -1012,7 +1093,7 @@ async function discoverNewAnime(env, start, end, extraParams) {
 
 async function discoverNewAnimeMovies(env, start, end) {
   const items = [];
-  for (let page = 1; page <= 4; page += 1) {
+  for (let page = 1; page <= 2; page += 1) {
     const params = new URLSearchParams({
       'primary_release_date.gte': isoDate(start),
       'primary_release_date.lte': isoDate(end),

@@ -109,7 +109,10 @@ class DetailScreen extends ConsumerWidget {
                       Text(
                         anime.isMovie
                             ? '극장판'
-                            : (anime.status.isEmpty ? '상태 확인 중' : anime.status),
+                            : animeAiringStatusLabel(
+                                anime.firstAirDate,
+                                status: anime.status,
+                              ),
                       ),
                       if (!anime.isMovie &&
                           isAnimeCurrentlyAiring(

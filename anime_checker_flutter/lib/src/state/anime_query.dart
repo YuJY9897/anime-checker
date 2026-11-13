@@ -153,7 +153,9 @@ int _compareEpisodeTargets(EpisodeTarget a, EpisodeTarget b) {
 Map<String, List<Anime>> scheduleByWeekday(AppData data) {
   final map = <String, List<Anime>>{};
   for (final anime in allAnime(data)) {
-    if (!isCurrentlyAiring(anime)) continue;
+    if (!isAnimeCurrentlyAiring(anime.firstAirDate, status: anime.status)) {
+      continue;
+    }
     final storedWeekday = normalizedWeekday(anime.weekday);
     final weekday = storedWeekday.isNotEmpty
         ? storedWeekday
@@ -165,21 +167,6 @@ Map<String, List<Anime>> scheduleByWeekday(AppData data) {
     items.sort((a, b) => a.title.compareTo(b.title));
   }
   return map;
-}
-
-bool isCurrentlyAiring(Anime anime) {
-  final status = anime.status.trim().toLowerCase();
-  final ended =
-      status.contains('ended') ||
-      status.contains('canceled') ||
-      status.contains('cancelled') ||
-      status.contains('종료') ||
-      status.contains('완결') ||
-      status.contains('종영') ||
-      status.contains('취소');
-  if (ended) return false;
-  if (status.isNotEmpty) return true;
-  return inferredCurrentWeekday(anime).isNotEmpty;
 }
 
 String normalizedWeekday(String value) {
@@ -199,7 +186,9 @@ String inferredCurrentWeekday(Anime anime) {
   for (final season in anime.seasons) {
     for (final episode in season.episodes) {
       final date = parseDate(episode.airDate);
-      if (date == null || date.year != today.year) continue;
+      // 바로 아래 14일 창이 이미 범위를 좁힌다.
+      // 연도까지 보면 1월 초에 작년 12월 방영분이 전부 걸러져 편성표가 빈다.
+      if (date == null) continue;
       final day = DateTime(date.year, date.month, date.day);
       if (day.isBefore(today.subtract(const Duration(days: 14)))) continue;
       if (bestDate == null || day.isBefore(bestDate)) bestDate = day;

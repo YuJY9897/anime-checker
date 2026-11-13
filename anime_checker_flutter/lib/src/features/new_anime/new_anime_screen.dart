@@ -102,7 +102,7 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                         initialValue: selectedYear,
                         style: Theme.of(context).textTheme.bodyMedium,
                         decoration: const InputDecoration(
-                          labelText: '년도',
+                          labelText: '연도',
                           isDense: true,
                           border: OutlineInputBorder(),
                         ),
@@ -187,9 +187,8 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
             else if (items.isEmpty)
               EmptyState(
                 title: '신작 정보를 가져오지 못했어요',
-                message: controller.error == null
-                    ? '인터넷 연결이나 프록시 설정을 확인해 주세요.'
-                    : '인터넷 연결을 확인해 주세요. (${controller.error})',
+                // 예외 문자열은 화면에 붙이지 않는다.
+                message: '지금 신작 정보를 못 가져왔어요. 잠시 뒤 다시 시도해 주세요.',
                 actionLabel: '다시 시도',
                 onAction: controller.refreshNewAnime,
               )

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_controller.dart';
+import '../../core/format/date_text.dart';
 import '../../data/models/models.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/scroll_top_area.dart';
@@ -45,7 +46,7 @@ class ScheduleScreen extends ConsumerWidget {
           if (schedule.isEmpty)
             const EmptyState(
               title: '편성표가 비어 있어요',
-              message: '현재 방영 중이고 요일 정보가 있는 작품만 여기에 표시돼요.',
+              message: '방영 중인 작품의 요일을 아직 알아내지 못했어요. 저장된 요일이 없으면 최근 2주 안에 나온 화의 방영일로 추론해요.',
               icon: Icons.calendar_month_outlined,
             )
           else
@@ -157,7 +158,7 @@ class _ScheduleRow extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w800),
       ),
       subtitle: Text(
-        anime.status,
+        animeAiringStatusLabel(anime.firstAirDate, status: anime.status),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

@@ -15,7 +15,30 @@ class EpisodeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(appControllerProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(season.name)),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              anime.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            ),
+            Text(
+              season.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
       body: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         itemBuilder: (context, index) {
@@ -92,7 +115,30 @@ class EpisodeScreen extends ConsumerWidget {
     Episode episode,
     bool watched,
   ) async {
-    if (watched && !controller.isInLibrary(anime.id)) {
+    if (!watched) {
+      // 되돌리기는 이 화 하나가 아니라 뒤쪽 화까지 지우므로 먼저 확인받는다.
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('시청 기록을 지울까요?'),
+          content: Text('${episode.number}화부터 이 시즌 마지막 화까지 시청 기록을 지웁니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('지우기'),
+            ),
+          ],
+        ),
+      );
+      if (accepted != true) return;
+      await controller.setEpisodeWatched(anime, season, episode, false);
+      return;
+    }
+    if (!controller.isInLibrary(anime.id)) {
       final accepted = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(

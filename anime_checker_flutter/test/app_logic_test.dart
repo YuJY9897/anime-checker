@@ -63,8 +63,19 @@ class SyncApiClient extends AnimeApiClient {
   Future<List<NewsArticle>> fetchNews() async => const [];
 }
 
-Anime airingAnime(List<Episode> episodes) => Anime(
-  id: '100',
+/// 갱신이 느린 서버를 흉내 낸다. 갱신 도중에 보관함을 바꿔 보려고 쓴다.
+class SlowSyncApiClient extends SyncApiClient {
+  SlowSyncApiClient(super.detail);
+
+  @override
+  Future<Anime?> fetchAnime(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    return super.fetchAnime(id);
+  }
+}
+
+Anime airingAnime(List<Episode> episodes, {String id = '100'}) => Anime(
+  id: id,
   title: '테스트 애니',
   originalTitle: '',
   posterUrl: '',
@@ -115,6 +126,23 @@ void main() {
     expect(season.episodes[1].title, '2화');
     expect(controller.isEpisodeWatched('100', 1, 1), isTrue);
     expect(repo.saved.animeSyncedAt['100'], isNotNull);
+  });
+
+  test('anime added while syncing is not wiped by the sync commit', () async {
+    final stored = airingAnime(const [
+      Episode(number: 1, title: '출항', airDate: '2026-01-07'),
+    ]);
+    final repo = FakeRepository()
+      ..saved = AppData.empty().copyWith(animeList: {stored.id: stored});
+    final controller = AppController(repo, SlowSyncApiClient(stored));
+
+    await controller.load();
+    // 회차 갱신이 도는 중에 보관함에 작품을 추가한다.
+    await controller.addAnime(airingAnime(const [], id: '200'));
+    await controller.pendingEpisodeSync;
+
+    expect(controller.data.animeList.containsKey('200'), isTrue);
+    expect(repo.saved.animeList.containsKey('200'), isTrue);
   });
 
   test('recently synced anime is not fetched again', () async {

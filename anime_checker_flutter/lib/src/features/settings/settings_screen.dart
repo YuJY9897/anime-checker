@@ -50,27 +50,33 @@ class SettingsScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: const Icon(Icons.delete_sweep_outlined),
-                      onPressed: () => _confirmReset(context, controller),
-                      label: const Text('전체 초기화'),
+                      icon: const Icon(Icons.cloud_download_outlined),
+                      onPressed:
+                          controller.apiConfigured && !controller.refreshingAll
+                          ? () => _confirmRefreshAll(context, controller)
+                          : null,
+                      label: const Text('정보 다시 받기'),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              if (controller.refreshingAll)
-                _RefreshAllProgress(controller: controller)
-              else
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.cloud_download_outlined),
-                    onPressed: controller.apiConfigured
-                        ? () => _confirmRefreshAll(context, controller)
-                        : null,
-                    label: const Text('모든 작품 정보 다시 받기'),
+              if (controller.refreshingAll) ...[
+                const SizedBox(height: 8),
+                _RefreshAllProgress(controller: controller),
+              ],
+              const SizedBox(height: 4),
+              // 기록을 전부 지우는 버튼이라 다른 버튼과 색과 자리를 나눈다.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.error,
                   ),
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                  onPressed: () => _confirmReset(context, controller),
+                  label: const Text('전체 초기화'),
                 ),
+              ),
             ],
           ),
           _SettingsGroup(

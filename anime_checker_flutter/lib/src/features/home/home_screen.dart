@@ -49,7 +49,7 @@ class HomeScreen extends ConsumerWidget {
                       '방영일: ${formatStoredDate(target.episode.airDate)}',
                     ],
                     onLongPress: () =>
-                        _showAnimeMenu(context, controller, target.anime.id),
+                        _showAnimeMenu(context, controller, target),
                   );
                 }).toList(),
               ),
@@ -63,14 +63,28 @@ class HomeScreen extends ConsumerWidget {
   void _showAnimeMenu(
     BuildContext context,
     AppController controller,
-    String animeId,
+    EpisodeTarget target,
   ) {
+    final animeId = target.anime.id;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
         child: Wrap(
           children: [
+            ListTile(
+              leading: const Icon(Icons.check_circle_outline),
+              title: Text('${episodeLabel(target.episode)} 시청 완료'),
+              onTap: () {
+                Navigator.pop(context);
+                controller.setEpisodeWatched(
+                  target.anime,
+                  target.season,
+                  target.episode,
+                  true,
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.pause_circle_outline),
               title: Text(controller.isDropped(animeId) ? '복귀' : '보류'),
@@ -84,11 +98,39 @@ class HomeScreen extends ConsumerWidget {
               title: const Text('삭제'),
               onTap: () {
                 Navigator.pop(context);
-                controller.deleteAnime(animeId);
+                _confirmDelete(context, controller, target.anime);
               },
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 보관함·상세와 같은 확인을 거쳐야 시청 기록이 지워진다.
+  void _confirmDelete(
+    BuildContext context,
+    AppController controller,
+    Anime anime,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('삭제할까요?'),
+        content: Text('${anime.title} 기록을 삭제합니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.deleteAnime(anime.id);
+            },
+            child: const Text('삭제'),
+          ),
+        ],
       ),
     );
   }

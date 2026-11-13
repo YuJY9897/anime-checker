@@ -44,7 +44,12 @@ class AppController extends ChangeNotifier {
   List<NewsArticle> news = const [];
   bool ready = false;
   bool busy = false;
+
+  /// 실패한 화면끼리 메시지를 덮어쓰지 않도록 따로 둔다.
   String? error;
+  String? searchError;
+  String? newAnimeError;
+  String? newsError;
   bool newAnimeLoading = false;
   bool newsLoading = false;
   bool episodeSyncing = false;
@@ -93,8 +98,6 @@ class AppController extends ChangeNotifier {
   List<EpisodeTarget> get todayTargets => query.todayTargets(data);
 
   Map<String, List<Anime>> get scheduleByWeekday => query.scheduleByWeekday(data);
-
-  bool isCurrentlyAiring(Anime anime) => query.isCurrentlyAiring(anime);
 
   String normalizedWeekday(String value) => query.normalizedWeekday(value);
 
@@ -171,10 +174,8 @@ class AppController extends ChangeNotifier {
     notifyListeners();
 
     final now = DateTime.now();
-    final list = Map<String, Anime>.from(data.animeList);
-    final syncedAt = Map<String, String>.from(data.animeSyncedAt);
+    final updated = <String, Anime>{};
     var watched = data.watchedEpisodes;
-    var changed = false;
     try {
       for (final anime in targets) {
         if (_cancelRefreshAll) break;
@@ -188,9 +189,7 @@ class AppController extends ChangeNotifier {
               before: anime.seasons,
               after: merged.seasons,
             );
-            list[anime.id] = merged;
-            syncedAt[anime.id] = now.toIso8601String();
-            changed = true;
+            updated[anime.id] = merged;
           }
         } catch (_) {
           // 한 작품이 실패해도 나머지는 계속 받는다.
@@ -199,11 +198,12 @@ class AppController extends ChangeNotifier {
         notifyListeners();
         await Future<void>.delayed(const Duration(milliseconds: 400));
       }
-      if (changed) {
+      if (updated.isNotEmpty) {
         await _commit(
-          mutate
-              .withSyncedAnime(data, list, syncedAt)
-              .copyWith(watchedEpisodes: watched),
+          _withUpdatedAnime(
+            updated,
+            now,
+          ).copyWith(watchedEpisodes: watched),
         );
       }
     } finally {
@@ -224,7 +224,10 @@ class AppController extends ChangeNotifier {
     final now = DateTime.now();
     final targets = libraryAnime
         .where((anime) => !anime.isMovie && !anime.id.startsWith('movie-'))
-        .where(query.isCurrentlyAiring)
+        .where(
+          (anime) =>
+              isAnimeCurrentlyAiring(anime.firstAirDate, status: anime.status),
+        )
         .where((anime) => force || sync.needsEpisodeSync(data, anime.id, now))
         .toList()
       // 오래 갱신되지 않은 작품부터 처리해 특정 작품만 계속 밀리지 않게 한다.
@@ -236,10 +239,8 @@ class AppController extends ChangeNotifier {
 
     episodeSyncing = true;
     notifyListeners();
-    final list = Map<String, Anime>.from(data.animeList);
-    final syncedAt = Map<String, String>.from(data.animeSyncedAt);
+    final updated = <String, Anime>{};
     var watched = data.watchedEpisodes;
-    var changed = false;
     try {
       for (final anime in batch) {
         try {
@@ -253,26 +254,39 @@ class AppController extends ChangeNotifier {
               before: anime.seasons,
               after: merged.seasons,
             );
-            list[anime.id] = merged;
-            syncedAt[anime.id] = now.toIso8601String();
-            changed = true;
+            updated[anime.id] = merged;
           }
         } catch (_) {
           // 한 작품이 실패해도 나머지는 계속 갱신한다.
         }
         await Future<void>.delayed(const Duration(milliseconds: 400));
       }
-      if (changed) {
+      if (updated.isNotEmpty) {
         await _commit(
-          mutate
-              .withSyncedAnime(data, list, syncedAt)
-              .copyWith(watchedEpisodes: watched),
+          _withUpdatedAnime(
+            updated,
+            now,
+          ).copyWith(watchedEpisodes: watched),
         );
       }
     } finally {
       episodeSyncing = false;
       notifyListeners();
     }
+  }
+
+  /// 갱신이 도는 10~30초 사이에 사용자가 보관함을 바꿀 수 있다.
+  /// 시작 시점 사본으로 통째로 덮지 말고, 받아온 작품만 지금 데이터에 얹는다.
+  AppData _withUpdatedAnime(Map<String, Anime> updated, DateTime syncedTime) {
+    final list = Map<String, Anime>.from(data.animeList);
+    final syncedAt = Map<String, String>.from(data.animeSyncedAt);
+    updated.forEach((animeId, anime) {
+      // 갱신 중에 지운 작품은 되살리지 않는다.
+      if (!list.containsKey(animeId)) return;
+      list[animeId] = anime;
+      syncedAt[animeId] = syncedTime.toIso8601String();
+    });
+    return mutate.withSyncedAnime(data, list, syncedAt);
   }
 
   Future<void> refreshAnimeDetail(String animeId) async {
@@ -321,7 +335,7 @@ class AppController extends ChangeNotifier {
     final keyword = text.trim();
     if (keyword.isEmpty) {
       searchResults = const [];
-      error = null;
+      searchError = null;
       notifyListeners();
       return;
     }
@@ -335,9 +349,9 @@ class AppController extends ChangeNotifier {
       } else {
         searchResults = localResults;
       }
-      error = null;
+      searchError = null;
     } catch (e) {
-      error = '$e';
+      searchError = _friendlyError(e);
       searchResults = query.searchLocal(data, keyword);
     } finally {
       busy = false;
@@ -356,9 +370,9 @@ class AppController extends ChangeNotifier {
     try {
       newAnime = await _apiClient.fetchNewAnime();
       newAnimeBasis = nowBasisText();
-      error = null;
+      newAnimeError = null;
     } catch (e) {
-      error = '$e';
+      newAnimeError = _friendlyError(e);
     } finally {
       newAnimeLoading = false;
       notifyListeners();
@@ -376,9 +390,9 @@ class AppController extends ChangeNotifier {
     try {
       news = await _apiClient.fetchNews();
       newsBasis = nowBasisText();
-      error = null;
+      newsError = null;
     } catch (e) {
-      error = '$e';
+      newsError = _friendlyError(e);
     } finally {
       newsLoading = false;
       notifyListeners();
@@ -516,4 +530,17 @@ class AppController extends ChangeNotifier {
     await _localRepository.save(data);
     notifyListeners();
   }
+}
+
+/// 예외 문자열은 화면에 그대로 띄우지 않는다. 원문은 디버그 로그로만 남긴다.
+String _friendlyError(Object error) {
+  final text = '$error';
+  debugPrint('anime_checker: $text');
+  if (text.contains('TimeoutException')) return '응답이 늦어요. 잠시 뒤 다시 시도해 주세요.';
+  if (text.contains('SocketException') ||
+      text.contains('HandshakeException') ||
+      text.contains('ClientException')) {
+    return '인터넷 연결을 확인해 주세요.';
+  }
+  return '잠시 뒤 다시 시도해 주세요.';
 }
