@@ -146,6 +146,7 @@ class _DaySection extends StatelessWidget {
           // 다른 화면과 같은 표지 카드를 쓴다. 편성표만 글자 목록이면 따로 논다.
           TwoColumnAnimeGrid(
             listMode: !controller.settings.showPosterImages,
+            horizontalPadding: 0,
             children: items.map((anime) {
               final isDropped = controller.isDropped(anime.id);
               return AnimePosterCard.fromAnime(

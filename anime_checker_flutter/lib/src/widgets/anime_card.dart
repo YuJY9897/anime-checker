@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/format/genre_text.dart';
 import '../data/models/models.dart';
+import 'progress_bar.dart';
 
 class AnimeCardAction {
   const AnimeCardAction({
@@ -168,13 +169,9 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                     if (widget.progress != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: widget.progress!.clamp(0, 1),
-                            minHeight: 4,
-                            backgroundColor: colors.surfaceContainerHighest,
-                          ),
+                        child: GradientProgressBar(
+                          value: widget.progress!,
+                          height: 4,
                         ),
                       ),
                     if (widget.actions.isNotEmpty) ...[
@@ -279,13 +276,9 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                     if (widget.progress != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 7),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: widget.progress!.clamp(0, 1),
-                            minHeight: 3,
-                            backgroundColor: colors.surfaceContainerHighest,
-                          ),
+                        child: GradientProgressBar(
+                          value: widget.progress!,
+                          height: 3,
                         ),
                       ),
                   ],
@@ -309,16 +302,25 @@ class TwoColumnAnimeGrid extends StatelessWidget {
     super.key,
     required this.children,
     this.listMode = false,
+    this.horizontalPadding = 16,
   });
 
   final List<Widget> children;
   final bool listMode;
 
+  /// 바깥에서 이미 좌우 여백을 준 화면(편성표)은 0을 넘겨 여백이 겹치지 않게 한다.
+  final double horizontalPadding;
+
   @override
   Widget build(BuildContext context) {
     if (listMode) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 22),
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          6,
+          horizontalPadding,
+          22,
+        ),
         child: Column(
           children: [
             for (var index = 0; index < children.length; index += 1)
@@ -355,7 +357,7 @@ class TwoColumnAnimeGrid extends StatelessWidget {
       );
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 22),
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 6, horizontalPadding, 22),
       child: Column(children: rows),
     );
   }

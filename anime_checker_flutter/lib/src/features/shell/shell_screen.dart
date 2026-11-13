@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_controller.dart';
+import '../../widgets/ambient_background.dart';
 import '../home/main_sections.dart';
 import '../patch_notes/patch_notes_screen.dart';
 import '../search/search_screen.dart';
@@ -124,9 +125,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
             const SizedBox(width: 8),
           ],
         ),
-        body: controller.ready
-            ? MainSectionBody(section: section)
-            : const Center(child: CircularProgressIndicator()),
+        body: AmbientBackground(
+          child: controller.ready
+              ? MainSectionBody(section: section)
+              : const Center(child: CircularProgressIndicator()),
+        ),
       ),
     );
   }
