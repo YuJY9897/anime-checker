@@ -86,9 +86,15 @@ String progressLabel(AppData data, Anime anime) {
 String latestWatchLabel(AppData data, Anime anime) {
   var latestSeason = 0;
   var latestEpisode = 0;
-  for (final season in anime.seasons) {
+  // 외전은 빼고, 순서대로 훑은 마지막이 아니라 실제로 가장 뒤 좌표를 고른다.
+  // 시즌 목록이 번호순이 아닐 수 있어 순서만 믿으면 엉뚱한 화가 나온다.
+  for (final season in mainSeasons(anime)) {
     for (final episode in season.episodes) {
-      if (isEpisodeWatched(data, anime.id, season.number, episode.number)) {
+      if (!isEpisodeWatched(data, anime.id, season.number, episode.number)) {
+        continue;
+      }
+      if (season.number > latestSeason ||
+          (season.number == latestSeason && episode.number > latestEpisode)) {
         latestSeason = season.number;
         latestEpisode = episode.number;
       }
@@ -231,7 +237,7 @@ String inferredCurrentWeekday(Anime anime) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   DateTime? bestDate;
-  for (final season in anime.seasons) {
+  for (final season in mainSeasons(anime)) {
     for (final episode in season.episodes) {
       final date = parseDate(episode.airDate);
       // 바로 아래 14일 창이 이미 범위를 좁힌다.
@@ -239,7 +245,9 @@ String inferredCurrentWeekday(Anime anime) {
       if (date == null) continue;
       final day = DateTime(date.year, date.month, date.day);
       if (day.isBefore(today.subtract(const Duration(days: 14)))) continue;
-      if (bestDate == null || day.isBefore(bestDate)) bestDate = day;
+      // '최근' 방영일이어야 한다. 예전에는 가장 이른 날을 골라
+      // 2주 창 맨 앞 회차의 요일이 나왔다.
+      if (bestDate == null || day.isAfter(bestDate)) bestDate = day;
     }
   }
   if (bestDate == null) return '';
@@ -249,7 +257,9 @@ String inferredCurrentWeekday(Anime anime) {
 List<Anime> searchLocal(AppData data, String keyword) {
   final lowered = keyword.toLowerCase();
   return allAnime(data).where((anime) {
-    return anime.id.toLowerCase().contains(lowered) ||
+    // 작품 번호는 정확히 같을 때만 친다. 부분 일치로 두면 '1'만 쳐도
+    // 번호에 1이 든 작품이 줄줄이 걸려 제목 검색 결과를 밀어냈다.
+    return anime.id.toLowerCase() == lowered ||
         anime.title.toLowerCase().contains(lowered) ||
         anime.originalTitle.toLowerCase().contains(lowered);
   }).toList();

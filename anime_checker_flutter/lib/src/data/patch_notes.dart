@@ -16,6 +16,22 @@ class PatchNote {
 
 const patchNotes = <PatchNote>[
   PatchNote(
+    version: '1.0.11',
+    date: '2026.11.14',
+    items: [
+      '화면을 전체적으로 손봤어요. 글자 크기 차이를 키우고 카드에 그림자를 넣어 무엇을 먼저 볼지 또렷해졌습니다.',
+      '환경설정에 "큰 표지로 보기"를 넣었어요. 끄면 작은 표지가 붙은 한 줄 목록으로 바뀌어 한 화면에 더 많이 담깁니다.',
+      '방영 상태를 색이 있는 표시로 올렸어요. 방영중만 눈에 띄게 하고, 알 수 없을 때는 아무 말도 하지 않습니다.',
+      '저장 도중에 앱이 꺼져도 기록이 사라지지 않도록 고쳤어요.',
+      '진행률 막대가 보이지 않던 문제를 고쳤어요.',
+      '메뉴를 열면 "새 화"와 "보관함"이 잘려 보이지 않던 문제를 고쳤어요.',
+      '보관함에는 요일이 적혀 있는데 편성표에는 없던 작품이 서로 맞게 됐어요.',
+      '편성표가 비었을 때 이유를 알려주고 "회차 다시 받기"를 바로 누를 수 있어요.',
+      '시청 통계의 진행률이 100%를 넘던 문제를 고쳤어요.',
+      '처음 설치하면 어두운 화면으로 시작합니다.',
+    ],
+  ),
+  PatchNote(
     version: '1.0.10',
     date: '2026.11.13',
     items: [
@@ -83,8 +99,11 @@ const patchNotes = <PatchNote>[
 ///
 /// [lastSeenVersion]은 사용자가 마지막으로 확인한 버전이다.
 /// 비어 있으면(처음 켜거나 이 기능이 생기기 전 사용자) 최신 내용을 한 번 보여준다.
-PatchNote? patchNoteToShow(String lastSeenVersion) {
+/// [hasHistory]가 false면 이번이 첫 실행이다. 앱을 처음 켠 사람에게
+/// '무엇을 고쳤다'는 목록을 먼저 보여줄 이유가 없으므로 건너뛴다.
+PatchNote? patchNoteToShow(String lastSeenVersion, {bool hasHistory = true}) {
   if (patchNotes.isEmpty) return null;
   final latest = patchNotes.first;
+  if (!hasHistory) return null;
   return lastSeenVersion == latest.version ? null : latest;
 }

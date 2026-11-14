@@ -149,8 +149,12 @@ class AppController extends ChangeNotifier {
   Future<void> get pendingEpisodeSync async => _episodeSyncTask;
 
   /// 업데이트 후 아직 안 본 안내가 있으면 그 내용을, 없으면 null.
-  PatchNote? get pendingPatchNote =>
-      patchNoteToShow(data.lastSeenPatchVersion);
+  /// 보관함도 시청 기록도 없으면 앱을 막 설치한 사람이다. 그런 사람에게
+  /// '무엇을 고쳤다'는 목록을 첫 화면으로 보여주지 않는다.
+  PatchNote? get pendingPatchNote => patchNoteToShow(
+    data.lastSeenPatchVersion,
+    hasHistory: data.animeList.isNotEmpty || data.watchedEpisodes.isNotEmpty,
+  );
 
   /// 안내를 봤다고 기록해 다음부터는 뜨지 않게 한다.
   Future<void> markPatchNoteSeen(String version) async {

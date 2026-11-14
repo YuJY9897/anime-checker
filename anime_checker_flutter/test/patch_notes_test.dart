@@ -41,4 +41,8 @@ void main() {
       }
     }
   });
+
+  test('앱을 막 설치한 사람에게는 안내창을 띄우지 않는다', () {
+    expect(patchNoteToShow('', hasHistory: false), isNull);
+  });
 }

@@ -61,9 +61,11 @@ WatchStats watchStats(AppData data) {
   final genres = <String, int>{};
 
   // 진행률 분모는 보류작까지 포함해야 총 시청 화수와 기준이 맞는다.
+  var watchedInLibrary = 0;
   for (final anime in everything) {
     totalEpisodes += query.totalEpisodeCount(anime);
     final watched = query.watchedCount(data, anime);
+    watchedInLibrary += watched;
     if (watched > longestCount) {
       longestCount = watched;
       longestTitle = anime.title;
@@ -98,7 +100,10 @@ WatchStats watchStats(AppData data) {
     });
 
   return WatchStats(
-    watchedEpisodes: data.watchedEpisodes.values.where((v) => v).length,
+    // 분모(totalEpisodes)가 본편만 세므로 분자도 같은 기준이어야 한다.
+    // 예전에는 저장된 기록을 통째로 세서 외전이나 자리가 없어진 옛 좌표까지
+    // 들어갔고, 그러면 진행률이 100%를 넘을 수 있었다.
+    watchedEpisodes: watchedInLibrary,
     watchedMovies: data.watchedMovies.values.where((v) => v).length,
     finishedAnime: finished,
     watchingAnime: watching,

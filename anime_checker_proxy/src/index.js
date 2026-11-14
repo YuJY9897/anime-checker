@@ -73,7 +73,11 @@ async function collectNewAnime(env, region, cacheKey) {
   if (!(await takeNewAnimeLock(env))) return;
   // 날짜는 서버의 한국 기준 오늘을 쓴다.
   const items = await newAnime(env, region, '').catch(() => []);
-  if (items.length === 0) return;
+  if (items.length === 0) {
+    // 0건이면 잠금을 바로 풀어 다음 요청이 5분을 기다리지 않게 한다.
+    await env.FEEDBACK_KV?.delete(NEW_ANIME_LOCK_KEY).catch(() => {});
+    return;
+  }
   const body = {items};
   await kvCachePut(env, cacheKey, body, 21600);
   await kvCachePut(env, NEW_ANIME_STALE_KEY, body, 2592000);
@@ -916,7 +920,7 @@ function knownKoreanTitle(title = '') {
     [/Vermilion Mask/i, '주홍빛 가면'],
     [/Hotel Inhumans/i, '호텔 인휴먼즈 2기'],
     [/Overgeared/i, '템빨'],
-    [/#?I'm Looking for Zombie|Zombie/i, '좀비를 찾습니다'],
+    [/^#?I'm Looking for Zombie/i, '좀비를 찾습니다'],
     [/Tank Chair/i, '탱크 체어'],
     [/Cheat Fuyo Majutsushi/i, '추방당한 치트 부여 마술사'],
     [/Ace of Diamond/i, '다이아몬드 에이스 Act II 2기 Part 2'],
@@ -943,11 +947,11 @@ function knownKoreanTitle(title = '') {
     [/Bleach/i, '블리치: 천년혈전편'],
     [/Elusive Samurai/i, '도망을 잘 치는 도련님 2기'],
     [/Keroro Gunsou/i, '개구리 중사 케로로'],
-    [/Baki/i, '바키도'],
+    [/^Baki/i, '바키도'],
     [/Mr\. Osomatsu|Osomatsu/i, '오소마츠상'],
-    [/Detective Conan/i, '명탐정 코난'],
+    [/^Detective Conan$/i, '명탐정 코난'],
     [/Smoking Behind the Supermarket/i, '슈퍼 뒤에서 담배 피우는 두 사람'],
-    [/Mononoke/i, '모노노케'],
+    [/^Mononoke$/i, '모노노케'],
     [/Patlabor/i, '기동경찰 패트레이버'],
     [/Irregular at Magic High School/i, '마법과고교의 열등생'],
     [/Love Live/i, '러브 라이브!'],
@@ -992,7 +996,7 @@ function knownKoreanTitle(title = '') {
     [/Boku no Kokoro no Yabai Yatsu/i, '내 마음의 위험한 녀석 극장판'],
     [/Milky.*Subway/i, '은하특급 밀키 서브웨이 극장판'],
     [/Duel Masters LOST/i, '듀얼 마스터즈 LOST 망각의 태양'],
-    [/Luca/i, '루카'],
+    [/^Luca$/i, '루카'],
     [/The Horrors' Horror Home/i, '더 호러스 호러 홈'],
     [/Princess Principal/i, '프린세스 프린서플 Crown Handler 4'],
     [/Medalist/i, '메달리스트 2기'],
@@ -1027,7 +1031,6 @@ function knownKoreanTitle(title = '') {
     [/The Detective Is Already Dead/i, '탐정은 이미 죽었다 2기'],
     [/Trapped in a Dating Sim/i, '여성향 게임 세계는 모브에게 가혹한 세계입니다 2기'],
     [/Clevatess/i, '클레바테스 2기'],
-    [/Fate\/strange Fake/i, '페이트/스트레인지 페이크'],
     [/From Old Country Bumpkin to Master Swordsman/i, '시골 아저씨, 검성이 되다 2기'],
     [/Skeleton Knight in Another World/i, '해골기사님은 지금 이세계 모험 중 2기'],
     [/You and I Are Polar Opposites/i, '정반대인 너와 나 2기'],

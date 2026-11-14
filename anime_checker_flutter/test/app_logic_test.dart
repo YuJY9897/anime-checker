@@ -297,7 +297,9 @@ void main() {
     expect(data.droppedReasons, isEmpty);
     expect(data.settings.showPosterImages, isTrue);
     expect(data.settings.showNewsImages, isTrue);
-    expect(data.settings.darkMode, isFalse);
+    // 기본값을 다크로 바꿨다. 앱 화면이 어두운 바탕을 전제로 짜여 있어서,
+    // 설정이 없는 상태로 시작하면 밝은 테마가 나와 의도한 모습이 아니었다.
+    expect(data.settings.darkMode, isTrue);
   });
 
   test('today targets show each anime only once', () async {

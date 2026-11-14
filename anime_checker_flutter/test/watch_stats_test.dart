@@ -169,4 +169,46 @@ void main() {
     expect(stats.completionRatio, 0);
     expect(stats.topGenres, isEmpty);
   });
+
+  // 분모(totalEpisodes)는 외전을 빼는데 분자가 저장된 기록을 통째로 세면
+  // 진행률이 100%를 넘는다. 외전 기록과 자리가 없어진 옛 좌표를 함께 넣어 본다.
+  test('외전과 옛 기록이 있어도 진행률이 100%를 넘지 않는다', () {
+    final base = anime(id: 'a', title: '본편 12화', episodes: 12);
+    final withExtra = Anime(
+      id: base.id,
+      title: base.title,
+      originalTitle: '',
+      posterUrl: '',
+      genres: base.genres,
+      status: base.status,
+      weekday: '',
+      firstAirDate: '',
+      seasons: [
+        ...base.seasons,
+        const AnimeSeason(
+          number: 0,
+          name: '외전 · 특별편',
+          subtitle: '',
+          posterUrl: '',
+          episodes: [Episode(number: 1, title: 'OVA', airDate: '')],
+        ),
+      ],
+      movies: const [],
+      dropped: false,
+    );
+    final data = AppData.empty().copyWith(
+      animeList: {'a': withExtra},
+      watchedEpisodes: {
+        for (var i = 1; i <= 12; i += 1) 'a:s1:e$i': true,
+        'a:s0:e1': true, // 외전
+        'a:s9:e99': true, // 자리가 없어진 옛 좌표
+      },
+    );
+
+    final stats = watchStats(data);
+
+    expect(stats.totalEpisodes, 12, reason: '분모는 본편만');
+    expect(stats.watchedEpisodes, 12, reason: '분자도 본편만');
+    expect(stats.completionRatio, lessThanOrEqualTo(1.0));
+  });
 }

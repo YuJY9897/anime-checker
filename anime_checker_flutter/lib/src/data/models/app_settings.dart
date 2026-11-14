@@ -17,7 +17,7 @@ class AppSettings {
       inferScheduleWeekday: true,
       showNewsImages: true,
       openNewsInsideApp: true,
-      darkMode: false,
+      darkMode: true,
     );
   }
 
