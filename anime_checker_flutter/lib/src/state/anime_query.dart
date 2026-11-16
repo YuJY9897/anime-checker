@@ -151,7 +151,9 @@ int _compareEpisodeTargets(EpisodeTarget a, EpisodeTarget b) {
   final aDate = parseDate(a.episode.airDate);
   final bDate = parseDate(b.episode.airDate);
   if (aDate != null && bDate != null) {
-    final compared = aDate.compareTo(bDate);
+    // 최근에 새 화가 나온 작품이 위로. 예전에는 오래된 순이라 몇 년 전
+    // 작품이 맨 위에 있고 어제 올라온 화가 아래로 밀렸다.
+    final compared = bDate.compareTo(aDate);
     if (compared != 0) return compared;
   } else if (aDate != null) {
     return -1;

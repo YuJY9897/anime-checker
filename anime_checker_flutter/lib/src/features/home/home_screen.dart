@@ -35,31 +35,36 @@ class HomeScreen extends ConsumerWidget {
             else
               TwoColumnAnimeGrid(
                 listMode: !controller.settings.showPosterImages,
-                children: targets.map((target) {
-                  return AnimePosterCard.fromAnime(
-                    anime: target.anime,
-                    showImage: controller.settings.showPosterImages,
-                    listMode: !controller.settings.showPosterImages,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => DetailScreen(animeId: target.anime.id),
-                      ),
+                children: [
+                  for (final target in targets)
+                    AnimePosterCard.fromAnime(
+                      anime: target.anime,
+                      showImage: controller.settings.showPosterImages,
+                      listMode: !controller.settings.showPosterImages,
+                      onTap: () => _open(context, target.anime.id),
+                      metaLines: _metaLines(target),
+                      onLongPress: () =>
+                          _showAnimeMenu(context, controller, target),
                     ),
-                    metaLines: [
-                      '이어볼 화: '
-                          '${seasonDisplayName(target.season.number, target.season.name)} '
-                          '${episodeLabel(target.episode)}',
-                      '방영일: ${formatStoredDate(target.episode.airDate)}',
-                    ],
-                    onLongPress: () =>
-                        _showAnimeMenu(context, controller, target),
-                  );
-                }).toList(),
+                ],
               ),
             const SizedBox(height: 20),
           ],
         ),
       ),
+    );
+  }
+
+  List<String> _metaLines(EpisodeTarget target) => [
+    '이어볼 화: '
+        '${seasonDisplayName(target.season.number, target.season.name)} '
+        '${episodeLabel(target.episode)}',
+    '방영일: ${formatStoredDate(target.episode.airDate)}',
+  ];
+
+  void _open(BuildContext context, String animeId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DetailScreen(animeId: animeId)),
     );
   }
 

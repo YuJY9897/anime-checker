@@ -388,6 +388,48 @@ void main() {
     },
   );
 
+  // 예전에는 오래된 순이라, 몇 년 전 작품이 맨 위에 있고 어제 올라온 화가
+  // 아래로 밀렸다. 새 화가 최근에 나온 작품이 위로 와야 한다.
+  test('이어볼 목록은 새 화가 최근에 나온 작품부터 보여준다', () async {
+    Anime make(String id, String title, String airDate) => Anime(
+      id: id,
+      title: title,
+      originalTitle: '',
+      posterUrl: '',
+      genres: const ['드라마'],
+      status: 'Returning Series',
+      weekday: '',
+      firstAirDate: airDate,
+      seasons: [
+        AnimeSeason(
+          number: 1,
+          name: '1기',
+          subtitle: '',
+          posterUrl: '',
+          episodes: [Episode(number: 1, title: '1화', airDate: airDate)],
+        ),
+      ],
+      movies: const [],
+      dropped: false,
+    );
+
+    final repo = FakeRepository()
+      ..saved = AppData.empty().copyWith(
+        animeList: {
+          'old': make('old', '오래된 작품', '2006-01-10'),
+          'new': make('new', '최근 작품', '2026-11-15'),
+          'mid': make('mid', '중간 작품', '2023-11-16'),
+        },
+      );
+    final controller = AppController(repo, FakeApiClient());
+    await controller.load();
+
+    expect(
+      controller.todayTargets.map((target) => target.anime.id).toList(),
+      ['new', 'mid', 'old'],
+    );
+  });
+
   test(
     'schedule shows only currently airing anime regardless of settings',
     () async {
