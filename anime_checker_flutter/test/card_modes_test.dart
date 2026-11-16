@@ -121,4 +121,39 @@ void main() {
 
     expect(find.text('정보 확인 중'), findsNothing);
   });
+
+  // 포스터를 못 받은 작품만 이미지 칸이 통째로 사라져, 같은 격자 안에서
+  // 혼자 글자만 있는 카드가 됐다. 자리는 지키고 회색 칸을 보여준다.
+  testWidgets('큰 표지 모드에서 포스터가 없어도 이미지 자리를 지킨다', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        AnimePosterCard(
+          title: '표지를 못 받은 작품',
+          posterUrl: '',
+          genres: const ['드라마'],
+          onTap: () {},
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AspectRatio), findsOneWidget);
+    expect(find.byIcon(Icons.image_not_supported_outlined), findsOneWidget);
+  });
+
+  testWidgets('작은 표지 목록에서도 같은 자리표시를 쓴다', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        AnimePosterCard(
+          title: '표지를 못 받은 작품',
+          posterUrl: '',
+          listMode: true,
+          onTap: () {},
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(ClipRRect), findsWidgets);
+  });
 }

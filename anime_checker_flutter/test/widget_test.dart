@@ -91,6 +91,10 @@ void main() {
               (index) => AnimePosterCard(
                 title: '자동판매기로 다시 태어난 나는 미궁을 방랑한다 $index',
                 posterUrl: '',
+                // 이 시험은 표지 칸이 없는 '컴팩트' 카드가 좁은 화면에서
+                // 넘치지 않는지를 본다. 예전에는 posterUrl이 비면 자동으로
+                // 컴팩트가 됐지만, 이제 빈 표지도 자리를 지키므로 명시한다.
+                showImage: false,
                 genres: const ['Action & Adventure', 'Sci-Fi & Fantasy', '코미디'],
                 metaLines: const ['다음 3기 12화', '방영일: 2026.06.17.'],
                 actions: [

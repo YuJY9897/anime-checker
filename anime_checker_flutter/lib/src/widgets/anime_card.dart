@@ -95,8 +95,11 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
     final colors = Theme.of(context).colorScheme;
     final hasPoster = widget.posterUrl.trim().isNotEmpty && !imageFailed;
     if (widget.listMode) return _buildRow(context, colors, hasPoster);
+    // 큰 표지 모드에서는 포스터가 없어도 자리를 비우지 않는다. 한 카드만
+    // 이미지 없이 글자만 남으면 같은 격자 안에서 혼자 다르게 보인다.
+    final showPosterArea = widget.showImage;
     final hasImage = widget.showImage && hasPoster;
-    final compact = !hasImage;
+    final compact = !showPosterArea;
     final genres = visibleGenres(widget.genres);
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -108,21 +111,23 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (hasImage)
+            if (showPosterArea)
               AspectRatio(
                 aspectRatio: 2 / 3,
-                child: Image.network(
-                  widget.posterUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && !imageFailed) {
-                        setState(() => imageFailed = true);
-                      }
-                    });
-                    return const SizedBox.shrink();
-                  },
-                ),
+                child: hasImage
+                    ? Image.network(
+                        widget.posterUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted && !imageFailed) {
+                              setState(() => imageFailed = true);
+                            }
+                          });
+                          return _PosterPlaceholder(colors: colors);
+                        },
+                      )
+                    : _PosterPlaceholder(colors: colors),
               ),
             Expanded(
               child: Padding(
@@ -354,6 +359,28 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
 }
 
 /// 큰 표지일 땐 2열 격자, 작은 썸네일일 땐 한 줄짜리 목록으로 쌓는다.
+/// 표지를 못 받았을 때 자리를 지키는 칸. 목록 모드의 작은 썸네일 자리와
+/// 같은 색을 써서 두 보기가 같은 모양으로 보이게 한다.
+class _PosterPlaceholder extends StatelessWidget {
+  const _PosterPlaceholder({required this.colors});
+
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: colors.surfaceContainerHighest,
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          size: 26,
+          color: colors.onSurfaceVariant.withValues(alpha: 0.45),
+        ),
+      ),
+    );
+  }
+}
+
 class TwoColumnAnimeGrid extends StatelessWidget {
   const TwoColumnAnimeGrid({
     super.key,
