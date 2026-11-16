@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildAppTheme(Brightness brightness) {
-  const seed = Color(0xFF275F57);
+  // 색은 Astryx matcha 테마(palette.config.json)의 팔레트 값을 차용했다.
+  const seed = Color(0xFF2E6B5A);
   final isDark = brightness == Brightness.dark;
   final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
   // 바탕은 더 깊게, 카드는 더 띄운다. 예전엔 둘의 명도 차가 6% 남짓인데
   // 다크에서 그림자까지 0이라 모든 것이 한 평면에 붙어 보였다.
-  final background = isDark ? const Color(0xFF0B1210) : const Color(0xFFF4F6F5);
-  final card = isDark ? const Color(0xFF1A2220) : const Color(0xFFFFFFFF);
-  final cardHigh = isDark ? const Color(0xFF232D2A) : const Color(0xFFEFF4F1);
+  final background = isDark ? const Color(0xFF12140E) : const Color(0xFFF0F0E0);
+  final card = isDark ? const Color(0xFF1A1C14) : const Color(0xFFFFFFFF);
+  final cardHigh = isDark ? const Color(0xFF1E2016) : const Color(0xFFDCE3CE);
   final cardHighest = isDark
-      ? const Color(0xFF2E3A36)
-      : const Color(0xFFE4ECE8);
-  final ink = isDark ? const Color(0xFFE9F1ED) : const Color(0xFF151C19);
-  final muted = isDark ? const Color(0xFF9FB3AB) : const Color(0xFF68736E);
-  final outline = isDark ? const Color(0xFF2C3A35) : const Color(0xFFDDE5E0);
+      ? const Color(0xFF3E481D)
+      : const Color(0xFFC0CBA9);
+  final ink = isDark ? const Color(0xFFF0F0E0) : const Color(0xFF1A1C14);
+  final muted = isDark ? const Color(0xFF94A468) : const Color(0xFF5A6B2A);
+  final outline = isDark ? const Color(0xFF3E481D) : const Color(0xFFDCE3CE);
   final shadow = isDark ? const Color(0xCC000000) : const Color(0x26000000);
 
   return ThemeData(
@@ -27,10 +28,10 @@ ThemeData buildAppTheme(Brightness brightness) {
       surfaceContainer: card,
       surfaceContainerHigh: cardHigh,
       surfaceContainerHighest: cardHighest,
-      primary: isDark ? const Color(0xFF8FD8C4) : seed,
-      onPrimary: isDark ? const Color(0xFF08201A) : Colors.white,
-      secondary: isDark ? const Color(0xFFFFB29B) : const Color(0xFFC55F42),
-      tertiary: isDark ? const Color(0xFF92D4FF) : const Color(0xFF2F7199),
+      primary: isDark ? const Color(0xFF5AB898) : seed,
+      onPrimary: isDark ? const Color(0xFF12140E) : Colors.white,
+      secondary: isDark ? const Color(0xFFE0A04A) : const Color(0xFFA06018),
+      tertiary: isDark ? const Color(0xFF8DBCE0) : const Color(0xFF2E4A6E),
       outlineVariant: outline,
     ),
     scaffoldBackgroundColor: background,
@@ -154,7 +155,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       style: OutlinedButton.styleFrom(
         foregroundColor: scheme.primary,
         side: BorderSide(
-          color: isDark ? const Color(0xFF6B827A) : const Color(0xFF789188),
+          color: isDark ? const Color(0xFF5A6440) : const Color(0xFF707E46),
           width: 1.2,
         ),
         minimumSize: const Size(0, 36),
@@ -191,7 +192,7 @@ ThemeData buildAppTheme(Brightness brightness) {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: card,
-      selectedColor: isDark ? const Color(0xFF284A3F) : const Color(0xFFD7EDE2),
+      selectedColor: isDark ? const Color(0xFF3E481D) : const Color(0xFFDCE3CE),
       checkmarkColor: scheme.primary,
       side: BorderSide(color: outline),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -225,9 +226,9 @@ ThemeData buildAppTheme(Brightness brightness) {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: isDark ? const Color(0xFFE9F1ED) : ink,
+      backgroundColor: isDark ? const Color(0xFFF0F0E0) : ink,
       contentTextStyle: TextStyle(
-        color: isDark ? const Color(0xFF101614) : Colors.white,
+        color: isDark ? const Color(0xFF12140E) : Colors.white,
         fontWeight: FontWeight.w700,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
