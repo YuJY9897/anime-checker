@@ -1,0 +1,908 @@
+{
+  "anime_checker_flutter/android/app/build.gradle.kts": {
+    "mtime": 1783910847.385055,
+    "seen": 1791942788.464656,
+    "ast_hash": "febe6febb20b17cd3bad3bb814eb6c91",
+    "semantic_hash": "febe6febb20b17cd3bad3bb814eb6c91"
+  },
+  "anime_checker_flutter/android/app/src/main/kotlin/com/yjy/anime_checker_flutter/MainActivity.kt": {
+    "mtime": 1783910847.3883193,
+    "seen": 1791942788.4646623,
+    "ast_hash": "f76d112ed52cdc312ef27cce1e713fe1",
+    "semantic_hash": "f76d112ed52cdc312ef27cce1e713fe1"
+  },
+  "anime_checker_flutter/android/build.gradle.kts": {
+    "mtime": 1783910847.3968353,
+    "seen": 1791942788.4646652,
+    "ast_hash": "803fe22651fbe96ed401eb0b66a492d1",
+    "semantic_hash": "803fe22651fbe96ed401eb0b66a492d1"
+  },
+  "anime_checker_flutter/android/gradlew": {
+    "mtime": 1783910847.399834,
+    "seen": 1791942788.4646666,
+    "ast_hash": "ab3b64d197bb9227a0da6e4cbe1ffd8a",
+    "semantic_hash": "ab3b64d197bb9227a0da6e4cbe1ffd8a"
+  },
+  "anime_checker_flutter/android/settings.gradle.kts": {
+    "mtime": 1783910847.4008381,
+    "seen": 1791942788.4646685,
+    "ast_hash": "087a01c04d081ae02a8e5db89f4bf3f3",
+    "semantic_hash": "087a01c04d081ae02a8e5db89f4bf3f3"
+  },
+  "anime_checker_flutter/ios/RunnerTests/RunnerTests.swift": {
+    "mtime": 1783910847.4280505,
+    "seen": 1791942788.4646697,
+    "ast_hash": "24e5d095048eb86c30423f4e04b6e57b",
+    "semantic_hash": "24e5d095048eb86c30423f4e04b6e57b"
+  },
+  "anime_checker_flutter/ios/Runner/AppDelegate.swift": {
+    "mtime": 1783910847.4113505,
+    "seen": 1791942788.4646714,
+    "ast_hash": "9e1de9c329a3fe4931876063de95132b",
+    "semantic_hash": "9e1de9c329a3fe4931876063de95132b"
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1783910847.4123516,
+    "seen": 1791942788.464673,
+    "ast_hash": "31a08e429403e265cabfb31b3d65f049",
+    "semantic_hash": "31a08e429403e265cabfb31b3d65f049"
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json": {
+    "mtime": 1783910847.421865,
+    "seen": 1791942788.4646742,
+    "ast_hash": "b9e927ac17345f2d5f052fe68a3487f9",
+    "semantic_hash": "b9e927ac17345f2d5f052fe68a3487f9"
+  },
+  "anime_checker_flutter/ios/Runner/Runner-Bridging-Header.h": {
+    "mtime": 1783910847.4260495,
+    "seen": 1791942788.464676,
+    "ast_hash": "7ad7b5cea096132de13ba526b2b9efbe",
+    "semantic_hash": "7ad7b5cea096132de13ba526b2b9efbe"
+  },
+  "anime_checker_flutter/ios/Runner/SceneDelegate.swift": {
+    "mtime": 1783910847.4270515,
+    "seen": 1791942788.464677,
+    "ast_hash": "0c3e86af131f6a9e547c80b5ed058914",
+    "semantic_hash": "0c3e86af131f6a9e547c80b5ed058914"
+  },
+  "anime_checker_flutter/lib/main.dart": {
+    "mtime": 1783910847.4280505,
+    "seen": 1791942788.4646783,
+    "ast_hash": "9e82952da4bf59613b6a70c2be0d996d",
+    "semantic_hash": "9e82952da4bf59613b6a70c2be0d996d"
+  },
+  "anime_checker_flutter/lib/src/app.dart": {
+    "mtime": 1787812522.7411087,
+    "seen": 1791942788.4646797,
+    "ast_hash": "526ec0905adff27bdbc8f75b18de55ea",
+    "semantic_hash": "526ec0905adff27bdbc8f75b18de55ea"
+  },
+  "anime_checker_flutter/lib/src/core/format/date_text.dart": {
+    "mtime": 1794594072.985328,
+    "seen": 1794805231.4676936,
+    "ast_hash": "6597e37115653c1ef52b106ecdba8e1a",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/core/format/genre_text.dart": {
+    "mtime": 1794579864.3318915,
+    "seen": 1794805231.4676962,
+    "ast_hash": "af2b16bcea061b11ce8d16dbf07bf6aa",
+    "semantic_hash": "af2b16bcea061b11ce8d16dbf07bf6aa"
+  },
+  "anime_checker_flutter/lib/src/core/theme/theme.dart": {
+    "mtime": 1794800940.813532,
+    "seen": 1794805231.4676979,
+    "ast_hash": "26d6c49f3753774e4fc249421060adf0",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/core/util/external_links.dart": {
+    "mtime": 1787812522.7451208,
+    "seen": 1791942788.4646852,
+    "ast_hash": "0b25538c14951c9ff9434a9ae4b534d2",
+    "semantic_hash": "0b25538c14951c9ff9434a9ae4b534d2"
+  },
+  "anime_checker_flutter/lib/src/data/local/local_repository.dart": {
+    "mtime": 1794597340.657331,
+    "seen": 1794805231.467702,
+    "ast_hash": "5b7d9ec30aa4c0fc095190b1b24d04c8",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/data/models/anime.dart": {
+    "mtime": 1794803837.6565144,
+    "seen": 1794805231.4677036,
+    "ast_hash": "25468f8e57fc69945be0792d80d08b55",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/data/models/anime_movie.dart": {
+    "mtime": 1787812522.748631,
+    "seen": 1791942788.46469,
+    "ast_hash": "5b93c66a76a33593dfe33f459ad08c33",
+    "semantic_hash": "5b93c66a76a33593dfe33f459ad08c33"
+  },
+  "anime_checker_flutter/lib/src/data/models/anime_season.dart": {
+    "mtime": 1787812522.7491312,
+    "seen": 1791942788.4646914,
+    "ast_hash": "42a4c16298bb87a21b5b72283abc580e",
+    "semantic_hash": "42a4c16298bb87a21b5b72283abc580e"
+  },
+  "anime_checker_flutter/lib/src/data/models/app_data.dart": {
+    "mtime": 1788771853.8521314,
+    "seen": 1791942788.4646933,
+    "ast_hash": "57d603641122f01f1728542b1eb2219a",
+    "semantic_hash": "57d603641122f01f1728542b1eb2219a"
+  },
+  "anime_checker_flutter/lib/src/data/models/app_settings.dart": {
+    "mtime": 1794804413.0522652,
+    "seen": 1794805231.467711,
+    "ast_hash": "1d14cf8e9e224f8a894ff7242c7f8d56",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/data/models/backup_summary.dart": {
+    "mtime": 1787812522.753646,
+    "seen": 1791942788.464698,
+    "ast_hash": "49388e51997444ca026936a34d4a0742",
+    "semantic_hash": "49388e51997444ca026936a34d4a0742"
+  },
+  "anime_checker_flutter/lib/src/data/models/data_diagnostics.dart": {
+    "mtime": 1787812522.7546463,
+    "seen": 1791942788.4646995,
+    "ast_hash": "d4cb273aa7f5fb82f7e1fc80dae3148c",
+    "semantic_hash": "d4cb273aa7f5fb82f7e1fc80dae3148c"
+  },
+  "anime_checker_flutter/lib/src/data/models/episode.dart": {
+    "mtime": 1788518756.205596,
+    "seen": 1791942788.464701,
+    "ast_hash": "f7257175cf7b897230e2c94d2e679a41",
+    "semantic_hash": "f7257175cf7b897230e2c94d2e679a41"
+  },
+  "anime_checker_flutter/lib/src/data/models/episode_target.dart": {
+    "mtime": 1787812522.7556472,
+    "seen": 1791942788.4647026,
+    "ast_hash": "993ab28289dd025eb7fc04562dcfabe8",
+    "semantic_hash": "993ab28289dd025eb7fc04562dcfabe8"
+  },
+  "anime_checker_flutter/lib/src/data/models/models.dart": {
+    "mtime": 1787812522.7566466,
+    "seen": 1791942788.464704,
+    "ast_hash": "ec2959f08949d031af06106d5a812394",
+    "semantic_hash": "ec2959f08949d031af06106d5a812394"
+  },
+  "anime_checker_flutter/lib/src/data/models/news_article.dart": {
+    "mtime": 1787812522.7571452,
+    "seen": 1791942788.4647055,
+    "ast_hash": "a26114971f0362127d3c8d762ebe1aa5",
+    "semantic_hash": "a26114971f0362127d3c8d762ebe1aa5"
+  },
+  "anime_checker_flutter/lib/src/data/models/wish_item.dart": {
+    "mtime": 1787812522.7576475,
+    "seen": 1791942788.4647076,
+    "ast_hash": "937786f757490a4965a3d10faebf4c5d",
+    "semantic_hash": "937786f757490a4965a3d10faebf4c5d"
+  },
+  "anime_checker_flutter/lib/src/data/patch_notes.dart": {
+    "mtime": 1794796386.47284,
+    "seen": 1794805231.4677248,
+    "ast_hash": "313e8058a3b8ac8a60069532f8d77249",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/data/remote/api_client.dart": {
+    "mtime": 1788509902.9953349,
+    "seen": 1791942788.464711,
+    "ast_hash": "b956a2d152fd4ab78c19a2487172286c",
+    "semantic_hash": "b956a2d152fd4ab78c19a2487172286c"
+  },
+  "anime_checker_flutter/lib/src/data/sample/sample_data.dart": {
+    "mtime": 1787812522.7596564,
+    "seen": 1791942788.4647121,
+    "ast_hash": "ea7f48d461951ca37b1bb062f7c6dcfc",
+    "semantic_hash": "ea7f48d461951ca37b1bb062f7c6dcfc"
+  },
+  "anime_checker_flutter/lib/src/features/backup/backup_screen.dart": {
+    "mtime": 1788509837.9597867,
+    "seen": 1791942788.4647138,
+    "ast_hash": "51c057cd68ccc81736cf31f515c1d032",
+    "semantic_hash": "51c057cd68ccc81736cf31f515c1d032"
+  },
+  "anime_checker_flutter/lib/src/features/detail/detail_screen.dart": {
+    "mtime": 1794803932.4728854,
+    "seen": 1794805231.4677312,
+    "ast_hash": "2eee63e2fa560ca961073213f458a4fc",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/detail/episode_screen.dart": {
+    "mtime": 1794799387.4751036,
+    "seen": 1794805231.4677331,
+    "ast_hash": "f97ab61bb3bb35c959b5b0d9609b7178",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/home/home_screen.dart": {
+    "mtime": 1794802164.3423204,
+    "seen": 1794805231.4677348,
+    "ast_hash": "71bf860d4edf6811ed681b1eb9ec5bcd",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/home/main_sections.dart": {
+    "mtime": 1788511674.4553068,
+    "seen": 1791942788.4647195,
+    "ast_hash": "7a7afd6ab2753cb5e49c798db5e9db29",
+    "semantic_hash": "7a7afd6ab2753cb5e49c798db5e9db29"
+  },
+  "anime_checker_flutter/lib/src/features/legal/legal_screen.dart": {
+    "mtime": 1794577381.1525834,
+    "seen": 1794805231.4677382,
+    "ast_hash": "479b2cb4492f5cb254d12a0ed3fa30b1",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/library/library_screen.dart": {
+    "mtime": 1794596803.4475462,
+    "seen": 1794805231.4677398,
+    "ast_hash": "491ea2fa700ac2b355716f262e35d86a",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/new_anime/new_anime_screen.dart": {
+    "mtime": 1794802556.498786,
+    "seen": 1794805231.4677417,
+    "ast_hash": "354e50e5bdfc0bb432d2d1f48d8a33a9",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/news/news_detail_screen.dart": {
+    "mtime": 1787812522.7685628,
+    "seen": 1791942788.4647267,
+    "ast_hash": "a8e56b8f6c2c1294e4c59c16061c3b36",
+    "semantic_hash": "a8e56b8f6c2c1294e4c59c16061c3b36"
+  },
+  "anime_checker_flutter/lib/src/features/news/news_screen.dart": {
+    "mtime": 1794798814.5084102,
+    "seen": 1794805231.4677453,
+    "ast_hash": "06a3e8efc96e19751939abb5d7410581",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/news/news_webview_screen.dart": {
+    "mtime": 1783910847.4468665,
+    "seen": 1791942788.464731,
+    "ast_hash": "bcdc2a85f16e81a4499582497c52a16f",
+    "semantic_hash": "bcdc2a85f16e81a4499582497c52a16f"
+  },
+  "anime_checker_flutter/lib/src/features/patch_notes/patch_notes_screen.dart": {
+    "mtime": 1794798568.0896552,
+    "seen": 1794805231.467749,
+    "ast_hash": "9b690d625299db88c79d44e20ba8db86",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/schedule/schedule_screen.dart": {
+    "mtime": 1794796541.546465,
+    "seen": 1794805231.4677503,
+    "ast_hash": "38bc9f3ecd302161cc4f3d1832e48ac3",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/search/search_screen.dart": {
+    "mtime": 1794593804.5728893,
+    "seen": 1794805231.4677522,
+    "ast_hash": "e313a7e43e3b49025f14e541df909add",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/settings/feedback_screen.dart": {
+    "mtime": 1787812522.7730885,
+    "seen": 1791942788.4647384,
+    "ast_hash": "8b03575c28a89a561f43d2b5fb7e0e6d",
+    "semantic_hash": "8b03575c28a89a561f43d2b5fb7e0e6d"
+  },
+  "anime_checker_flutter/lib/src/features/settings/help_screen.dart": {
+    "mtime": 1794804141.5431418,
+    "seen": 1794805231.4677553,
+    "ast_hash": "28da22d62e1a332da8518ca338b38524",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/settings/settings_screen.dart": {
+    "mtime": 1794803932.4455924,
+    "seen": 1794805231.4677567,
+    "ast_hash": "b293ad684d47f352b0aaed3ca2155cf9",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/shell/shell_screen.dart": {
+    "mtime": 1794800957.133282,
+    "seen": 1794805231.4677582,
+    "ast_hash": "501cf4507c55628866a7638fad4ebb98",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/stats/stats_screen.dart": {
+    "mtime": 1794799387.4731042,
+    "seen": 1794805231.4677596,
+    "ast_hash": "05ef98763822c6961b88527cf962d9ec",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/features/wish/wish_screen.dart": {
+    "mtime": 1794593804.3657146,
+    "seen": 1794805231.467761,
+    "ast_hash": "e222088e82b8b5cc33e9cf8a8cefbd61",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/state/anime_mutation.dart": {
+    "mtime": 1787813739.2162912,
+    "seen": 1791942788.4647489,
+    "ast_hash": "d20336950f551bdafec68b4031b320e1",
+    "semantic_hash": "d20336950f551bdafec68b4031b320e1"
+  },
+  "anime_checker_flutter/lib/src/state/anime_query.dart": {
+    "mtime": 1794802629.625816,
+    "seen": 1794805231.4677641,
+    "ast_hash": "59c63825cb169ec6b67d90289fcd46c4",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/state/app_controller.dart": {
+    "mtime": 1794802532.276323,
+    "seen": 1794805231.4677658,
+    "ast_hash": "2a7ef675ee64c7152e9cbb690a9c1038",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/state/episode_sync.dart": {
+    "mtime": 1794804669.8330274,
+    "seen": 1794805231.4677672,
+    "ast_hash": "befe188c560a248b61d39730a5419f63",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/state/season_migration.dart": {
+    "mtime": 1788522669.7154725,
+    "seen": 1791942788.4647553,
+    "ast_hash": "abcab3d9616528fc4655ed286adca89c",
+    "semantic_hash": "abcab3d9616528fc4655ed286adca89c"
+  },
+  "anime_checker_flutter/lib/src/state/watch_stats.dart": {
+    "mtime": 1794796541.5489838,
+    "seen": 1794805231.4677708,
+    "ast_hash": "7da826c01a2a499f64550eb16e369df5",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/widgets/anime_card.dart": {
+    "mtime": 1794800708.573481,
+    "seen": 1794805231.4677744,
+    "ast_hash": "c12e0dc41192ea9618c875e8c764de89",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/widgets/empty_state.dart": {
+    "mtime": 1794799387.4741051,
+    "seen": 1794805231.4677763,
+    "ast_hash": "f44c07564b54e24cb89950544aad5747",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/widgets/scroll_top_area.dart": {
+    "mtime": 1784867262.009253,
+    "seen": 1791942788.464761,
+    "ast_hash": "d3583a522f550e7bea26cf58e8a28f5a",
+    "semantic_hash": "d3583a522f550e7bea26cf58e8a28f5a"
+  },
+  "anime_checker_flutter/lib/src/widgets/section_header.dart": {
+    "mtime": 1783910847.4548836,
+    "seen": 1791942788.4647627,
+    "ast_hash": "dc01db3aeea6a4cd9aae57596d780b52",
+    "semantic_hash": "dc01db3aeea6a4cd9aae57596d780b52"
+  },
+  "anime_checker_flutter/test/app_logic_test.dart": {
+    "mtime": 1794804636.6713433,
+    "seen": 1794805231.4677835,
+    "ast_hash": "e49b71e839ce0b15b0ae97d89d528f04",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/test/app_smoke_test.dart": {
+    "mtime": 1783910847.4618926,
+    "seen": 1791942788.4647658,
+    "ast_hash": "93d2785258e68f6b463f0958c970b560",
+    "semantic_hash": "93d2785258e68f6b463f0958c970b560"
+  },
+  "anime_checker_flutter/test/backup_parse_test.dart": {
+    "mtime": 1788509965.7777987,
+    "seen": 1791942788.4647672,
+    "ast_hash": "7680df520c88d24788359f0a6ebfc893",
+    "semantic_hash": "7680df520c88d24788359f0a6ebfc893"
+  },
+  "anime_checker_flutter/test/episode_screen_test.dart": {
+    "mtime": 1794796541.5499904,
+    "seen": 1794805231.4677901,
+    "ast_hash": "ef855e59315d0f8951ee295b8dc0eae4",
+    "semantic_hash": "ef855e59315d0f8951ee295b8dc0eae4"
+  },
+  "anime_checker_flutter/test/patch_notes_test.dart": {
+    "mtime": 1794796541.5525088,
+    "seen": 1794805231.4677932,
+    "ast_hash": "8256d90ef1f4dca0e9d6d6e9361d01ac",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/test/season_migration_test.dart": {
+    "mtime": 1794796541.5525088,
+    "seen": 1794805231.4677947,
+    "ast_hash": "162f5fb8e2b823ff82102a0dd3b9608f",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/test/watch_stats_test.dart": {
+    "mtime": 1794625874.483783,
+    "seen": 1794805231.4677963,
+    "ast_hash": "65f16fd6c13c74d5faaad6bfc748c632",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/test/widget_test.dart": {
+    "mtime": 1794799997.3918602,
+    "seen": 1794805231.4677975,
+    "ast_hash": "0d04f6bf978fdbcf6f64cf240de6b6b6",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/web/manifest.json": {
+    "mtime": 1783910847.4680934,
+    "seen": 1791942788.4647777,
+    "ast_hash": "239af26aeea60758ad29e77ee142671f",
+    "semantic_hash": "239af26aeea60758ad29e77ee142671f"
+  },
+  "anime_checker_proxy/package.json": {
+    "mtime": 1783910847.4695985,
+    "seen": 1791942788.4647796,
+    "ast_hash": "05087ed2c63492eb5994d197a6054187",
+    "semantic_hash": "05087ed2c63492eb5994d197a6054187"
+  },
+  "anime_checker_proxy/src/index.js": {
+    "mtime": 1794803809.967208,
+    "seen": 1794805231.4678023,
+    "ast_hash": "78d5cafe3e680b884f2675ccd78baffc",
+    "semantic_hash": ""
+  },
+  "tools/package.json": {
+    "mtime": 1787812522.791637,
+    "seen": 1791942788.464783,
+    "ast_hash": "62702f0b017bd94b9abdd044bc876a1a",
+    "semantic_hash": "62702f0b017bd94b9abdd044bc876a1a"
+  },
+  "tools/play_check.mjs": {
+    "mtime": 1787812522.7921336,
+    "seen": 1791942788.4647844,
+    "ast_hash": "5d93189ba255734c7326b62076f62a5f",
+    "semantic_hash": "5d93189ba255734c7326b62076f62a5f"
+  },
+  "tools/play_icon.mjs": {
+    "mtime": 1787812522.7926335,
+    "seen": 1791942788.4647863,
+    "ast_hash": "1cd4827fbe46228d3007bb9ee79f46d3",
+    "semantic_hash": "1cd4827fbe46228d3007bb9ee79f46d3"
+  },
+  "tools/play_upload.mjs": {
+    "mtime": 1787812522.7931347,
+    "seen": 1791942788.4647877,
+    "ast_hash": "722a0d783dd531b63d67848913978d3a",
+    "semantic_hash": "722a0d783dd531b63d67848913978d3a"
+  },
+  ".claude/settings.json": {
+    "mtime": 1791942851.7503848,
+    "seen": 1794805231.4676373,
+    "ast_hash": "3ac995fbf93552a991ecab9b63f776aa",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/widgets/ambient_background.dart": {
+    "mtime": 1794798744.34367,
+    "seen": 1794805231.4677727,
+    "ast_hash": "f591e142f5bc618b5f6bbdb3fd80e8a7",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/lib/src/widgets/progress_bar.dart": {
+    "mtime": 1794800530.9156747,
+    "seen": 1794805231.4677777,
+    "ast_hash": "a87296cb0152959e828ab7367f9ab246",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/test/card_modes_test.dart": {
+    "mtime": 1794800460.772284,
+    "seen": 1794805231.4677882,
+    "ast_hash": "94c73fe3ececd272273ee6ed5a3cefb8",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/test/local_repository_test.dart": {
+    "mtime": 1794796541.5514996,
+    "seen": 1794805231.4677916,
+    "ast_hash": "9c305d4599149ab545ec1c8d5070c72d",
+    "semantic_hash": ""
+  },
+  ".claude/CLAUDE.md": {
+    "mtime": 1791942851.7478836,
+    "seen": 1794805231.4678104,
+    "ast_hash": "9b31786b637be3c13978bec4c2330752",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1794801036.468346,
+    "seen": 1794805231.4678116,
+    "ast_hash": "e5c94f432a834365ebc4e84d26cf5467",
+    "semantic_hash": ""
+  },
+  "CLAUDE.local.md": {
+    "mtime": 1791942859.264754,
+    "seen": 1794805231.467813,
+    "ast_hash": "67d88e9d0760c3ba54c75dfd9551c1c5",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1791942859.2652538,
+    "seen": 1794805231.4678156,
+    "ast_hash": "bac14b5e2247c3355465f699376e862a",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1788508765.8039196,
+    "seen": 1794805231.4678173,
+    "ast_hash": "efa1a35e6f2f3dc231be7cfea09062ae",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/README.md": {
+    "mtime": 1783910847.3830552,
+    "seen": 1794805231.4678185,
+    "ast_hash": "fb256ab15832563fd862f455fa9e66de",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/analysis_options.yaml": {
+    "mtime": 1783910847.3840532,
+    "seen": 1794805231.4678197,
+    "ast_hash": "9e65f4b9beebb674c0dc252f70a5c177",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/data_sources_and_copyright.html": {
+    "mtime": 1783910847.401834,
+    "seen": 1794805231.4678214,
+    "ast_hash": "4836c8c1b332ff0f7ab906fcd75ec249",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md": {
+    "mtime": 1783910847.423868,
+    "seen": 1794805231.4678228,
+    "ast_hash": "f7ee1b402881509d197f34963e569927",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/play_store_checklist.md": {
+    "mtime": 1783910847.4558895,
+    "seen": 1794805231.4678242,
+    "ast_hash": "0c1386fb98a9e98f3b58960f1d56b29a",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/play_store_listing_ko.md": {
+    "mtime": 1783910847.4568884,
+    "seen": 1794805231.4678257,
+    "ast_hash": "7855effc658dec618c2acb3bf574002d",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/privacy_policy.html": {
+    "mtime": 1783910847.4568884,
+    "seen": 1794805231.467827,
+    "ast_hash": "c219fb29d7442756d5ea8d0eb351b775",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/pubspec.yaml": {
+    "mtime": 1794796396.1523573,
+    "seen": 1794805231.4678285,
+    "ast_hash": "7022a29972ad18af94d113c58cf843f5",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/web/index.html": {
+    "mtime": 1783910847.4670894,
+    "seen": 1794805231.4678297,
+    "ast_hash": "eac9327e0605dc18fa797be4d56ea002",
+    "semantic_hash": ""
+  },
+  "anime_checker_proxy/README.md": {
+    "mtime": 1783910847.4680934,
+    "seen": 1794805231.4678311,
+    "ast_hash": "90e14a3ab2626c61a57e43e28cf56d4e",
+    "semantic_hash": ""
+  },
+  "docs/data_sources_and_copyright.html": {
+    "mtime": 1794804141.337946,
+    "seen": 1794805231.4678326,
+    "ast_hash": "da5ac8db9179d4bda1e4698e6bd0d866",
+    "semantic_hash": ""
+  },
+  "docs/feedback_management.md": {
+    "mtime": 1783910847.4736078,
+    "seen": 1794805231.4678335,
+    "ast_hash": "3e4587db9b25af0d9ee5ee57da3b54ae",
+    "semantic_hash": ""
+  },
+  "docs/play_store_checklist.md": {
+    "mtime": 1783910847.4736078,
+    "seen": 1794805231.4678352,
+    "ast_hash": "4242d3bf4f306aa9f0caff036dab54dc",
+    "semantic_hash": ""
+  },
+  "docs/play_store_submission_pack.md": {
+    "mtime": 1783910847.4736078,
+    "seen": 1794805231.4678364,
+    "ast_hash": "40c1ecb2a4bfaed90dc70ed43c19bcaf",
+    "semantic_hash": ""
+  },
+  "docs/privacy_policy.html": {
+    "mtime": 1783926203.5304575,
+    "seen": 1794805231.4678378,
+    "ast_hash": "c219fb29d7442756d5ea8d0eb351b775",
+    "semantic_hash": ""
+  },
+  "docs/privacy_policy.md": {
+    "mtime": 1783910847.475113,
+    "seen": 1794805231.467839,
+    "ast_hash": "2bb2ad58e580d375cdf2e41e75bf69a2",
+    "semantic_hash": ""
+  },
+  "tools/release_notes_ko.txt": {
+    "mtime": 1794796416.1132288,
+    "seen": 1794805231.4678402,
+    "ast_hash": "4824aac0eea6fcb946098ee0ad67cdef",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-hdpi/ic_launcher.png": {
+    "mtime": 1787812522.726565,
+    "seen": 1794805231.4678419,
+    "ast_hash": "b2d3b84e4d12d8ab9d5e78e9ae670c4f",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-hdpi/ic_launcher_background.png": {
+    "mtime": 1787812522.727067,
+    "seen": 1794805231.467843,
+    "ast_hash": "3ef48890e71a69030d5f06552c84e29e",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png": {
+    "mtime": 1787812522.7280726,
+    "seen": 1794805231.4678447,
+    "ast_hash": "a3bcfaf321e3ae25aed0460ad66f6f3b",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-mdpi/ic_launcher.png": {
+    "mtime": 1787812522.7290792,
+    "seen": 1794805231.4678462,
+    "ast_hash": "f347fa66b287a875adf51b0490a57d12",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-mdpi/ic_launcher_background.png": {
+    "mtime": 1787812522.7295785,
+    "seen": 1794805231.4678476,
+    "ast_hash": "7ca3cb7610223d33469e43cc96aa22ea",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png": {
+    "mtime": 1787812522.7300782,
+    "seen": 1794805231.467849,
+    "ast_hash": "5909e241afbf02761442c7b160dde488",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
+    "mtime": 1787812522.731591,
+    "seen": 1794805231.4678504,
+    "ast_hash": "11ce9ea6cdd6acd86aab346e57e70a67",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-xhdpi/ic_launcher_background.png": {
+    "mtime": 1787812522.7320943,
+    "seen": 1794805231.4678519,
+    "ast_hash": "850ac69340cf238e878b5f1f9b0de194",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png": {
+    "mtime": 1787812522.7325912,
+    "seen": 1794805231.4678533,
+    "ast_hash": "a9a527ed585b8e3b87688ef5f918d887",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
+    "mtime": 1787812522.7340915,
+    "seen": 1794805231.4678545,
+    "ast_hash": "e849f6c085a4b9f4ecd602df00af1d35",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_background.png": {
+    "mtime": 1787812522.7350912,
+    "seen": 1794805231.4678562,
+    "ast_hash": "943912a5d113adad12f188b610e3dce6",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png": {
+    "mtime": 1787812522.736091,
+    "seen": 1794805231.4678576,
+    "ast_hash": "66f4254af080d8f16178172dafb83e7b",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
+    "mtime": 1787812522.7381043,
+    "seen": 1794805231.4678593,
+    "ast_hash": "4cdb78f42efbb5a7e4daf0ad45854933",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_background.png": {
+    "mtime": 1787812522.7391026,
+    "seen": 1794805231.4678605,
+    "ast_hash": "78f9027d25d90f7bd0ae67cc483092a5",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png": {
+    "mtime": 1787812522.7401025,
+    "seen": 1794805231.4678621,
+    "ast_hash": "7e741505c146b6e3392da3a2f4e7ff3f",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": {
+    "mtime": 1783910847.4133518,
+    "seen": 1794805231.4678636,
+    "ast_hash": "c785f8932297af4acd5f5ccb7630f01c",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png": {
+    "mtime": 1783910847.4133518,
+    "seen": 1794805231.467865,
+    "ast_hash": "a2f8558fb1d42514111fbbb19fb67314",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png": {
+    "mtime": 1783910847.4133518,
+    "seen": 1794805231.4678667,
+    "ast_hash": "2247a840b6ee72b8a069208af170e5b1",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png": {
+    "mtime": 1783910847.4148567,
+    "seen": 1794805231.467868,
+    "ast_hash": "1b3b1538136316263c7092951e923e9d",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png": {
+    "mtime": 1783910847.4148567,
+    "seen": 1794805231.4678698,
+    "ast_hash": "be8887071dd7ec39cb754d236aa9584f",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png": {
+    "mtime": 1783910847.4158645,
+    "seen": 1794805231.467871,
+    "ast_hash": "043119ef4faa026ff82bd03f241e5338",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png": {
+    "mtime": 1783910847.4158645,
+    "seen": 1794805231.4678726,
+    "ast_hash": "2b1452c4c1bda6177b4fbbb832df217f",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png": {
+    "mtime": 1783910847.4168644,
+    "seen": 1794805231.4678738,
+    "ast_hash": "2247a840b6ee72b8a069208af170e5b1",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png": {
+    "mtime": 1783910847.417865,
+    "seen": 1794805231.4678752,
+    "ast_hash": "8245359312aea1b0d2412f79a07b0ca5",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png": {
+    "mtime": 1783910847.417865,
+    "seen": 1794805231.467877,
+    "ast_hash": "5b3c0902200ce596e9848f22e1f0fe0e",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png": {
+    "mtime": 1783910847.4188638,
+    "seen": 1794805231.4678783,
+    "ast_hash": "5b3c0902200ce596e9848f22e1f0fe0e",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png": {
+    "mtime": 1783910847.4188638,
+    "seen": 1794805231.4678798,
+    "ast_hash": "e419d22a37bc40ba185aca1acb6d4ac6",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png": {
+    "mtime": 1783910847.419865,
+    "seen": 1794805231.4678812,
+    "ast_hash": "36c0d7a7132bdde18898ffdfcfcdc4d2",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png": {
+    "mtime": 1783910847.419865,
+    "seen": 1794805231.4678826,
+    "ast_hash": "643842917530acf4c5159ae851b0baf2",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": {
+    "mtime": 1783910847.420865,
+    "seen": 1794805231.4678843,
+    "ast_hash": "665cb5e3c5729da6d639d26eff47a503",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png": {
+    "mtime": 1783910847.421865,
+    "seen": 1794805231.4678857,
+    "ast_hash": "978c1bee49d7ad5fc1a4d81099b13e18",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png": {
+    "mtime": 1783910847.4228654,
+    "seen": 1794805231.4678872,
+    "ast_hash": "978c1bee49d7ad5fc1a4d81099b13e18",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png": {
+    "mtime": 1783910847.4228654,
+    "seen": 1794805231.4678886,
+    "ast_hash": "978c1bee49d7ad5fc1a4d81099b13e18",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/store_assets/feature_graphic_1024x500.png": {
+    "mtime": 1783927914.141894,
+    "seen": 1794805231.46789,
+    "ast_hash": "8e2f6c5180613356292b72712ed9745c",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/store_assets/icon_master_1024.png": {
+    "mtime": 1787812522.7836192,
+    "seen": 1794805231.4678915,
+    "ast_hash": "39c73e92fb8a7170e4fc4fbb8c11664d",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/store_assets/play_icon_512.png": {
+    "mtime": 1787812522.7876172,
+    "seen": 1794805231.4678926,
+    "ast_hash": "609bd42e26b7d02f437b74108920651e",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/store_assets/screenshots/shot_01_home.png": {
+    "mtime": 1785922030.939135,
+    "seen": 1794805231.4678943,
+    "ast_hash": "ed740544f15f5e2cfdccfd1f2f4fd3b5",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/store_assets/screenshots/shot_02_library.png": {
+    "mtime": 1785922030.9457011,
+    "seen": 1794805231.4678957,
+    "ast_hash": "de82243d0b22e7fa63c9b61fc5a4b5b6",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/store_assets/screenshots/shot_03_new_anime.png": {
+    "mtime": 1785922030.9527023,
+    "seen": 1794805231.4678972,
+    "ast_hash": "183a4245ac353dc0d8f838c10ecdbf7e",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/store_assets/screenshots/shot_04_news.png": {
+    "mtime": 1785922030.9537003,
+    "seen": 1794805231.4678986,
+    "ast_hash": "3b088241c15d5b9d5d41063ab12322c1",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/store_assets/screenshots/shot_05_schedule.png": {
+    "mtime": 1785921996.6543252,
+    "seen": 1794805231.4678998,
+    "ast_hash": "de404c109603f0491d02dc0c3e8d167a",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/web/favicon.png": {
+    "mtime": 1783910847.4628904,
+    "seen": 1794805231.4679012,
+    "ast_hash": "5dcef449791fa27946b3d35ad8803796",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/web/icons/Icon-192.png": {
+    "mtime": 1783910847.4638908,
+    "seen": 1794805231.4679027,
+    "ast_hash": "ac9a721a12bbc803b44f645561ecb1e1",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/web/icons/Icon-512.png": {
+    "mtime": 1783910847.46489,
+    "seen": 1794805231.467904,
+    "ast_hash": "96e752610906ba2a93c65f8abe1645f1",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/web/icons/Icon-maskable-192.png": {
+    "mtime": 1783910847.46489,
+    "seen": 1794805231.4679053,
+    "ast_hash": "c457ef57daa1d16f64b27b786ec2ea3c",
+    "semantic_hash": ""
+  },
+  "anime_checker_flutter/web/icons/Icon-maskable-512.png": {
+    "mtime": 1783910847.4661746,
+    "seen": 1794805231.4679067,
+    "ast_hash": "301a7604d45b3e739efc881eb04896ea",
+    "semantic_hash": ""
+  }
+}
