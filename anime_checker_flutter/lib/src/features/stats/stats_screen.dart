@@ -160,9 +160,17 @@ class _CountGrid extends StatelessWidget {
         return Wrap(
           spacing: 10,
           runSpacing: 10,
-          children: tiles
-              .map((tile) => SizedBox(width: width, child: tile))
-              .toList(),
+          children: [
+            for (var index = 0; index < tiles.length; index += 1)
+              SizedBox(
+                // 칸이 홀수면 마지막 하나가 짝 없이 반쪽으로 남는다.
+                // 그 칸만 한 줄을 다 쓰게 한다.
+                width: tiles.length.isOdd && index == tiles.length - 1
+                    ? constraints.maxWidth
+                    : width,
+                child: tiles[index],
+              ),
+          ],
         );
       },
     );

@@ -66,7 +66,7 @@ class EmptyState extends StatelessWidget {
               ),
               if (actionLabel != null && onAction != null) ...[
                 const SizedBox(height: 14),
-                FilledButton.tonal(
+                FilledButton(
                   onPressed: onAction,
                   child: Text(actionLabel!),
                 ),
