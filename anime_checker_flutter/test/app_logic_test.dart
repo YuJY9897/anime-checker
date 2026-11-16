@@ -324,7 +324,9 @@ void main() {
 
     expect(data.animeNotes, isEmpty);
     expect(data.droppedReasons, isEmpty);
-    expect(data.settings.showPosterImages, isTrue);
+    // 「큰 표지로 보기」 기본값을 끔으로 바꿨다. 작은 표지 한 줄 목록이
+    // 한 화면에 더 많이 담긴다. 이 키가 없던 옛 백업도 끔으로 열린다.
+    expect(data.settings.showPosterImages, isFalse);
     expect(data.settings.showNewsImages, isTrue);
     // 기본값을 다크로 바꿨다. 앱 화면이 어두운 바탕을 전제로 짜여 있어서,
     // 설정이 없는 상태로 시작하면 밝은 테마가 나와 의도한 모습이 아니었다.

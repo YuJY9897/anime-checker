@@ -13,7 +13,9 @@ class AppSettings {
   factory AppSettings.defaults() {
     return AppSettings(
       librarySort: 'title',
-      showPosterImages: true,
+      // 기본은 작은 표지 한 줄 목록. 한 화면에 더 많이 담기고, 큰 표지는
+      // 보고 싶은 사람이 환경설정에서 켠다.
+      showPosterImages: false,
       showNewsImages: true,
       openNewsInsideApp: true,
       darkMode: true,
