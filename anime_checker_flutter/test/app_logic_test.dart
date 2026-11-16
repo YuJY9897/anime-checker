@@ -145,31 +145,34 @@ void main() {
     expect(repo.saved.animeList.containsKey('200'), isTrue);
   });
 
-  test('episode checked while syncing is not wiped by the sync commit', () async {
-    final stored = airingAnime(const [
-      Episode(number: 1, title: '출항', airDate: '2026-01-07'),
-    ]);
-    final repo = FakeRepository()
-      ..saved = AppData.empty().copyWith(animeList: {stored.id: stored});
-    final controller = AppController(repo, SlowSyncApiClient(stored));
+  test(
+    'episode checked while syncing is not wiped by the sync commit',
+    () async {
+      final stored = airingAnime(const [
+        Episode(number: 1, title: '출항', airDate: '2026-01-07'),
+      ]);
+      final repo = FakeRepository()
+        ..saved = AppData.empty().copyWith(animeList: {stored.id: stored});
+      final controller = AppController(repo, SlowSyncApiClient(stored));
 
-    await controller.load();
-    // 회차 갱신이 도는 중에 다른 작품의 화를 시청 완료로 체크한다.
-    final other = airingAnime(const [
-      Episode(number: 1, title: '출항', airDate: '2026-01-07'),
-    ], id: '200');
-    await controller.addAnime(other);
-    await controller.setEpisodeWatched(
-      other,
-      other.seasons.first,
-      other.seasons.first.episodes.first,
-      true,
-    );
-    await controller.pendingEpisodeSync;
+      await controller.load();
+      // 회차 갱신이 도는 중에 다른 작품의 화를 시청 완료로 체크한다.
+      final other = airingAnime(const [
+        Episode(number: 1, title: '출항', airDate: '2026-01-07'),
+      ], id: '200');
+      await controller.addAnime(other);
+      await controller.setEpisodeWatched(
+        other,
+        other.seasons.first,
+        other.seasons.first.episodes.first,
+        true,
+      );
+      await controller.pendingEpisodeSync;
 
-    expect(controller.isEpisodeWatched('200', 1, 1), isTrue);
-    expect(repo.saved.watchedEpisodes['200:s1:e1'], isTrue);
-  });
+      expect(controller.isEpisodeWatched('200', 1, 1), isTrue);
+      expect(repo.saved.watchedEpisodes['200:s1:e1'], isTrue);
+    },
+  );
 
   test('recently synced anime is not fetched again', () async {
     final stored = airingAnime(const [
@@ -282,6 +285,32 @@ void main() {
     expect(repo.saved.droppedReasons[anime.id], '자막 대기');
   });
 
+  // 쓰이지 않던 설정 두 개(includeDroppedInSchedule, inferScheduleWeekday)를
+  // 뺐다. 그 키가 남아 있는 예전 백업도 그대로 읽혀야 한다.
+  test('없앤 설정이 들어 있는 예전 백업도 읽힌다', () {
+    final data = AppData.fromJson({
+      'animeList': {},
+      'watchedEpisodes': {},
+      'settings': {
+        'librarySort': 'recent',
+        'showPosterImages': false,
+        'includeDroppedInSchedule': false,
+        'inferScheduleWeekday': false,
+        'darkMode': false,
+      },
+      'updatedAt': DateTime.now().toIso8601String(),
+      'backupVersion': 1,
+    });
+
+    expect(data.settings.librarySort, 'recent');
+    expect(data.settings.showPosterImages, isFalse);
+    expect(data.settings.darkMode, isFalse);
+    expect(
+      data.settings.toJson().containsKey('includeDroppedInSchedule'),
+      isFalse,
+    );
+  });
+
   test('older backups without notes still load', () {
     final data = AppData.fromJson({
       'animeList': {},
@@ -390,10 +419,6 @@ void main() {
         ..saved = AppData.empty().copyWith(
           animeList: {'airing': airing, 'ended': ended},
           dropped: {'airing': true},
-          settings: AppSettings.defaults().copyWith(
-            includeDroppedInSchedule: false,
-            inferScheduleWeekday: false,
-          ),
         );
       final controller = AppController(repo, FakeApiClient());
       await controller.load();

@@ -1,9 +1,10 @@
+// 편성표는 보류작을 늘 포함하고 요일도 늘 추론한다. 예전에는 이 둘을
+// 설정으로 두었지만 환경설정 화면에도 없고 계산에서도 보지 않아서 뺐다.
+// 예전 백업에 그 키가 남아 있어도 fromJson이 모르는 키를 무시하므로 괜찮다.
 class AppSettings {
   const AppSettings({
     required this.librarySort,
     required this.showPosterImages,
-    required this.includeDroppedInSchedule,
-    required this.inferScheduleWeekday,
     required this.showNewsImages,
     required this.openNewsInsideApp,
     required this.darkMode,
@@ -13,8 +14,6 @@ class AppSettings {
     return AppSettings(
       librarySort: 'title',
       showPosterImages: true,
-      includeDroppedInSchedule: true,
-      inferScheduleWeekday: true,
       showNewsImages: true,
       openNewsInsideApp: true,
       darkMode: true,
@@ -23,8 +22,6 @@ class AppSettings {
 
   final String librarySort;
   final bool showPosterImages;
-  final bool includeDroppedInSchedule;
-  final bool inferScheduleWeekday;
   final bool showNewsImages;
   final bool openNewsInsideApp;
   final bool darkMode;
@@ -32,17 +29,12 @@ class AppSettings {
   AppSettings copyWith({
     String? librarySort,
     bool? showPosterImages,
-    bool? includeDroppedInSchedule,
-    bool? inferScheduleWeekday,
     bool? showNewsImages,
     bool? openNewsInsideApp,
     bool? darkMode,
   }) => AppSettings(
     librarySort: librarySort ?? this.librarySort,
     showPosterImages: showPosterImages ?? this.showPosterImages,
-    includeDroppedInSchedule:
-        includeDroppedInSchedule ?? this.includeDroppedInSchedule,
-    inferScheduleWeekday: inferScheduleWeekday ?? this.inferScheduleWeekday,
     showNewsImages: showNewsImages ?? this.showNewsImages,
     openNewsInsideApp: openNewsInsideApp ?? this.openNewsInsideApp,
     darkMode: darkMode ?? this.darkMode,
@@ -55,12 +47,6 @@ class AppSettings {
       librarySort: json['librarySort'] as String? ?? defaults.librarySort,
       showPosterImages:
           json['showPosterImages'] as bool? ?? defaults.showPosterImages,
-      includeDroppedInSchedule:
-          json['includeDroppedInSchedule'] as bool? ??
-          defaults.includeDroppedInSchedule,
-      inferScheduleWeekday:
-          json['inferScheduleWeekday'] as bool? ??
-          defaults.inferScheduleWeekday,
       showNewsImages:
           json['showNewsImages'] as bool? ?? defaults.showNewsImages,
       openNewsInsideApp:
@@ -72,8 +58,6 @@ class AppSettings {
   Map<String, dynamic> toJson() => {
     'librarySort': librarySort,
     'showPosterImages': showPosterImages,
-    'includeDroppedInSchedule': includeDroppedInSchedule,
-    'inferScheduleWeekday': inferScheduleWeekday,
     'showNewsImages': showNewsImages,
     'openNewsInsideApp': openNewsInsideApp,
     'darkMode': darkMode,

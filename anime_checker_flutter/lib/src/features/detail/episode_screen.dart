@@ -14,6 +14,14 @@ class EpisodeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(appControllerProvider);
+    // 화면을 연 시점의 시즌을 그대로 쓰면, 뒤에서 새 화가 들어오거나 기수가
+    // 재편돼도 다시 열기 전에는 반영되지 않는다. 매번 지금 데이터에서 같은
+    // 번호의 시즌을 다시 찾는다. 번호로 찾으므로 시청 기록 좌표는 그대로다.
+    final live = controller.data.animeList[anime.id] ?? anime;
+    final season = live.seasons.firstWhere(
+      (item) => item.number == this.season.number,
+      orElse: () => this.season,
+    );
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -21,7 +29,7 @@ class EpisodeScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              anime.title,
+              live.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
@@ -75,8 +83,14 @@ class EpisodeScreen extends ConsumerWidget {
                 const SizedBox(width: 10),
                 watched
                     ? FilledButton.tonal(
-                        onPressed: () =>
-                            _setWatched(context, controller, episode, false),
+                        onPressed: () => _setWatched(
+                          context,
+                          controller,
+                          live,
+                          season,
+                          episode,
+                          false,
+                        ),
                         child: const Text('완료'),
                       )
                     : OutlinedButton(
@@ -86,6 +100,8 @@ class EpisodeScreen extends ConsumerWidget {
                             : () => _setWatched(
                                 context,
                                 controller,
+                                live,
+                                season,
                                 episode,
                                 true,
                               ),
@@ -116,6 +132,8 @@ class EpisodeScreen extends ConsumerWidget {
   Future<void> _setWatched(
     BuildContext context,
     AppController controller,
+    Anime anime,
+    AnimeSeason season,
     Episode episode,
     bool watched,
   ) async {
