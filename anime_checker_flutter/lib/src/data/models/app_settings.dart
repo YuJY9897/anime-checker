@@ -1,10 +1,12 @@
 // 편성표는 보류작을 늘 포함하고 요일도 늘 추론한다. 예전에는 이 둘을
 // 설정으로 두었지만 환경설정 화면에도 없고 계산에서도 보지 않아서 뺐다.
 // 예전 백업에 그 키가 남아 있어도 fromJson이 모르는 키를 무시하므로 괜찮다.
-/// TMDB(JustWatch)가 한국에 주는 시청처 26곳 가운데, 애니를 보는 데
-/// 실제로 쓰이는 곳만 처음부터 켜 둔다. 나머지는 환경설정에서 켤 수 있다.
+/// TMDB(JustWatch)가 한국에 주는 시청처 26곳 가운데, 한국에서 널리 쓰이는
+/// 곳만 처음부터 켜 둔다. 나머지는 환경설정에서 켤 수 있다.
+///
 /// 「Netflix Standard with Ads」는 넷플릭스 광고 요금제라 같은 곳이 두 번
-/// 보이므로 빼 두었다.
+/// 보이므로 뺀다. 「Crunchyroll」은 애니 전문이지만 국내 인지도가 낮아
+/// 기본에서는 빼고 고를 수 있게만 둔다.
 const defaultWatchProviders = <String>[
   'Netflix',
   'TVING',
@@ -12,7 +14,6 @@ const defaultWatchProviders = <String>[
   'Watcha',
   'Coupang Play',
   'Disney Plus',
-  'Crunchyroll',
 ];
 
 /// 한국에 있는 시청처 전체. 환경설정에서 고를 수 있는 목록이다.

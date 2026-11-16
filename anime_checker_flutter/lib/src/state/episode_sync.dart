@@ -61,5 +61,11 @@ Anime mergeEpisodes(Anime current, Anime fetched) {
     movies: fetched.movies.isEmpty ? current.movies : fetched.movies,
     dropped: current.dropped,
     isMovie: current.isMovie,
+    // 여기는 Anime를 필드별로 다시 만든다. 빠뜨린 필드는 조용히 기본값이
+    // 되므로, 모델에 필드를 더할 때 이 줄도 같이 봐야 한다.
+    // 서버가 못 주면(오류·빈 응답) 갖고 있던 값을 지우지 않고 그대로 둔다.
+    watchProviders: fetched.watchProviders.isEmpty
+        ? current.watchProviders
+        : fetched.watchProviders,
   );
 }

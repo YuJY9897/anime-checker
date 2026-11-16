@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:anime_checker_flutter/src/data/remote/api_client.dart';
 import 'package:anime_checker_flutter/src/state/anime_query.dart';
+import 'package:anime_checker_flutter/src/state/episode_sync.dart';
 import 'package:anime_checker_flutter/src/state/app_controller.dart';
 import 'package:anime_checker_flutter/src/core/format/date_text.dart';
 import 'package:anime_checker_flutter/src/core/format/genre_text.dart';
@@ -388,6 +389,47 @@ void main() {
       expect(controller.todayTargets.single.episode.number, 1);
     },
   );
+
+  // mergeEpisodes는 Anime를 필드별로 다시 만든다. 모델에 필드를 더하고 이
+  // 줄을 빠뜨리면 조용히 기본값이 되어, 동기화할 때마다 서버가 준 값이
+  // 사라진다. watchProviders를 넣었을 때 실제로 그렇게 됐다.
+  group('회차 동기화가 시청처를 지우지 않는다', () {
+    Anime make(List<String> providers, {int episodes = 1}) => Anime(
+      id: 'p',
+      title: '작품',
+      originalTitle: '',
+      posterUrl: 'poster',
+      genres: const ['드라마'],
+      status: 'Returning Series',
+      weekday: '',
+      firstAirDate: '2024-01-01',
+      seasons: [
+        AnimeSeason(
+          number: 1,
+          name: '1기',
+          subtitle: '',
+          posterUrl: '',
+          episodes: [
+            for (var i = 1; i <= episodes; i += 1)
+              Episode(number: i, title: '$i화', airDate: '2024-01-0$i'),
+          ],
+        ),
+      ],
+      movies: const [],
+      dropped: false,
+      watchProviders: providers,
+    );
+
+    test('서버가 준 시청처가 합친 뒤에도 남는다', () {
+      final merged = mergeEpisodes(make(const []), make(['Netflix', 'TVING']));
+      expect(merged.watchProviders, ['Netflix', 'TVING']);
+    });
+
+    test('서버가 못 주면 갖고 있던 값을 지우지 않는다', () {
+      final merged = mergeEpisodes(make(['Watcha']), make(const []));
+      expect(merged.watchProviders, ['Watcha']);
+    });
+  });
 
   // TMDB는 다음 기수가 예정된 작품을 완결작과 똑같이 'Returning Series'로
   // 두지 않는다. 그래서 상태만 보면 기수가 끝난 지 몇 달 지난 작품도 계속
