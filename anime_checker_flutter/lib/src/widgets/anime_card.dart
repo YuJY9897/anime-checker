@@ -131,7 +131,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
               ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 11),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

@@ -4,6 +4,16 @@ import 'package:anime_checker_flutter/src/widgets/progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// 시험 화면은 기본이 800x600이라, 폭 360에 2:3 표지(540)가 들어가면
+// 글자 자리가 60밖에 안 남아 여백을 조금만 늘려도 넘친다. 실제 폰은
+// 훨씬 길다. 화면을 폰 크기로 키워서 카드가 제 높이를 쓰게 한다.
+void _usePhoneSurface(WidgetTester tester) {
+  tester.view.physicalSize = const Size(360, 1200);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
 Widget _wrap(Widget child, {double width = 360}) => MaterialApp(
   theme: buildAppTheme(Brightness.dark),
   home: Scaffold(
@@ -125,6 +135,7 @@ void main() {
   // 포스터를 못 받은 작품만 이미지 칸이 통째로 사라져, 같은 격자 안에서
   // 혼자 글자만 있는 카드가 됐다. 자리는 지키고 회색 칸을 보여준다.
   testWidgets('큰 표지 모드에서 포스터가 없어도 이미지 자리를 지킨다', (tester) async {
+    _usePhoneSurface(tester);
     await tester.pumpWidget(
       _wrap(
         AnimePosterCard(

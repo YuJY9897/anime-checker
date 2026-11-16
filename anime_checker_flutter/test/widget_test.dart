@@ -14,15 +14,20 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: TwoColumnAnimeGrid(
-            children: List.generate(
-              4,
-              (index) => AnimePosterCard(
-                title: '애니 $index',
-                posterUrl: '',
-                genres: const ['액션'],
-                metaLines: const ['방영일: 2026.07.01.', '방영예정'],
-                onTap: () {},
+          // 실제 화면은 격자를 ListView 안에 넣는다(ScrollTopArea). 스크롤
+          // 없이 두면 표지 카드 두 줄이 화면 높이를 넘겨, 격자가 아니라
+          // 시험 틀이 터진다.
+          body: SingleChildScrollView(
+            child: TwoColumnAnimeGrid(
+              children: List.generate(
+                4,
+                (index) => AnimePosterCard(
+                  title: '애니 $index',
+                  posterUrl: '',
+                  genres: const ['액션'],
+                  metaLines: const ['방영일: 2026.07.01.', '방영예정'],
+                  onTap: () {},
+                ),
               ),
             ),
           ),
@@ -48,15 +53,17 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: TwoColumnAnimeGrid(
-              children: List.generate(
-                4,
-                (index) => AnimePosterCard(
-                  title: '테스트 $index',
-                  posterUrl: '',
-                  genres: const ['액션'],
-                  metaLines: metaLines,
-                  onTap: () {},
+            body: SingleChildScrollView(
+              child: TwoColumnAnimeGrid(
+                children: List.generate(
+                  4,
+                  (index) => AnimePosterCard(
+                    title: '테스트 $index',
+                    posterUrl: '',
+                    genres: const ['액션'],
+                    metaLines: metaLines,
+                    onTap: () {},
+                  ),
                 ),
               ),
             ),
