@@ -112,39 +112,26 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (showPosterArea)
-              AspectRatio(
-                aspectRatio: 2 / 3,
-                child: hasImage
-                    ? Image.network(
-                        widget.posterUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted && !imageFailed) {
-                              setState(() => imageFailed = true);
-                            }
-                          });
-                          return _PosterPlaceholder(colors: colors);
-                        },
-                      )
-                    : _PosterPlaceholder(colors: colors),
-              ),
+              _posterWithOverlay(context, colors, hasImage, genres),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        height: 1.2,
+                    // 표지가 있으면 제목·상태·장르·진행률은 표지 위에 얹는다.
+                    // 표지를 끈 모드에서만 여기에 글자로 쌓는다.
+                    if (compact)
+                      Text(
+                        widget.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                        ),
                       ),
-                    ),
-                    if (widget._showStatusChip)
+                    if (compact && widget._showStatusChip)
                       Padding(
                         padding: EdgeInsets.only(top: compact ? 5 : 7),
                         child: Align(
@@ -152,7 +139,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                           child: _statusChip(context, colors),
                         ),
                       ),
-                    if (genres.isNotEmpty)
+                    if (compact && genres.isNotEmpty)
                       Padding(
                         padding: EdgeInsets.only(top: compact ? 4 : 6),
                         child: Text(
@@ -189,7 +176,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                         ),
                       ),
                     const Spacer(),
-                    if (widget.progress != null)
+                    if (compact && widget.progress != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: GradientProgressBar(
@@ -211,6 +198,113 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
     );
   }
 
+  /// 표지를 카드의 주인공으로 두고, 제목·장르·상태·진행률을 그 위에 얹는다.
+  /// 표지 아래에 글자 블록을 따로 쌓으면 카드가 길어지고 표지가 작아진다.
+  Widget _posterWithOverlay(
+    BuildContext context,
+    ColorScheme colors,
+    bool hasImage,
+    List<String> genres,
+  ) {
+    return AspectRatio(
+      aspectRatio: 2 / 3,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (hasImage)
+            Image.network(
+              widget.posterUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && !imageFailed) {
+                    setState(() => imageFailed = true);
+                  }
+                });
+                return _PosterPlaceholder(colors: colors);
+              },
+            )
+          else
+            _PosterPlaceholder(colors: colors),
+          // 표지 그림은 밝기를 알 수 없다. 아래쪽을 어둡게 깔아야 흰 글자가
+          // 어떤 그림 위에서도 읽힌다.
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                // 두 단으로 꺾어야 가운데가 자연스럽게 어두워지면서
+                // 글자가 앉는 아래쪽은 확실히 덮인다. 한 단이면 표지에
+                // 밝은 로고가 깔린 작품에서 제목과 겹쳐 보인다.
+                colors: [
+                  Color(0x00000000),
+                  Color(0x80000000),
+                  Color(0xF7000000),
+                ],
+                // 마지막 단을 0.84에 두어야 제목이 앉는 높이까지 확실히
+                // 덮인다. 1로 두면 짙어지는 구간이 글자보다 아래에 생겨
+                // 밝은 로고가 깔린 표지에서 제목과 겹친다.
+                stops: [0.36, 0.62, 0.84],
+              ),
+            ),
+          ),
+          if (widget._showStatusChip)
+            Positioned(
+              top: 10,
+              left: 10,
+              child: _statusChip(context, colors, onPoster: true),
+            ),
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: widget.progress != null ? 12 : 10,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    height: 1.2,
+                    // 표지에 밝은 로고가 걸리는 경우를 대비한 두 번째 방어선.
+                    shadows: const [
+                      Shadow(color: Color(0xCC000000), blurRadius: 6),
+                    ],
+                  ),
+                ),
+                if (genres.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      genres.take(2).join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colors.secondary,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (widget.progress != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: GradientProgressBar(value: widget.progress!, height: 3),
+            ),
+        ],
+      ),
+    );
+  }
+
   /// 상태를 칩으로 띄울 때 쓸 색. 회색 글자로 묻히지 않게 방영중만
   /// 민트로 올리고, 방영예정은 중간, 완결은 흐리게 둔다.
   Color _statusTone(ColorScheme colors) {
@@ -221,12 +315,23 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
   }
 
   /// 상태를 회색 본문 글자 대신 작은 칩으로 띄운다.
-  Widget _statusChip(BuildContext context, ColorScheme colors) {
+  Widget _statusChip(
+    BuildContext context,
+    ColorScheme colors, {
+    bool onPoster = false,
+  }) {
     final tone = _statusTone(colors);
+    // 표지 위에서는 흐린 회색이 그림에 묻힌다. 방영중만 민트로 두고
+    // 나머지는 흰 글자에 어두운 바탕을 깔아 어떤 그림 위에서도 읽히게 한다.
+    final shown = onPoster && !widget.statusLabel.contains('방영중')
+        ? Colors.white.withValues(alpha: 0.9)
+        : tone;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: tone.withValues(alpha: 0.14),
+        color: onPoster
+            ? const Color(0xB3000000)
+            : tone.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -234,7 +339,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: tone,
+          color: shown,
           fontWeight: FontWeight.w800,
           height: 1.1,
         ),

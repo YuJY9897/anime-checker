@@ -47,6 +47,27 @@ void main() {
     expect(box.width, greaterThan(0), reason: '채움 칸 폭이 0이면 안 보인다');
   });
 
+  // 폭만 재던 앞 시험은 이걸 못 잡았다. FractionallySizedBox는 정렬을 안 주면
+  // 가운데에 붙어서, 막대 한가운데에서 채움이 시작되고 양옆이 빈 채로 떠 보인다.
+  testWidgets('진행률 막대는 왼쪽 끝에서부터 찬다', (tester) async {
+    await tester.pumpWidget(
+      _wrap(const GradientProgressBar(value: 0.5, height: 4)),
+    );
+
+    final track = tester.getRect(find.byType(FractionallySizedBox));
+    final fill = tester.getRect(
+      find.descendant(
+        of: find.byType(FractionallySizedBox),
+        matching: find.byType(DecoratedBox),
+      ),
+    );
+    expect(
+      fill.left,
+      closeTo(track.left, 0.5),
+      reason: '채움 칸이 막대 왼쪽 끝에 붙어야 한다',
+    );
+  });
+
   testWidgets('진행률 0과 1에서도 막대가 터지지 않는다', (tester) async {
     for (final value in [0.0, 1.0]) {
       await tester.pumpWidget(

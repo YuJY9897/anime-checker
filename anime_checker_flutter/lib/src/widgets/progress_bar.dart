@@ -25,6 +25,9 @@ class GradientProgressBar extends StatelessWidget {
               child: ColoredBox(color: colors.surfaceContainerHighest),
             ),
             FractionallySizedBox(
+              // 정렬을 안 주면 기본이 가운데라, 채움 칸이 막대 한가운데에서
+              // 시작해 양옆이 빈 채로 떠 보인다. 왼쪽 끝에 붙인다.
+              alignment: Alignment.centerLeft,
               widthFactor: ratio,
               child: DecoratedBox(
                 decoration: BoxDecoration(
