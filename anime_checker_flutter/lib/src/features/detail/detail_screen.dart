@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,6 +55,143 @@ class DetailScreen extends ConsumerWidget {
     return _buildDetail(context, controller, anime);
   }
 
+  /// 표지를 흐리게 깔아 배경으로 쓰고, 그 위에 표지 한 장과 제목·상태를 얹는다.
+  /// 예전에는 작은 표지와 글자가 흰 바탕에 나란히 놓인 목록의 첫 줄이었다.
+  Widget _header(
+    BuildContext context,
+    AppController controller,
+    Anime anime,
+    List<String> genres,
+    bool inLibrary,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    final hasPoster = anime.posterUrl.trim().isNotEmpty;
+    final topInset = MediaQuery.paddingOf(context).top + kToolbarHeight;
+    return SizedBox(
+      height: topInset + 212,
+      // BackdropFilter는 제 경계를 안 지키고 밖까지 번진다. 잘라내지 않으면
+      // 머리말 아래 버튼 줄까지 표지 얼룩이 따라 내려온다.
+      child: ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (hasPoster)
+              Image.network(
+                anime.posterUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox.shrink(),
+              ),
+            if (hasPoster)
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: const ColoredBox(color: Color(0x66000000)),
+              ),
+            // 아래쪽은 본문 바탕색으로 녹여야 머리말과 목록이 이어져 보인다.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    colors.surface.withValues(alpha: 0.45),
+                    colors.surface.withValues(alpha: 0.82),
+                    colors.surface,
+                  ],
+                  stops: const [0, 0.62, 1],
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, topInset - 8, 16, 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (hasPoster) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        anime.posterUrl,
+                        width: 124,
+                        height: 186,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox.shrink(),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                  ],
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          anime.title,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.headlineSmall?.copyWith(height: 1.16),
+                        ),
+                        if (genres.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              genres.join(' · '),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(color: colors.secondary),
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                        Text(
+                          anime.isMovie
+                              ? '극장판'
+                              : animeAiringStatusLabel(
+                                  anime.firstAirDate,
+                                  status: anime.status,
+                                ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        // 편성표·보관함과 같은 판정을 쓴다.
+                        if (!anime.isMovie &&
+                            controller.isOnAirThisWeek(anime) &&
+                            hasUsefulText(anime.weekday))
+                          Text(
+                            anime.weekday,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        Text(
+                          anime.isMovie
+                              ? '개봉일: ${formatStoredDate(anime.firstAirDate)}'
+                              : '첫 방영: ${formatStoredDate(anime.firstAirDate)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (inLibrary) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            controller.progressLabel(anime),
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          Text(
+                            controller.latestWatchLabel(anime),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDetail(
     BuildContext context,
     AppController controller,
@@ -69,82 +208,16 @@ class DetailScreen extends ConsumerWidget {
         .where((season) => season.number == 0)
         .toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('상세')),
+      // 표지를 머리말 배경으로 깔기 때문에 앱바가 그 위에 떠야 한다.
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text('상세'),
+        backgroundColor: Colors.transparent,
+      ),
       body: ListView(
+        padding: EdgeInsets.zero,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (anime.posterUrl.trim().isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      anime.posterUrl,
-                      width: 118,
-                      height: 177,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const SizedBox.shrink(),
-                    ),
-                  ),
-                if (anime.posterUrl.trim().isNotEmpty)
-                  const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        anime.title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          height: 1.18,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (genres.isNotEmpty) ...[
-                        Text(
-                          genres.join(' · '),
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.secondary,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                      Text(
-                        anime.isMovie
-                            ? '극장판'
-                            : animeAiringStatusLabel(
-                                anime.firstAirDate,
-                                status: anime.status,
-                              ),
-                      ),
-                      // 편성표·보관함과 같은 판정을 쓴다.
-                      if (!anime.isMovie &&
-                          controller.isOnAirThisWeek(anime) &&
-                          hasUsefulText(anime.weekday))
-                        Text(anime.weekday),
-                      Text(
-                        anime.isMovie
-                            ? '개봉일: ${formatStoredDate(anime.firstAirDate)}'
-                            : '첫 방영: ${formatStoredDate(anime.firstAirDate)}',
-                      ),
-                      const SizedBox(height: 8),
-                      if (inLibrary) ...[
-                        Text(
-                          controller.progressLabel(anime),
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        Text(controller.latestWatchLabel(anime)),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _header(context, controller, anime, genres, inLibrary),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Wrap(
