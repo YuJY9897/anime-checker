@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../data/models/app_settings.dart';
 import '../../state/app_controller.dart';
 import '../../core/format/date_text.dart';
 import '../../widgets/scroll_top_area.dart';
@@ -87,6 +88,21 @@ class SettingsScreen extends ConsumerWidget {
                 value: settings.showPosterImages,
                 onChanged: (value) => controller.updateSettings(
                   settings.copyWith(showPosterImages: value),
+                ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('볼 수 있는 곳 고르기'),
+                subtitle: Text(
+                  settings.watchProviders.isEmpty
+                      ? '고른 곳 없음'
+                      : '${settings.watchProviders.length}곳 선택됨',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const WatchProviderScreen(),
+                  ),
                 ),
               ),
               _SwitchRow(
@@ -389,6 +405,68 @@ class _RefreshAllProgress extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 상세 화면에 어느 시청처를 보여줄지 고른다. 한국에 있는 곳이 26군데라
+/// 전부 띄우면 이름만 늘어서 읽히지 않는다. 쓰는 곳만 남긴다.
+class WatchProviderScreen extends ConsumerWidget {
+  const WatchProviderScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.watch(appControllerProvider);
+    final chosen = controller.settings.watchProviders;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('볼 수 있는 곳'),
+        actions: [
+          TextButton(
+            onPressed: () => controller.updateSettings(
+              controller.settings.copyWith(
+                watchProviders: defaultWatchProviders,
+              ),
+            ),
+            child: const Text('기본값'),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          Text(
+            '상세 화면에 여기서 고른 곳만 보여줍니다. 자료는 JustWatch에서 받아옵니다.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          for (final name in koreanWatchProviders)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(name),
+              value: chosen.contains(name),
+              onChanged: (on) {
+                final next = [...chosen];
+                if (on) {
+                  // 고른 순서가 아니라 목록 순서를 지켜야 상세 화면에서
+                  // 늘 같은 자리에 보인다.
+                  next.add(name);
+                  next.sort(
+                    (a, b) => koreanWatchProviders
+                        .indexOf(a)
+                        .compareTo(koreanWatchProviders.indexOf(b)),
+                  );
+                } else {
+                  next.remove(name);
+                }
+                controller.updateSettings(
+                  controller.settings.copyWith(watchProviders: next),
+                );
+              },
+            ),
+        ],
+      ),
     );
   }
 }

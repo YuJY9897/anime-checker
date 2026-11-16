@@ -15,6 +15,7 @@ class Anime {
     required this.movies,
     required this.dropped,
     this.isMovie = false,
+    this.watchProviders = const [],
   });
 
   final String id;
@@ -32,6 +33,10 @@ class Anime {
   /// 극장판/영화 여부 (Jikan type: Movie).
   final bool isMovie;
 
+  /// 한국에서 지금 볼 수 있는 곳. 서버가 JustWatch 자료(TMDB 중계)에서
+  /// 구독·무료·광고형만 골라 보낸다. 대여·구매는 들어 있지 않다.
+  final List<String> watchProviders;
+
   Anime copyWith({bool? dropped}) => Anime(
     id: id,
     title: title,
@@ -45,6 +50,7 @@ class Anime {
     movies: movies,
     dropped: dropped ?? this.dropped,
     isMovie: isMovie,
+    watchProviders: watchProviders,
   );
 
   factory Anime.fromJson(Map<String, dynamic> json) => Anime(
@@ -70,6 +76,11 @@ class Anime {
     isMovie:
         json['isMovie'] == true ||
         json['id']?.toString().startsWith('movie-') == true,
+    // 이 키가 없던 저장본과 백업도 그대로 열린다. 빈 목록이 된다.
+    watchProviders: (json['watchProviders'] as List? ?? const [])
+        .map((item) => '$item')
+        .where((item) => item.trim().isNotEmpty)
+        .toList(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -85,5 +96,6 @@ class Anime {
     'movies': movies.map((item) => item.toJson()).toList(),
     'dropped': dropped,
     'isMovie': isMovie,
+    'watchProviders': watchProviders,
   };
 }

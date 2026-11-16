@@ -55,6 +55,60 @@ class DetailScreen extends ConsumerWidget {
     return _buildDetail(context, controller, anime);
   }
 
+  /// 한국에서 지금 볼 수 있는 곳. 환경설정에서 고른 곳만 추려서 보여준다.
+  /// 자료는 JustWatch 것이고, TMDB 약관상 출처를 밝혀야 해서 같이 적는다.
+  Widget _watchProviders(
+    BuildContext context,
+    AppController controller,
+    Anime anime,
+  ) {
+    final chosen = controller.settings.watchProviders;
+    final shown = anime.watchProviders
+        .where(chosen.contains)
+        .toList(growable: false);
+    if (shown.isEmpty) return const SizedBox.shrink();
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '지금 볼 수 있는 곳',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 9),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final name in shown)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: colors.outlineVariant),
+                  ),
+                  child: Text(
+                    name,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          Text('제공: JustWatch', style: Theme.of(context).textTheme.labelSmall),
+        ],
+      ),
+    );
+  }
+
   /// 표지를 흐리게 깔아 배경으로 쓰고, 그 위에 표지 한 장과 제목·상태를 얹는다.
   /// 예전에는 작은 표지와 글자가 흰 바탕에 나란히 놓인 목록의 첫 줄이었다.
   Widget _header(
@@ -277,6 +331,7 @@ class DetailScreen extends ConsumerWidget {
                 ),
               ),
             ),
+          _watchProviders(context, controller, anime),
           if (mainSeasons.isNotEmpty || inLibrary) SectionHeader(title: '본편'),
           if (mainSeasons.isEmpty && !inLibrary)
             const SizedBox.shrink()

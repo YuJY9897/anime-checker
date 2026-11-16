@@ -218,8 +218,9 @@ async function searchAnime(env, query) {
 // 상세는 서브요청이 가장 많이 드는 경로라 KV에 캐시한다.
 async function animeDetailResponse(env, id) {
   if (!/^(mal-)?\d+$/.test(id)) return json({error: 'invalid id'}, 400);
-  // 외전·극장판이 응답에 추가돼 모양이 바뀌었으므로 키를 올려 옛 캐시를 버린다.
-  const cacheKey = `cache:anime:v2:${id}`;
+  // 응답 모양이 바뀌면 키를 올려 옛 캐시를 버린다.
+  // v3: 한국에서 볼 수 있는 곳(watchProviders)이 추가됐다.
+  const cacheKey = `cache:anime:v3:${id}`;
   const cached = await kvCacheGet(env, cacheKey);
   if (cached) return json(cached);
   const detail = await animeDetail(env, id);
@@ -236,9 +237,9 @@ function isEndedStatus(status) {
 }
 
 // 무료 플랜은 요청 하나당 서브요청이 50회다.
-// /tv 1회, 시즌 0 상세 1회, 극장판 검색 1회, KV 조회·기록 2회를 빼고
-// 나머지를 시즌 상세 → 제목 보강 순으로 나눠 쓴다.
-const DETAIL_SUBREQUEST_BUDGET = 40;
+// /tv 1회, 시즌 0 상세 1회, 극장판 검색 1회, 한국 시청처 1회,
+// KV 조회·기록 2회를 빼고 나머지를 시즌 상세 → 제목 보강 순으로 나눠 쓴다.
+const DETAIL_SUBREQUEST_BUDGET = 39;
 
 async function animeDetail(env, id) {
   if (id.startsWith('mal-')) return jikanAnimeDetail(id);
@@ -259,11 +260,12 @@ async function animeDetail(env, id) {
   const filled = seasons.filter((season) => season.episodes.length > 0);
   // 기수 나누기는 본편에만 적용한다. 외전이 섞이면 회차 번호가 어긋난다.
   const split = await splitBundledSeasons(env, id, tv, filled);
-  const [specials, movies] = await Promise.all([
+  const [specials, movies, watchProviders] = await Promise.all([
     specialSummary
       ? seasonDetail(env, id, tv, specialSummary).catch(() => null)
       : Promise.resolve(null),
     relatedMovies(env, tv).catch(() => []),
+    koreanWatchProviders(env, id).catch(() => []),
   ]);
   const extras = specials && specials.episodes.length > 0
     ? [{...specials, number: 0, name: '외전 · 특별편'}]
@@ -273,7 +275,28 @@ async function animeDetail(env, id) {
     weekday: inferWeekday(split),
     seasons: [...split, ...extras],
     movies,
+    watchProviders,
   };
+}
+
+// 한국에서 지금 볼 수 있는 곳. JustWatch 자료를 TMDB가 중계한다.
+// 이 자료를 쓰려면 출처를 JustWatch로 밝혀야 한다(TMDB 약관).
+//
+// 구독(flatrate)·무료(free)·광고형(ads)만 모은다. 대여(rent)와 구매(buy)는
+// '지금 볼 수 있는 곳'이 아니라 '사면 볼 수 있는 곳'이라, 같이 묶으면
+// 구독 중인 곳에 있는 것처럼 잘못 읽힌다.
+async function koreanWatchProviders(env, id) {
+  const data = await tmdb(env, `/tv/${id}/watch/providers`);
+  const kr = data.results?.KR;
+  if (!kr) return [];
+  const names = [];
+  for (const key of ['flatrate', 'free', 'ads']) {
+    for (const item of kr[key] || []) {
+      const name = (item.provider_name || '').trim();
+      if (name && !names.includes(name)) names.push(name);
+    }
+  }
+  return names;
 }
 
 // TMDB는 TV 작품에 극장판을 이어 주지 않는다. 제목으로 찾아 일본 애니 영화만 남긴다.
