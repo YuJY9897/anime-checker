@@ -61,7 +61,7 @@ class _PatchNoteTile extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: colors.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     '최신',

@@ -98,7 +98,7 @@ class _HeadlineCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(999),
               child: LinearProgressIndicator(
                 value: stats.completionRatio,
                 minHeight: 10,
@@ -254,7 +254,7 @@ class _GenreCard extends StatelessWidget {
                   ),
                   Expanded(
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(999),
                       child: LinearProgressIndicator(
                         value: top == 0 ? 0 : genre.count / top,
                         minHeight: 8,

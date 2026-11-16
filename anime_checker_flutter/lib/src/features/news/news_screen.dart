@@ -214,13 +214,13 @@ class _NewsCard extends StatelessWidget {
           MaterialPageRoute(builder: (_) => NewsDetailScreen(article: article)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(13),
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (showImage && article.imageUrl.trim().isNotEmpty) ...[
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   child: Image.network(
                     article.imageUrl,
                     width: 92,
@@ -270,7 +270,7 @@ class _NewsCard extends StatelessWidget {
                     DecoratedBox(
                       decoration: BoxDecoration(
                         color: colors.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(

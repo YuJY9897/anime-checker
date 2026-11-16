@@ -23,7 +23,7 @@ class AmbientBackground extends StatelessWidget {
         Positioned(
           top: 230,
           right: -140,
-          child: _Glow(color: colors.tertiary, size: 320, strength: 0.10),
+          child: _Glow(color: colors.secondary, size: 320, strength: 0.10),
         ),
         Positioned.fill(child: child),
       ],

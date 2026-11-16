@@ -108,7 +108,7 @@ class DetailScreen extends ConsumerWidget {
                           genres.join(' · '),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: Theme.of(context).colorScheme.tertiary,
+                                color: Theme.of(context).colorScheme.secondary,
                               ),
                         ),
                         const SizedBox(height: 8),

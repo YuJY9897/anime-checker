@@ -381,7 +381,7 @@ class _RefreshAllProgress extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: total == 0 ? null : done / total,
             minHeight: 8,
