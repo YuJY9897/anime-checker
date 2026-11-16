@@ -131,7 +131,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
               ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(11, 10, 11, 11),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 11),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -162,7 +162,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(
-                                color: colors.tertiary,
+                                color: colors.secondary,
                                 fontWeight: FontWeight.w800,
                                 height: 1.22,
                               ),
@@ -258,12 +258,12 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
         onTap: widget.onTap,
         onLongPress: widget.onLongPress,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+          padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(12),
                 child: SizedBox(
                   width: 46,
                   height: 69,
@@ -316,7 +316,7 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
-                                color: colors.tertiary,
+                                color: colors.secondary,
                                 fontWeight: FontWeight.w800,
                               ),
                         ),

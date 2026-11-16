@@ -131,7 +131,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       shadowColor: shadow,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(18)),
+        borderRadius: const BorderRadius.all(Radius.circular(42)),
         side: BorderSide(color: outline),
       ),
     ),
@@ -140,14 +140,14 @@ ThemeData buildAppTheme(Brightness brightness) {
         foregroundColor: ink,
         backgroundColor: card,
         fixedSize: const Size(44, 44),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+        shape: const StadiumBorder(),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size(0, 38),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: const StadiumBorder(),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     ),
@@ -159,16 +159,16 @@ ThemeData buildAppTheme(Brightness brightness) {
           width: 1.2,
         ),
         minimumSize: const Size(0, 36),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        shape: const StadiumBorder(),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         minimumSize: const Size(0, 32),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        shape: const StadiumBorder(),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -177,25 +177,25 @@ ThemeData buildAppTheme(Brightness brightness) {
       labelStyle: TextStyle(color: muted, fontWeight: FontWeight.w700),
       hintStyle: TextStyle(color: muted.withValues(alpha: 0.72)),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(999),
         borderSide: BorderSide(color: outline),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(999),
         borderSide: BorderSide(color: outline),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(999),
         borderSide: BorderSide(color: scheme.primary, width: 1.4),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: card,
       selectedColor: isDark ? const Color(0xFF3E481D) : const Color(0xFFDCE3CE),
       checkmarkColor: scheme.primary,
       side: BorderSide(color: outline),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: const StadiumBorder(),
       labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w700,
@@ -206,13 +206,13 @@ ThemeData buildAppTheme(Brightness brightness) {
         fontWeight: FontWeight.w800,
         color: ink,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     ),
     popupMenuTheme: PopupMenuThemeData(
       color: card,
       elevation: isDark ? 0 : 5,
       shadowColor: shadow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       textStyle: TextStyle(
         color: ink,
         fontSize: 14,
@@ -231,7 +231,7 @@ ThemeData buildAppTheme(Brightness brightness) {
         color: isDark ? const Color(0xFF12140E) : Colors.white,
         fontWeight: FontWeight.w700,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     dividerTheme: DividerThemeData(color: outline),
     switchTheme: SwitchThemeData(
