@@ -188,6 +188,27 @@ bool airsAroundNow(Anime anime, {DateTime? now}) {
   return false;
 }
 
+/// 작품의 방영 상태. 셋을 가른다.
+///
+/// TMDB는 다음 기수가 예정된 작품도 완결작도 아닌 'Returning Series'로 둔다.
+/// 상태만 믿으면 몇 달 전에 기수가 끝난 작품이 계속 '방영중'으로 보인다.
+/// (주술회전 3기는 2026-03-27에 끝났는데 상태는 아직 Returning Series다.)
+/// 최근에 나온 화가 있는지 함께 봐서 '방영중'과 '다음 기수 예정'을 나눈다.
+/// 'Ended'·'Canceled'는 그대로 '완결'이다. 완전히 끝난 것과 다음 기수를
+/// 기다리는 것은 다르다.
+String animeStatusLabel(Anime anime, {DateTime? now}) {
+  final base = animeAiringStatusLabel(
+    anime.firstAirDate,
+    status: anime.status,
+    now: now,
+  );
+  if (base != '방영중') return base;
+  if (hasEpisodeAirDates(anime) && !airsAroundNow(anime, now: now)) {
+    return '다음 기수 예정';
+  }
+  return base;
+}
+
 /// 이번 주에 실제로 새 화가 나오는 작품인지. 편성표에 넣는 기준과
 /// 보관함·상세의 요일 표시가 같은 함수를 써야, 보관함엔 '방영중 · 금요일'인데
 /// 편성표엔 없는 모순이 생기지 않는다.

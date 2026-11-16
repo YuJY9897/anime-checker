@@ -104,6 +104,8 @@ class AppController extends ChangeNotifier {
   String inferredCurrentWeekday(Anime anime) =>
       query.inferredCurrentWeekday(anime);
 
+  String animeStatusLabel(Anime anime) => query.animeStatusLabel(anime);
+
   bool isDropped(String animeId) => query.isDropped(data, animeId);
 
   bool isWished(String animeId) => query.isWished(data, animeId);

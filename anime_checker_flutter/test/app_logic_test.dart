@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:anime_checker_flutter/src/data/remote/api_client.dart';
+import 'package:anime_checker_flutter/src/state/anime_query.dart';
 import 'package:anime_checker_flutter/src/state/app_controller.dart';
 import 'package:anime_checker_flutter/src/core/format/date_text.dart';
 import 'package:anime_checker_flutter/src/core/format/genre_text.dart';
@@ -387,6 +388,54 @@ void main() {
       expect(controller.todayTargets.single.episode.number, 1);
     },
   );
+
+  // TMDB는 다음 기수가 예정된 작품을 완결작과 똑같이 'Returning Series'로
+  // 두지 않는다. 그래서 상태만 보면 기수가 끝난 지 몇 달 지난 작품도 계속
+  // '방영중'으로 나왔다. 주술회전 3기는 2026-03-27에 끝났는데 상태는 아직
+  // Returning Series다.
+  group('방영 상태 라벨', () {
+    Anime make({
+      required String status,
+      required String lastAirDate,
+    }) => Anime(
+      id: 'x',
+      title: '작품',
+      originalTitle: '',
+      posterUrl: '',
+      genres: const [],
+      status: status,
+      weekday: '',
+      firstAirDate: '2020-10-03',
+      seasons: [
+        AnimeSeason(
+          number: 1,
+          name: '1기',
+          subtitle: '',
+          posterUrl: '',
+          episodes: [Episode(number: 1, title: '1화', airDate: lastAirDate)],
+        ),
+      ],
+      movies: const [],
+      dropped: false,
+    );
+
+    final now = DateTime(2026, 11, 16);
+
+    test('기수가 끝났고 다음 기수가 예정이면 방영중이 아니다', () {
+      final anime = make(status: 'Returning Series', lastAirDate: '2026-03-27');
+      expect(animeStatusLabel(anime, now: now), '다음 기수 예정');
+    });
+
+    test('최근에 새 화가 나왔으면 방영중이다', () {
+      final anime = make(status: 'Returning Series', lastAirDate: '2026-11-14');
+      expect(animeStatusLabel(anime, now: now), '방영중');
+    });
+
+    test('완전히 끝난 작품은 완결로 둔다', () {
+      final anime = make(status: 'Ended', lastAirDate: '2021-03-27');
+      expect(animeStatusLabel(anime, now: now), '완결');
+    });
+  });
 
   // 예전에는 오래된 순이라, 몇 년 전 작품이 맨 위에 있고 어제 올라온 화가
   // 아래로 밀렸다. 새 화가 최근에 나온 작품이 위로 와야 한다.

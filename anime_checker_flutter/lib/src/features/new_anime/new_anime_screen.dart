@@ -212,10 +212,8 @@ class _NewAnimeScreenState extends ConsumerState<NewAnimeScreen> {
                       ),
                     ),
                     listMode: !controller.settings.showPosterImages,
-                    statusLabel: animeAiringStatusLabel(
-                      anime.firstAirDate,
-                      status: anime.status,
-                    ),
+                    // 카드와 상세가 같은 판정을 쓰게 한다.
+                    statusLabel: controller.animeStatusLabel(anime),
                     metaLines: animeBroadcastMetaLines(
                       anime.firstAirDate,
                       status: anime.status,

@@ -149,10 +149,7 @@ class DetailScreen extends ConsumerWidget {
                         Text(
                           anime.isMovie
                               ? '극장판'
-                              : animeAiringStatusLabel(
-                                  anime.firstAirDate,
-                                  status: anime.status,
-                                ),
+                              : controller.animeStatusLabel(anime),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         // 편성표·보관함과 같은 판정을 쓴다.
