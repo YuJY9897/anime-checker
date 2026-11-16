@@ -44,6 +44,25 @@ extension MainSectionText on MainSection {
     }
   }
 
+  /// 하단 탭 칸은 좁아서 긴 이름이 잘린다. 탭에서만 쓰는 짧은 이름.
+  String get shortLabel => this == MainSection.schedule ? '편성표' : label;
+
+  /// 탭에서 고른 칸은 속이 찬 아이콘으로 바꿔 지금 어디인지 또렷하게 한다.
+  IconData get shortIcon {
+    switch (this) {
+      case MainSection.updates:
+        return Icons.playlist_play;
+      case MainSection.library:
+        return Icons.inventory_2;
+      case MainSection.wish:
+        return Icons.star_rounded;
+      case MainSection.schedule:
+        return Icons.calendar_month;
+      default:
+        return icon;
+    }
+  }
+
   IconData get icon {
     switch (this) {
       case MainSection.updates:
@@ -76,6 +95,15 @@ class ShellScreen extends ConsumerStatefulWidget {
 }
 
 class _ShellScreenState extends ConsumerState<ShellScreen> {
+  /// 하단 탭에 꺼내 두는 넷. 매일 여는 것만 둔다.
+  /// 나머지는 마지막 칸 「더보기」에서 고른다.
+  static const tabs = [
+    MainSection.updates,
+    MainSection.library,
+    MainSection.wish,
+    MainSection.schedule,
+  ];
+
   MainSection section = MainSection.updates;
   DateTime? lastBackAt;
 
@@ -117,11 +145,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                 context,
               ).push(MaterialPageRoute(builder: (_) => const SearchScreen())),
             ),
-            IconButton(
-              tooltip: '메뉴',
-              icon: const Icon(Icons.menu),
-              onPressed: _openSectionMenu,
-            ),
             const SizedBox(width: 8),
           ],
         ),
@@ -130,20 +153,44 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
               ? MainSectionBody(section: section)
               : const Center(child: CircularProgressIndicator()),
         ),
+        bottomNavigationBar: NavigationBar(
+          // 탭에 없는 화면(보류·신작·소식·통계·환경설정)을 보고 있으면
+          // 마지막 칸을 켜 둬서, 지금 어디인지 모르게 되는 것을 막는다.
+          selectedIndex: tabs.contains(section)
+              ? tabs.indexOf(section)
+              : tabs.length,
+          onDestinationSelected: (index) {
+            if (index == tabs.length) {
+              _openSectionMenu();
+              return;
+            }
+            setState(() => section = tabs[index]);
+          },
+          destinations: [
+            for (final tab in tabs)
+              NavigationDestination(
+                icon: Icon(tab.icon),
+                selectedIcon: Icon(tab.shortIcon),
+                label: tab.shortLabel,
+              ),
+            const NavigationDestination(
+              icon: Icon(Icons.more_horiz),
+              label: '더보기',
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _openSectionMenu() {
+    // 탭에 이미 나와 있는 넷은 빼고, 나머지만 보여준다.
+    final rest = MainSection.values
+        .where((value) => !tabs.contains(value))
+        .toList();
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      // 기본 높이는 화면의 9/16이라 제목 + 항목 9개가 안 들어가서
-      // 맨 위 '새 화'와 '보관함'이 잘려 나갔다.
-      isScrollControlled: true,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.82,
-      ),
       builder: (context) => SafeArea(
         child: ListView.separated(
           shrinkWrap: true,
@@ -153,14 +200,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
               return Padding(
                 padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
                 child: Text(
-                  '메뉴',
+                  '더보기',
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
               );
             }
-            final value = MainSection.values[index - 1];
+            final value = rest[index - 1];
             final selected = value == section;
             return ListTile(
               leading: Icon(selected ? Icons.check_circle : value.icon),
@@ -174,7 +221,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
           },
           separatorBuilder: (_, index) =>
               index == 0 ? const SizedBox.shrink() : const Divider(height: 1),
-          itemCount: MainSection.values.length + 1,
+          itemCount: rest.length + 1,
         ),
       ),
     );

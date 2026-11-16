@@ -233,6 +233,27 @@ ThemeData buildAppTheme(Brightness brightness) {
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: card,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: scheme.primary.withValues(alpha: 0.18),
+      indicatorShape: const StadiumBorder(),
+      height: 68,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          size: 24,
+          color: states.contains(WidgetState.selected) ? scheme.primary : muted,
+        ),
+      ),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: states.contains(WidgetState.selected) ? ink : muted,
+        ),
+      ),
+    ),
     dividerTheme: DividerThemeData(color: outline),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
